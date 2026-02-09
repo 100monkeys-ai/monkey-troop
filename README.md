@@ -159,9 +159,11 @@ export MODEL_REFRESH_INTERVAL=300
 
 ## 📖 Documentation
 
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deploy your own Headscale coordinator
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Deploy your own Headscale coordinator
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Development setup and guidelines
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Detailed system design (coming soon)
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - Project architecture details
+- [docs/MVP_STATUS.md](docs/MVP_STATUS.md) - Implementation status and roadmap
+- [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) - Testing instructions
 
 ## 🤝 Contributing
 
@@ -183,7 +185,7 @@ Inspired by:
 
 ---
 
-**🚨 Status**: Phase 2 Complete - Production-Ready Alpha (90%)
+**🚨 Status**: Phase 2 Complete - Production-Ready Alpha (93.8%)
 
 The system includes:
 - ✅ Credit accounting with PostgreSQL ledger
@@ -193,7 +195,10 @@ The system includes:
 - ✅ Proof-of-Hardware benchmarking
 - ✅ Timeout enforcement (5s/30s/300s)
 - ✅ Streaming responses (Server-Sent Events)
+- ✅ Multi-engine support (Ollama, vLLM, LM Studio)
 - ✅ Integration tests + CI/CD pipeline
 - 🚧 VPS deployment (handled separately)
+
+See [docs/MVP_STATUS.md](docs/MVP_STATUS.md) for detailed progress.
 
 Join us in building the future of decentralized AI!
