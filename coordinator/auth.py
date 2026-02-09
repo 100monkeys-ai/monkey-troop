@@ -56,6 +56,5 @@ def verify_jwt_ticket(token: str) -> Optional[dict]:
         )
         return payload
     except JWTError as e:
-        print(f"JWT verification failed: {e}")ad
-    except JWTError:
+        print(f"JWT verification failed: {e}")
         return None

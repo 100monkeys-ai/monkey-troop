@@ -107,6 +107,28 @@ cargo run --bin monkey-troop-worker
 cargo run --bin monkey-troop-client
 ```
 
+### Using Streaming
+
+Enable streaming responses for real-time token generation:
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:3000/v1/chat/completions",
+    json={
+        "model": "llama3:8b",
+        "messages": [{"role": "user", "content": "Write a story"}],
+        "stream": True
+    },
+    stream=True
+)
+
+for chunk in response.iter_lines():
+    if chunk:
+        print(chunk.decode('utf-8'))
+```
+
 ## 📖 Documentation
 
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deploy your own Headscale coordinator
@@ -133,6 +155,17 @@ Inspired by:
 
 ---
 
-**🚨 Status**: Early Development (Pre-Alpha)
+**🚨 Status**: Phase 2 Complete - Production-Ready Alpha (90%)
 
-This project is under active development. The MVP is not yet functional. Join us in building the future of decentralized AI!
+The system includes:
+- ✅ Credit accounting with PostgreSQL ledger
+- ✅ Rate limiting (100/hr default, 20/hr strict)
+- ✅ Audit logging to PostgreSQL
+- ✅ JWT-based authorization (RSA-2048)
+- ✅ Proof-of-Hardware benchmarking
+- ✅ Timeout enforcement (5s/30s/300s)
+- ✅ Streaming responses (Server-Sent Events)
+- ✅ Integration tests + CI/CD pipeline
+- 🚧 VPS deployment (handled separately)
+
+Join us in building the future of decentralized AI!

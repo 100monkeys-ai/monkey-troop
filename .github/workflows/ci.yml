@@ -1,0 +1,242 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Rust components (client + worker)
+  rust-lint:
+    name: Rust Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Run rustfmt
+        run: cargo fmt --all -- --check
+      
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  rust-test:
+    name: Rust Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Run tests
+        run: cargo test --workspace --verbose
+
+  rust-build:
+    name: Rust Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Build workspace
+        run: cargo build --workspace --release
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.os }}
+          path: |
+            target/release/monkey-troop-client
+            target/release/monkey-troop-worker
+          retention-days: 7
+
+  # Python coordinator
+  python-lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          cd coordinator
+          pip install -r requirements.txt
+          pip install flake8 black isort mypy
+      
+      - name: Run black
+        run: |
+          cd coordinator
+          black --check .
+      
+      - name: Run isort
+        run: |
+          cd coordinator
+          isort --check-only .
+      
+      - name: Run flake8
+        run: |
+          cd coordinator
+          flake8 --max-line-length=120 --exclude=__pycache__,migrations,venv .
+      
+      - name: Run mypy
+        run: |
+          cd coordinator
+          mypy --ignore-missing-imports *.py
+        continue-on-error: true  # Mypy can be strict, don't fail builds yet
+
+  python-test:
+    name: Python Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: test_troop
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          cd coordinator
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio
+      
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:testpass@localhost:5432/test_troop
+          REDIS_URL: redis://localhost:6379
+          JWT_PRIVATE_KEY_PATH: /tmp/test_private.pem
+          JWT_PUBLIC_KEY_PATH: /tmp/test_public.pem
+        run: |
+          # Generate test RSA keys
+          openssl genrsa -out /tmp/test_private.pem 2048
+          openssl rsa -in /tmp/test_private.pem -pubout -out /tmp/test_public.pem
+          
+          cd coordinator
+          pytest tests/ -v --cov=. --cov-report=term-missing
+
+  # Security scanning
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Rust security audit
+        uses: rustsec/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Python security audit
+        run: |
+          pip install safety
+          cd coordinator
+          safety check --json || true  # Don't fail on vulnerabilities yet
+
+  # Deployment stub
+  deploy-staging:
+    name: Deploy to Staging (Stub)
+    runs-on: ubuntu-latest
+    needs: [rust-test, rust-build, python-test]
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deployment placeholder
+        run: |
+          echo "🚀 Deployment to staging environment"
+          echo "This is handled separately as per user requirements"
+          echo "Pipeline completed successfully - artifacts ready for deployment"
+
+  deploy-production:
+    name: Deploy to Production (Stub)
+    runs-on: ubuntu-latest
+    needs: [rust-test, rust-build, python-test]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deployment placeholder
+        run: |
+          echo "🚀 Deployment to production environment"
+          echo "This is handled separately as per user requirements"
+          echo "Pipeline completed successfully - artifacts ready for deployment"

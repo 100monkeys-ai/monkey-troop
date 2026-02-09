@@ -36,20 +36,75 @@ cd ..
 # Rust tests
 cargo test --workspace
 
-# Python tests
+# Python tests (requires PostgreSQL and Redis)
 cd coordinator
-pytest
+# Set up test environment variables
+export DATABASE_URL=postgresql://postgres:testpass@localhost:5432/test_troop
+export REDIS_URL=redis://localhost:6379
+pytest -v
+
+# Integration tests with Docker
+docker-compose -f docker-compose.test.yml up --abort-on-container-exit
 ```
+
+### Database Migrations
+
+When adding new database features, create migrations:
+
+```bash
+cd coordinator
+
+# Create a new migration
+alembic revision --autogenerate -m "add_my_feature"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback one migration
+alembic downgrade -1
+
+# Check current version
+alembic current
+```
+
+**Migration Best Practices:**
+- Always test migrations in a dev environment first
+- Include both `upgrade()` and `downgrade()` functions
+- Use descriptive migration messages
+- Add indexes for frequently queried columns
+- Never modify existing migrations once merged to main
 
 ### Code Style
 
 **Rust:**
 - Follow standard Rust formatting: `cargo fmt`
 - Run clippy: `cargo clippy --all-targets`
+- Fix warnings before committing
 
 **Python:**
 - Format with Black: `black .`
-- Lint with Ruff: `ruff check .`
+- Sort imports with isort: `isort .`
+- Lint with flake8: `flake8 --max-line-length=120 .`
+- Type hints are encouraged (checked with mypy)
+
+### Streaming Responses
+
+The system supports streaming for chat completions:
+
+```python
+# Client request with streaming
+{
+  "model": "llama3:8b",
+  "messages": [...],
+  "stream": true  # Enable Server-Sent Events
+}
+```
+
+**Implementation Notes:**
+- Client: Passes through SSE stream from worker
+- Worker: Passes through SSE stream from Ollama
+- No buffering in the pipeline for streaming responses
+- Content-Type: `text/event-stream`
 
 ## 🔄 Development Workflow
 

@@ -21,7 +21,10 @@ from transactions import (
 )
 from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
+from timeout_middleware import TimeoutMiddleware
 import audit
+from secrets import compare_digest
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -42,12 +45,18 @@ app.add_middleware(
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_client = Redis(host=redis_host, port=6379, db=0, decode_responses=True)
 
-# Rate limiter
-rate_limiter = RateLimiter(redis_client)
+# Rate limiter (order matters - outermost first)
+app.add_middleware(TimeoutMiddleware)
+# Add timeout middleware (outermost layer)
+app.add_middleware(TimeoutMiddleware)
 
-# Add middleware
+# Add request tracing and rate limiting
 app.add_middleware(RequestTracingMiddleware)
 app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
+
+# HTTP Basic Auth for admin endpoints
+security = HTTPBasic()
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "change-me-in-production")
 
 # Constants
 CHALLENGE_TTL = 60  # Challenge expires in 60 seconds
@@ -463,11 +472,50 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 async def get_transactions(
     public_key: str,
     limit: int = 50,
-    db: Session = Depends(get_db)
 ):
-    """Get user's transaction history."""
-    history = get_transaction_history(db, public_key, limit)
-    return {"transactions": history}
+    """Get transaction history for a user."""
+    from transactions import get_transaction_history
+    return {"transactions": get_transaction_history(public_key, limit)}
+
+
+@app.get("/admin/audit")
+async def get_audit_logs_endpoint(
+    credentials: HTTPBasicCredentials = Depends(security),
+    limit: int = 100,
+    offset: int = 0,
+    event_type: Optional[str] = None,
+    user_id: Optional[str] = None
+):
+    """
+    Get audit logs (admin only, requires HTTP Basic Auth).
+    
+    Query parameters:
+    - limit: Number of records to return (default 100)
+    - offset: Number of records to skip (default 0)
+    - event_type: Filter by event type (authorization, transaction, rate_limit, security)
+    - user_id: Filter by user ID
+    """
+    # Verify password
+    if not compare_digest(credentials.password, ADMIN_PASSWORD):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"}
+        )
+    
+    logs = audit.get_audit_logs(
+        limit=min(limit, 1000),  # Cap at 1000
+        offset=offset,
+        event_type=event_type,
+        user_id=user_id
+    )
+    
+    return {
+        "logs": logs,
+        "count": len(logs),
+        "limit": limit,
+        "offset": offset
+    }
 
 
 # ----------------------

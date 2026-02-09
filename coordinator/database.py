@@ -2,6 +2,7 @@
 
 import os
 from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -11,6 +12,18 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://troop_admin:changeme@loca
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+
+class AuditLog(Base):
+    """Audit log entries stored in PostgreSQL."""
+    __tablename__ = "audit_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True, nullable=False)
+    event_type = Column(String(50), index=True, nullable=False)
+    user_id = Column(String(255), index=True, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    details = Column(JSONB, nullable=True)
 
 
 class User(Base):

@@ -138,6 +138,13 @@ async fn proxy_handler(
         .await
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     
+    // Check if streaming is requested
+    let is_stream = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
+        json.get("stream").and_then(|v| v.as_bool()).unwrap_or(false)
+    } else {
+        false
+    };
+    
     // Forward request (POST assumed for simplicity in MVP)
     let response = client
         .post(&target_url)
@@ -147,14 +154,29 @@ async fn proxy_handler(
         .await
         .map_err(|_| StatusCode::BAD_GATEWAY)?;
     
-    // Convert response
-    let status_code = response.status().as_u16();
-    let body = response.bytes().await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let status = response.status();
+    let status_code = status.as_u16();
     
-    Response::builder()
-        .status(status_code)
-        .header("Content-Type", "application/json")
-        .body(axum::body::Body::from(body))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    // Handle streaming vs non-streaming responses
+    if is_stream {
+        // Pass through the stream directly without buffering
+        info!("✓ Streaming response from Ollama");
+        Response::builder()
+            .status(status_code)
+            .header("Content-Type", "text/event-stream")
+            .header("Cache-Control", "no-cache")
+            .header("Connection", "keep-alive")
+            .body(axum::body::Body::from_stream(response.bytes_stream()))
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    } else {
+        // Buffer complete response for non-streaming
+        let body = response.bytes().await
+            .map_err(|_| StatusCode::BAD_GATEWAY)?;
+        
+        Response::builder()
+            .status(status_code)
+            .header("Content-Type", "application/json")
+            .body(axum::body::Body::from(body))
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    }
 }

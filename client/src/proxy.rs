@@ -86,6 +86,7 @@ async fn chat_completions_handler(
     info!("✓ Got ticket for node: {}", auth_response.target_ip);
     
     // Phase 2: P2P Connection to worker (with retry)
+    let is_stream = payload.stream;
     let response = match send_to_worker(&auth_response, &payload).await {
         Ok(resp) => resp,
         Err(e) => {
@@ -94,17 +95,32 @@ async fn chat_completions_handler(
         }
     };
     
-    // Stream response back to client
-    let status_code = response.status().as_u16();
-    let body = response.bytes().await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let status_code = response.status();
+    let status_u16 = status_code.as_u16();
     
-    info!("✓ Response received, forwarding to client");
-    
-    Response::builder()
-        .status(status_code)
-        .body(axum::body::Body::from(body))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    // Handle streaming vs non-streaming responses
+    if is_stream {
+        // Pass through the stream directly to the client
+        info!("✓ Streaming response back to client");
+        Ok(Response::builder()
+            .status(status_u16)
+            .header("content-type", "text/event-stream")
+            .header("cache-control", "no-cache")
+            .header("connection", "keep-alive")
+            .body(axum::body::Body::from_stream(response.bytes_stream()))
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+    } else {
+        // Buffer complete response for non-streaming
+        let body = response.bytes().await
+            .map_err(|_| StatusCode::BAD_GATEWAY)?;
+        
+        info!("✓ Response received, forwarding to client");
+        
+        Ok(Response::builder()
+            .status(status_u16)
+            .body(axum::body::Body::from(body))
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+    }
 }
 
 async fn get_authorization(config: &Config, model: &str) -> TroopResult<AuthorizeResponse> {
