@@ -4,15 +4,15 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
+from crypto import load_private_key, load_public_key
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
-ALGORITHM = "HS256"
+ALGORITHM = "RS256"  # RSA signing
 ACCESS_TOKEN_EXPIRE_MINUTES = 5
 
 
 def create_jwt_ticket(user_id: str, target_node_id: str, project: str = "free-tier") -> str:
     """
-    Create a JWT ticket for authorization.
+    Create a JWT ticket for authorization using RSA signing.
     
     Args:
         user_id: The requester's ID
@@ -32,13 +32,13 @@ def create_jwt_ticket(user_id: str, target_node_id: str, project: str = "free-ti
         "project": project,
     }
     
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    private_key = load_private_key()
+    token = jwt.encode(payload, private_key, algorithm=ALGORITHM)
     return token
 
 
 def verify_jwt_ticket(token: str) -> Optional[dict]:
-    """
-    Verify and decode a JWT ticket.
+    """ using RSA public key.
     
     Args:
         token: The JWT token to verify
@@ -47,12 +47,15 @@ def verify_jwt_ticket(token: str) -> Optional[dict]:
         Decoded payload if valid, None otherwise
     """
     try:
+        public_key = load_public_key()
         payload = jwt.decode(
             token,
-            SECRET_KEY,
+            public_key,
             algorithms=[ALGORITHM],
             audience="troop-worker"
         )
         return payload
+    except JWTError as e:
+        print(f"JWT verification failed: {e}")ad
     except JWTError:
         return None

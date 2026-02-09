@@ -7,22 +7,52 @@ use axum::{
     middleware::{self, Next},
 };
 use anyhow::Result;
-use tracing::{info, warn};
+use tracing::{info, warn, error};
 use std::sync::Arc;
+use tokio::sync::RwLock;
+use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct JwtClaims {
+    sub: String,
+    aud: String,
+    exp: usize,
+}
+
+struct ProxyState {
+    config: Config,
+    public_key: RwLock<Option<DecodingKey>>,
+}
 
 pub async fn run_proxy_server(config: Config) -> Result<()> {
     let addr = format!("0.0.0.0:{}", config.proxy_port);
     info!("🔐 Starting JWT verification proxy on {}", addr);
     
-    let shared_config = Arc::new(config);
+    let state = Arc::new(ProxyState {
+        config: config.clone(),
+        public_key: RwLock::new(None),
+    });
+    
+    // Fetch public key from coordinator on startup
+    match fetch_public_key(&config.coordinator_url).await {
+        Ok(key) => {
+            *state.public_key.write().await = Some(key);
+            info!("✓ Public key loaded from coordinator");
+        }
+        Err(e) => {
+            error!("Failed to fetch public key: {}", e);
+            return Err(e);
+        }
+    }
     
     let app = Router::new()
         .fallback(proxy_handler)
         .layer(middleware::from_fn_with_state(
-            shared_config.clone(),
+            state.clone(),
             jwt_verification_middleware
         ))
-        .with_state(shared_config);
+        .with_state(state);
     
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("Proxy listening on {}", addr);
@@ -32,8 +62,25 @@ pub async fn run_proxy_server(config: Config) -> Result<()> {
     Ok(())
 }
 
+async fn fetch_public_key(coordinator_url: &str) -> Result<DecodingKey> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/public-key", coordinator_url);
+    
+    let response = client.get(&url)
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await?;
+    
+    let pem_string = response.text().await?;
+    
+    let key = DecodingKey::from_rsa_pem(pem_string.as_bytes())
+        .map_err(|e| anyhow::anyhow!("Failed to parse public key: {}", e))?;
+    
+    Ok(key)
+}
+
 async fn jwt_verification_middleware(
-    State(_config): State<Arc<Config>>,
+    State(state): State<Arc<ProxyState>>,
     headers: HeaderMap,
     request: Request,
     next: Next,
@@ -45,35 +92,45 @@ async fn jwt_verification_middleware(
         .ok_or(StatusCode::UNAUTHORIZED)?;
     
     if !auth_header.starts_with("Bearer ") {
+        warn!("Invalid Authorization header format");
         return Err(StatusCode::UNAUTHORIZED);
     }
     
     let token = &auth_header[7..];
     
-    // Verify JWT (simplified - in production use proper JWT verification)
-    // For now, just check if it looks like a JWT
-    if token.split('.').count() != 3 {
-        warn!("Invalid JWT format");
-        return Err(StatusCode::UNAUTHORIZED);
+    // Get public key from state
+    let public_key_guard = state.public_key.read().await;
+    let public_key = public_key_guard.as_ref()
+        .ok_or_else(|| {
+            error!("Public key not loaded");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    // Verify JWT signature
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.set_audience(&["troop-worker"]);
+    
+    match decode::<JwtClaims>(token, public_key, &validation) {
+        Ok(token_data) => {
+            info!("✓ JWT verified for node: {}", token_data.claims.sub);
+            Ok(next.run(request).await)
+        }
+        Err(e) => {
+            warn!("JWT verification failed: {}", e);
+            Err(StatusCode::UNAUTHORIZED)
+        }
     }
-    
-    // TODO: Implement proper JWT verification with coordinator's public key
-    // For MVP, we trust the token format
-    
-    info!("✓ JWT verified");
-    
-    Ok(next.run(request).await)
 }
 
 async fn proxy_handler(
-    State(config): State<Arc<Config>>,
+    State(state): State<Arc<ProxyState>>,
     request: Request,
 ) -> Result<Response, StatusCode> {
     // Forward request to local Ollama
     let client = reqwest::Client::new();
     
     let uri = request.uri();
-    let target_url = format!("{}{}", config.ollama_host, uri.path());
+    let target_url = format!("{}{}", state.config.ollama_host, uri.path());
     
     info!("Proxying request to {}", target_url);
     

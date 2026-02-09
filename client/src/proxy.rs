@@ -11,7 +11,8 @@ use anyhow::Result;
 use tracing::{info, error};
 use std::sync::Arc;
 use monkey_troop_shared::{
-    ChatCompletionRequest, AuthorizeRequest, AuthorizeResponse, ModelsResponse
+    ChatCompletionRequest, AuthorizeRequest, AuthorizeResponse, ModelsResponse,
+    retry_with_backoff, TroopError, TroopResult, AUTH_TIMEOUT, INFERENCE_TIMEOUT
 };
 
 pub async fn run_proxy_server(config: Config) -> Result<()> {
@@ -73,49 +74,25 @@ async fn chat_completions_handler(
 ) -> Result<Response, StatusCode> {
     info!("💬 Received chat completion request for model: {}", payload.model);
     
-    // Phase 1: Discovery & Authorization
-    let client = reqwest::Client::new();
-    let auth_url = format!("{}/authorize", config.coordinator_url);
-    
-    let auth_request = AuthorizeRequest {
-        model: payload.model.clone(),
-        requester: config.requester_id.clone(),
+    // Phase 1: Discovery & Authorization (with retry)
+    let auth_response = match get_authorization(&config, &payload.model).await {
+        Ok(resp) => resp,
+        Err(e) => {
+            error!("Authorization failed: {}", e);
+            return Err(StatusCode::BAD_GATEWAY);
+        }
     };
-    
-    info!("🎫 Requesting authorization ticket...");
-    
-    let auth_response: AuthorizeResponse = client
-        .post(&auth_url)
-        .json(&auth_request)
-        .send()
-        .await
-        .map_err(|e| {
-            error!("Authorization request failed: {}", e);
-            StatusCode::BAD_GATEWAY
-        })?
-        .json()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     
     info!("✓ Got ticket for node: {}", auth_response.target_ip);
     
-    // Phase 2: Direct P2P connection to worker
-    let worker_url = format!("http://{}:8080/v1/chat/completions", auth_response.target_ip);
-    
-    info!("⚡ Connecting P2P to worker at {}", worker_url);
-    
-    // Forward request with JWT ticket
-    let response = client
-        .post(&worker_url)
-        .header("Authorization", format!("Bearer {}", auth_response.token))
-        .header("Content-Type", "application/json")
-        .json(&payload)
-        .send()
-        .await
-        .map_err(|e| {
-            error!("Worker connection failed: {}", e);
-            StatusCode::BAD_GATEWAY
-        })?;
+    // Phase 2: P2P Connection to worker (with retry)
+    let response = match send_to_worker(&auth_response, &payload).await {
+        Ok(resp) => resp,
+        Err(e) => {
+            error!("Worker request failed: {}", e);
+            return Err(StatusCode::BAD_GATEWAY);
+        }
+    };
     
     // Stream response back to client
     let status_code = response.status().as_u16();
@@ -128,4 +105,67 @@ async fn chat_completions_handler(
         .status(status_code)
         .body(axum::body::Body::from(body))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn get_authorization(config: &Config, model: &str) -> TroopResult<AuthorizeResponse> {
+    let config = config.clone();
+    let model = model.to_string();
+    
+    retry_with_backoff("Authorization", || {
+        let config = config.clone();
+        let model = model.clone();
+        async move {
+            let client = reqwest::Client::new();
+            let auth_url = format!("{}/authorize", config.coordinator_url);
+            
+            let auth_request = AuthorizeRequest {
+                model: model.clone(),
+                requester: config.requester_id.clone(),
+            };
+            
+            info!("🎫 Requesting authorization ticket...");
+            
+            let response = client
+                .post(&auth_url)
+                .json(&auth_request)
+                .timeout(AUTH_TIMEOUT)
+                .send()
+                .await?;
+            
+            let auth_response: AuthorizeResponse = response.json().await?;
+            Ok(auth_response)
+        }
+    }).await
+}
+
+async fn send_to_worker(auth: &AuthorizeResponse, payload: &ChatCompletionRequest) -> TroopResult<reqwest::Response> {
+    let auth = auth.clone();
+    let payload = payload.clone();
+    
+    retry_with_backoff("Worker request", || {
+        let auth = auth.clone();
+        let payload = payload.clone();
+        async move {
+            let client = reqwest::Client::new();
+            let worker_url = format!("http://{}:8080/v1/chat/completions", auth.target_ip);
+            
+            info!("🔌 Connecting P2P to worker: {}", worker_url);
+            
+            let response = client
+                .post(&worker_url)
+                .header("Authorization", format!("Bearer {}", auth.token))
+                .json(&payload)
+                .timeout(INFERENCE_TIMEOUT)
+                .send()
+                .await?;
+            
+            if !response.status().is_success() {
+                return Err(TroopError::WorkerUnavailable(
+                    format!("Worker returned status {}", response.status())
+                ));
+            }
+            
+            Ok(response)
+        }
+    }).await
 }

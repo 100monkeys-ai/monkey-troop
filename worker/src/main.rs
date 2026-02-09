@@ -3,6 +3,7 @@ mod engines;
 mod gpu;
 mod heartbeat;
 mod proxy;
+mod benchmark;
 
 use anyhow::Result;
 use tracing::{info, error};
@@ -18,6 +19,19 @@ async fn main() -> Result<()> {
     // Load configuration
     let config = config::Config::from_env()?;
     info!("Configuration loaded: {}", config.node_id);
+    
+    // Optional: Run initial benchmark on startup
+    if std::env::var("RUN_INITIAL_BENCHMARK").unwrap_or_default() == "true" {
+        info!("Running initial hardware benchmark...");
+        match benchmark::run_benchmark("startup", 4096).await {
+            Ok(result) => {
+                info!("✓ Benchmark: {}s on {}", result.duration, result.device_name);
+            }
+            Err(e) => {
+                info!("Benchmark skipped: {}", e);
+            }
+        }
+    }
     
     // Start heartbeat broadcaster
     let heartbeat_handle = tokio::spawn(heartbeat::run_heartbeat_loop(config.clone()));

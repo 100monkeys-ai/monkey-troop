@@ -1,15 +1,22 @@
 use crate::config::Config;
 use crate::engines;
 use crate::gpu;
-use monkey_troop_shared::{NodeHeartbeat, NodeStatus, HardwareInfo};
+use monkey_troop_shared::{NodeHeartbeat, NodeStatus, HardwareInfo, CircuitBreaker, CIRCUIT_BREAKER_THRESHOLD, CIRCUIT_BREAKER_TIMEOUT};
 use anyhow::Result;
 use std::time::Duration;
+use std::sync::Arc;
 use tokio::time::sleep;
 use tracing::{info, warn};
 
 pub async fn run_heartbeat_loop(config: Config) -> Result<()> {
     let client = reqwest::Client::new();
     let heartbeat_url = format!("{}/heartbeat", config.coordinator_url);
+    
+    // Circuit breaker to avoid spamming coordinator when offline
+    let circuit_breaker = Arc::new(CircuitBreaker::new(
+        CIRCUIT_BREAKER_THRESHOLD,
+        CIRCUIT_BREAKER_TIMEOUT
+    ));
     
     // Get Tailscale IP
     let tailscale_ip = get_tailscale_ip().unwrap_or_else(|_| "unknown".to_string());
@@ -18,12 +25,21 @@ pub async fn run_heartbeat_loop(config: Config) -> Result<()> {
     info!("Tailscale IP: {}", tailscale_ip);
     
     loop {
+        // Check circuit breaker
+        if !circuit_breaker.allow_request().await {
+            warn!("Circuit breaker OPEN - skipping heartbeat attempt");
+            sleep(Duration::from_secs(config.heartbeat_interval)).await;
+            continue;
+        }
+        
         match send_heartbeat(&client, &heartbeat_url, &config, &tailscale_ip).await {
             Ok(_) => {
                 info!("✓ Heartbeat sent successfully");
+                circuit_breaker.record_success().await;
             }
             Err(e) => {
                 warn!("Failed to send heartbeat: {}", e);
+                circuit_breaker.record_failure().await;
             }
         }
         

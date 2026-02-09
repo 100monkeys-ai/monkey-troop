@@ -5,13 +5,23 @@ import uuid
 import json
 import random
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from redis import Redis
 from sqlalchemy.orm import Session
 
 from database import init_db, get_db, Node, User
 from auth import create_jwt_ticket
+from crypto import ensure_keys_exist, get_public_key_string
+from transactions import (
+    create_user_if_not_exists, get_user_balance, check_sufficient_balance,
+    reserve_credits, record_job_completion, get_transaction_history,
+    generate_receipt_signature
+)
+from rate_limit import RateLimiter
+from middleware import RateLimitMiddleware, RequestTracingMiddleware
+import audit
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -32,9 +42,17 @@ app.add_middleware(
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_client = Redis(host=redis_host, port=6379, db=0, decode_responses=True)
 
+# Rate limiter
+rate_limiter = RateLimiter(redis_client)
+
+# Add middleware
+app.add_middleware(RequestTracingMiddleware)
+app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
+
 # Constants
 CHALLENGE_TTL = 60  # Challenge expires in 60 seconds
 HEARTBEAT_TTL = 15  # Node heartbeat expires in 15 seconds
+ESTIMATED_JOB_DURATION = 300  # 5 minutes default reservation
 
 
 # ----------------------
@@ -95,6 +113,21 @@ class AuthorizeRequest(BaseModel):
 class AuthorizeResponse(BaseModel):
     target_ip: str
     token: str
+    estimated_cost: int
+
+
+class JobReceiptRequest(BaseModel):
+    job_id: str
+    requester_public_key: str
+    worker_node_id: str
+    duration_seconds: int
+    signature: str
+
+
+class BalanceResponse(BaseModel):
+    public_key: str
+    balance_seconds: int
+    balance_hours: float
 
 
 class PeersResponse(BaseModel):
@@ -123,9 +156,27 @@ def calculate_multiplier(duration: float) -> float:
 # ----------------------
 # STARTUP/SHUTDOWN
 # ----------------------
+def run_migrations():
+    """Run database migrations using Alembic"""
+    try:
+        from alembic.config import Config
+        from alembic import command
+        
+        # Run migrations
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        print("✓ Database migrations applied")
+    except Exception as e:
+        print(f"⚠️  Migration error: {e}")
+        print("Creating tables directly...")
+        from database import Base, engine
+        Base.metadata.create_all(bind=engine)
+
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database on startup."""
+    """Initialize database and keys on startup."""
+    ensure_keys_exist()
+    run_migrations()
     init_db()
     print("🐒 Monkey Troop Coordinator started")
 
@@ -136,6 +187,15 @@ async def startup_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+
+
+@app.get("/public-key")
+async def get_public_key():
+    """
+    Expose RSA public key for JWT verification.
+    Workers fetch this on startup to verify tickets.
+    """
+    return {"public_key": get_public_key_string()}
     return {"status": "healthy", "service": "monkey-troop-coordinator"}
 
 
@@ -277,11 +337,31 @@ async def submit_proof(req: VerifyRequest, db: Session = Depends(get_db)):
 # AUTHORIZATION
 # ----------------------
 @app.post("/authorize", response_model=AuthorizeResponse)
-async def authorize_request(req: AuthorizeRequest, db: Session = Depends(get_db)):
+async def authorize_request(
+    req: AuthorizeRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
     """
     Client requests authorization to use a node.
     Returns JWT ticket and target node IP.
     """
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Create user if doesn't exist (gets starter credits)
+    user = create_user_if_not_exists(db, req.requester)
+    
+    # Check sufficient balance
+    if not check_sufficient_balance(db, req.requester, ESTIMATED_JOB_DURATION):
+        audit.log_authorization(
+            req.requester, req.model, "none",
+            client_ip, False, "insufficient_credits"
+        )
+        raise HTTPException(
+            status_code=402,
+            detail=f"Insufficient credits. Balance: {user.balance_seconds}s, Required: {ESTIMATED_JOB_DURATION}s"
+        )
+    
     # Find available nodes with requested model
     keys = redis_client.keys("node:*")
     candidates = []
@@ -294,6 +374,10 @@ async def authorize_request(req: AuthorizeRequest, db: Session = Depends(get_db)
                 candidates.append(node)
     
     if not candidates:
+        audit.log_authorization(
+            req.requester, req.model, "none",
+            client_ip, False, "no_nodes_available"
+        )
         raise HTTPException(
             status_code=503,
             detail=f"No idle nodes found for model: {req.model}"
@@ -302,6 +386,10 @@ async def authorize_request(req: AuthorizeRequest, db: Session = Depends(get_db)
     # Simple random selection (can be upgraded to load balancing)
     selected = random.choice(candidates)
     
+    # Reserve credits for job
+    if not reserve_credits(db, req.requester, ESTIMATED_JOB_DURATION):
+        raise HTTPException(status_code=402, detail="Failed to reserve credits")
+    
     # Create JWT ticket
     token = create_jwt_ticket(
         user_id=req.requester,
@@ -309,12 +397,77 @@ async def authorize_request(req: AuthorizeRequest, db: Session = Depends(get_db)
         project="free-tier"
     )
     
+    audit.log_authorization(
+        req.requester, req.model, selected["node_id"],
+        client_ip, True, None
+    )
+    
     print(f"🎫 Authorized {req.requester} to use {selected['node_id']} ({selected['tailscale_ip']})")
     
     return {
         "target_ip": selected["tailscale_ip"],
-        "token": token
+        "token": token,
+        "estimated_cost": ESTIMATED_JOB_DURATION
     }
+
+
+@app.post("/transactions/submit")
+async def submit_job_completion(
+    receipt: JobReceiptRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Worker submits job completion receipt for credit transfer."""
+    client_ip = request.client.host if request.client else "unknown"
+    
+    result = record_job_completion(
+        db=db,
+        job_id=receipt.job_id,
+        requester_public_key=receipt.requester_public_key,
+        worker_node_id=receipt.worker_node_id,
+        duration_seconds=receipt.duration_seconds,
+        receipt_signature=receipt.signature
+    )
+    
+    if result["status"] == "success":
+        audit.log_transaction(
+            receipt.job_id,
+            receipt.requester_public_key,
+            receipt.worker_node_id,
+            receipt.duration_seconds,
+            result["credits_transferred"],
+            client_ip
+        )
+    else:
+        audit.log_security_event(
+            "invalid_receipt",
+            {"job_id": receipt.job_id, "reason": result.get("message")},
+            client_ip
+        )
+    
+    return result
+
+
+@app.get("/users/{public_key}/balance")
+async def get_balance(public_key: str, db: Session = Depends(get_db)):
+    """Get user's credit balance."""
+    balance = get_user_balance(db, public_key)
+    return {
+        "public_key": public_key,
+        "balance_seconds": balance,
+        "balance_hours": round(balance / 3600, 2)
+    }
+
+
+@app.get("/users/{public_key}/transactions")
+async def get_transactions(
+    public_key: str,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """Get user's transaction history."""
+    history = get_transaction_history(db, public_key, limit)
+    return {"transactions": history}
 
 
 # ----------------------
