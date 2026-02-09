@@ -129,6 +129,34 @@ for chunk in response.iter_lines():
         print(chunk.decode('utf-8'))
 ```
 
+### Multi-Engine Support
+
+Monkey Troop automatically detects and supports multiple inference engines:
+
+- **vLLM** (highest priority - fastest inference)
+- **Ollama** (versatile, easy setup)
+- **LM Studio** (GUI-based management)
+
+Workers detect all available engines at startup and route requests intelligently based on model availability. vLLM models are prioritized for performance.
+
+**Setup vLLM** (optional):
+```bash
+# Install vLLM
+pip install vllm
+
+# Start vLLM server
+vllm serve meta-llama/Llama-3-8B --port 8000
+
+# Or use custom host
+export VLLM_HOST=http://localhost:8000
+```
+
+**Configure model refresh** (optional):
+```bash
+# Check for new models every 5 minutes (default: 3 minutes)
+export MODEL_REFRESH_INTERVAL=300
+```
+
 ## 📖 Documentation
 
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deploy your own Headscale coordinator

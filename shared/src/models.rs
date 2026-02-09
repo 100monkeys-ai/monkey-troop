@@ -24,7 +24,7 @@ pub struct NodeHeartbeat {
     pub status: NodeStatus,
     pub models: Vec<String>,
     pub hardware: HardwareInfo,
-    pub engine: EngineInfo,
+    pub engines: Vec<EngineInfo>,
 }
 
 /// Current operational status of a node

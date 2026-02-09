@@ -69,4 +69,8 @@ impl EngineDriver for OllamaDriver {
         
         Ok(models_info.models.into_iter().map(|m| m.name).collect())
     }
+    
+    fn get_base_url(&self) -> String {
+        self.base_url.clone()
+    }
 }

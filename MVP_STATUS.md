@@ -2,7 +2,7 @@
 
 ## 🎉 Status: Phase 2 Complete - Production-Ready Alpha
 
-**Completion**: 92.9% (13/14 features) | **Last Updated**: February 8, 2026
+**Completion**: 93.8% (14/15 features) | **Last Updated**: February 8, 2026
 
 The Monkey Troop distributed GPU inferencing network has completed Phase 2 implementation with enterprise-grade features. All core functionality is implemented and tested. The system is production-ready pending VPS deployment.
 
@@ -30,9 +30,13 @@ The Monkey Troop distributed GPU inferencing network has completed Phase 2 imple
 
 2. **Worker (Rust)**
    - ✅ GPU idle detection via nvidia-smi
-   - ✅ Multi-engine support (Ollama, LM Studio drivers)
+   - ✅ Multi-engine support (Ollama, vLLM, LM Studio drivers)
+   - ✅ Model registry with priority-based routing (vLLM > Ollama > LM Studio)
+   - ✅ Periodic model refresh (configurable, default 3 minutes)
+   - ✅ Change detection (only sends heartbeat on model/engine changes)
    - ✅ Heartbeat broadcaster (every 10s to coordinator)
    - ✅ JWT verification proxy (axum server on port 8080)
+   - ✅ Dynamic request routing based on model availability
    - ✅ Tailscale IP detection
    - ✅ Request forwarding to local inference engines
 
@@ -44,8 +48,9 @@ The Monkey Troop distributed GPU inferencing network has completed Phase 2 imple
    - ✅ CLI interface (`up`, `balance`, `nodes` commands)
 
 4. **Shared Library (Rust)**
-   - ✅ Common data structures (NodeHeartbeat, JWTClaims, etc.)
+   - ✅ Common data structures (NodeHeartbeat with engines array, JWTClaims, etc.)
    - ✅ Serde serialization for all types
+   - ✅ Multi-engine support in data models
 
 ### Infrastructure
 
@@ -110,6 +115,15 @@ All features below are **fully implemented and tested**.
    - Rust integration tests (12 tests passing)
    - Python test suite with pytest
    - GitHub Actions CI/CD (Planned for Phase 3)
+
+9. **Multi-Engine Support** ✅
+   - vLLM driver with `/v1/models` detection and OpenAI-compatible API
+   - Ollama driver with custom API support
+   - LM Studio driver for GUI-based management
+   - Model registry with priority-based routing (vLLM > Ollama > LM Studio)
+   - Periodic model refresh with change detection (default 3 minutes)
+   - Dynamic request routing based on model availability
+   - Reduced coordinator traffic via change detection
 
 - Encrypted prompts (E2E encryption for sensitive workloads)
 - Web dashboard (monitoring and management UI)

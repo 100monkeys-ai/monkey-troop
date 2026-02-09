@@ -54,4 +54,8 @@ impl EngineDriver for LMStudioDriver {
         
         Ok(models_info.data.into_iter().map(|m| m.id).collect())
     }
+    
+    fn get_base_url(&self) -> String {
+        self.base_url.clone()
+    }
 }

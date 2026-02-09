@@ -32,8 +32,8 @@ curl http://localhost:8000/users/alice_public_key/balance
 
 ### Test Authorization with Balance Check
 ```bash
-# Register a fake worker
-redis-cli SET "node:test_worker" '{"node_id":"test_worker","tailscale_ip":"100.64.0.1","status":"IDLE","models":["llama2:7b"],"hardware":{"gpu":"Test","vram_free":8192},"engine":{"type":"ollama","version":"0.1","port":11434}}' EX 60
+# Register a fake worker with multi-engine support
+redis-cli SET "node:test_worker" '{"node_id":"test_worker","tailscale_ip":"100.64.0.1","status":"IDLE","models":["llama2:7b"],"hardware":{"gpu":"Test","vram_free":8192},"engines":[{"type":"ollama","version":"0.1","port":11434}]}' EX 60
 
 # Request authorization (reserves 300s)
 curl -X POST http://localhost:8000/authorize \

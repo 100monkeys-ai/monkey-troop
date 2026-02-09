@@ -45,6 +45,11 @@ pytest -v
 
 # Integration tests with Docker
 docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+
+# Test with vLLM (optional - requires vLLM installed)
+export VLLM_HOST=http://localhost:8000
+vllm serve meta-llama/Llama-3-8B --port 8000 &
+cargo test --workspace
 ```
 
 ### Database Migrations

@@ -16,13 +16,28 @@ curl -sSL https://troop.100monkeys.ai/install.sh | bash
 # 1. Download latest release
 wget https://github.com/monkeytroop/monkey-troop/releases/latest/monkey-troop-worker
 
-# 2. Create .env file
+# 2. Install an inference engine (choose one or more):
+# Option A: Ollama (recommended for beginners)
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama pull llama3:8b
+
+# Option B: vLLM (fastest, requires Python)
+pip install vllm
+vllm serve meta-llama/Llama-3-8B --port 8000
+
+# Option C: LM Studio (GUI-based)
+# Download from https://lmstudio.ai
+
+# 3. Create .env file
 cat > .env << EOF
 NODE_ID=$(hostname)
 COORDINATOR_URL=https://troop.100monkeys.ai
+OLLAMA_HOST=http://localhost:11434
+VLLM_HOST=http://localhost:8000
+MODEL_REFRESH_INTERVAL=180
 EOF
 
-# 3. Start worker
+# 4. Start worker (auto-detects all engines)
 ./monkey-troop-worker
 ```
 

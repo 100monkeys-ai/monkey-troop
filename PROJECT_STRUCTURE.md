@@ -32,9 +32,10 @@ monkey-troop/
 │       ├── heartbeat.rs            # Coordinator communication
 │       ├── proxy.rs                # JWT verification proxy
 │       └── engines/
-│           ├── mod.rs              # Engine abstraction
+│           ├── mod.rs              # Engine abstraction & registry
 │           ├── ollama.rs           # Ollama driver
-│           └── lmstudio.rs         # LM Studio driver
+│           ├── lmstudio.rs         # LM Studio driver
+│           └── vllm.rs             # vLLM driver
 │
 ├── client/                         # Rust client sidecar
 │   ├── Cargo.toml
@@ -62,11 +63,11 @@ monkey-troop/
 - **benchmark.py**: PyTorch matrix multiplication for hardware verification
 
 ### Worker (Rust)
-- **main.rs**: Launches heartbeat loop and JWT proxy simultaneously
-- **heartbeat.rs**: Broadcasts node status every 10s to coordinator
-- **proxy.rs**: Axum server that verifies JWT tickets before forwarding to Ollama
+- **main.rs**: Detects engines, initializes model registry, launches heartbeat and proxy
+- **heartbeat.rs**: Broadcasts node status with periodic model refresh (default 3min)
+- **proxy.rs**: Axum server that verifies JWT, parses model name, routes to correct engine
 - **gpu.rs**: Detects GPU idle state via nvidia-smi
-- **engines/**: Adapters for Ollama, LM Studio, etc.
+- **engines/**: Multi-engine drivers (Ollama, vLLM, LM Studio) with priority-based routing
 
 ### Client (Rust)
 - **main.rs**: CLI with `up`, `balance`, `nodes` commands
@@ -77,12 +78,14 @@ monkey-troop/
 
 ## Architecture Flow
 
-1. **Worker** detects idle GPU → broadcasts heartbeat to Coordinator → stored in Redis
-2. **Client** receives OpenAI request → asks Coordinator for authorization
-3. **Coordinator** finds idle node → issues signed JWT ticket → returns node IP
-4. **Client** connects directly to Worker's Tailscale IP with JWT
-5. **Worker** verifies JWT → forwards to local Ollama → streams response back
-6. **No data** passes through Coordinator during inference (pure P2P)
+1. **Worker** detects all available engines (Ollama, vLLM, LM Studio) → builds model registry
+2. **Worker** detects idle GPU → broadcasts heartbeat with models from all engines → stored in Redis
+3. **Client** receives OpenAI request → asks Coordinator for authorization
+4. **Coordinator** finds idle node with requested model → issues signed JWT ticket → returns node IP
+5. **Client** connects directly to Worker's Tailscale IP with JWT
+6. **Worker** verifies JWT → parses model from request → routes to correct engine → streams response back
+7. **No data** passes through Coordinator during inference (pure P2P)
+8. **Model registry** refreshes every 3 minutes, heartbeat only sent on changes
 
 ## Development Commands
 

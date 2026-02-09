@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::engines::ModelRegistry;
 use axum::{
     Router,
     extract::{Request, State},
@@ -20,18 +21,27 @@ struct JwtClaims {
     exp: usize,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct InferenceRequest {
+    model: String,
+    #[serde(default)]
+    stream: bool,
+}
+
 struct ProxyState {
     config: Config,
     public_key: RwLock<Option<DecodingKey>>,
+    model_registry: Arc<RwLock<ModelRegistry>>,
 }
 
-pub async fn run_proxy_server(config: Config) -> Result<()> {
+pub async fn run_proxy_server(config: Config, model_registry: Arc<RwLock<ModelRegistry>>) -> Result<()> {
     let addr = format!("0.0.0.0:{}", config.proxy_port);
     info!("🔐 Starting JWT verification proxy on {}", addr);
     
     let state = Arc::new(ProxyState {
         config: config.clone(),
         public_key: RwLock::new(None),
+        model_registry,
     });
     
     // Fetch public key from coordinator on startup
@@ -126,41 +136,56 @@ async fn proxy_handler(
     State(state): State<Arc<ProxyState>>,
     request: Request,
 ) -> Result<Response, StatusCode> {
-    // Forward request to local Ollama
     let client = reqwest::Client::new();
     
-    let uri = request.uri();
-    let target_url = format!("{}{}", state.config.ollama_host, uri.path());
-    
-    info!("Proxying request to {}", target_url);
+    // Clone URI path before consuming request
+    let path = request.uri().path().to_string();
     
     let body_bytes = axum::body::to_bytes(request.into_body(), usize::MAX)
         .await
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     
-    // Check if streaming is requested
-    let is_stream = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
-        json.get("stream").and_then(|v| v.as_bool()).unwrap_or(false)
-    } else {
-        false
-    };
+    // Parse request to extract model name
+    let inference_req: InferenceRequest = serde_json::from_slice(&body_bytes)
+        .map_err(|e| {
+            error!("Failed to parse request JSON: {}", e);
+            StatusCode::BAD_REQUEST
+        })?;
     
-    // Forward request (POST assumed for simplicity in MVP)
+    info!("📨 Request for model: {}", inference_req.model);
+    
+    // Lookup engine URL for this model
+    let registry = state.model_registry.read().await;
+    let engine_url = registry.get_engine_url(&inference_req.model)
+        .ok_or_else(|| {
+            error!("Model '{}' not found in registry", inference_req.model);
+            StatusCode::NOT_FOUND
+        })?;
+    
+    let target_url = format!("{}{}", engine_url, path);
+    drop(registry);
+    
+    info!("🎯 Routing to: {}", target_url);
+    
+    // Forward request
     let response = client
         .post(&target_url)
         .header("Content-Type", "application/json")
         .body(body_bytes.to_vec())
         .send()
         .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+        .map_err(|e| {
+            error!("Failed to forward request: {}", e);
+            StatusCode::BAD_GATEWAY
+        })?;
     
     let status = response.status();
     let status_code = status.as_u16();
     
     // Handle streaming vs non-streaming responses
-    if is_stream {
+    if inference_req.stream {
         // Pass through the stream directly without buffering
-        info!("✓ Streaming response from Ollama");
+        info!("✓ Streaming response from engine");
         Response::builder()
             .status(status_code)
             .header("Content-Type", "text/event-stream")

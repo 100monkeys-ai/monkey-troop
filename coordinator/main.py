@@ -87,7 +87,7 @@ class NodeHeartbeat(BaseModel):
     status: str  # "IDLE", "BUSY", "OFFLINE"
     models: list[str]
     hardware: HardwareInfo
-    engine: EngineInfo
+    engines: list[EngineInfo]
 
 
 class ChallengeRequest(BaseModel):
