@@ -1,0 +1,82 @@
+# Headscale Configuration Template
+# https://github.com/juanfont/headscale
+
+server_url: SERVER_URL_PLACEHOLDER
+listen_addr: 127.0.0.1:8080
+metrics_listen_addr: 127.0.0.1:9090
+
+grpc_listen_addr: 127.0.0.1:50443
+grpc_allow_insecure: false
+
+# Private key path for WireGuard
+private_key_path: /var/lib/headscale/private.key
+
+# Noise protocol private key
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+# IP address ranges for VPN clients
+ip_prefixes:
+  - 100.64.0.0/10
+
+# DERP (Designated Encrypted Relay for Packets) configuration
+derp:
+  server:
+    enabled: false
+    region_id: 999
+    region_code: "headscale"
+    region_name: "Headscale Embedded DERP"
+    stun_listen_addr: "0.0.0.0:3478"
+  
+  # Use Tailscale's DERP servers
+  urls:
+    - https://controlplane.tailscale.com/derpmap/default
+  
+  # Automatically update DERP map
+  auto_update_enabled: true
+  update_frequency: 24h
+
+# Disable check for updates
+disable_check_updates: false
+
+# Ephemeral nodes (automatically removed after inactivity)
+ephemeral_node_inactivity_timeout: 30m
+
+# Database configuration
+database:
+  type: sqlite3
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+
+# Logging
+log:
+  level: info
+  format: text
+
+# DNS configuration
+dns_config:
+  # Override local DNS settings
+  override_local_dns: true
+  
+  # Nameservers for VPN clients
+  nameservers:
+    - 1.1.1.1
+    - 8.8.8.8
+  
+  # Additional search domains
+  domains: []
+  
+  # MagicDNS allows using machine names instead of IP addresses
+  magic_dns: true
+  base_domain: DOMAIN_PLACEHOLDER
+
+# Unix socket for CLI
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"
+
+# Logtail (Tailscale logging service)
+logtail:
+  enabled: false
+
+# Randomize client port
+randomize_client_port: false

@@ -1,0 +1,92 @@
+# Caddy configuration for Monkey Troop (Subdomain routing)
+# Automatic HTTPS via Let's Encrypt
+
+{
+    email EMAIL_PLACEHOLDER
+}
+
+# Coordinator API
+api.DOMAIN_PLACEHOLDER {
+    # Reverse proxy to coordinator
+    reverse_proxy localhost:8000 {
+        # Health check
+        health_uri /health
+        health_interval 10s
+        health_timeout 5s
+    }
+    
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/api.log {
+            roll_size 100mb
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+    }
+}
+
+# Headscale VPN
+vpn.DOMAIN_PLACEHOLDER {
+    # Reverse proxy to headscale
+    reverse_proxy localhost:8080 {
+        # Longer timeouts for VPN connections
+        transport http {
+            dial_timeout 30s
+            read_timeout 0
+            write_timeout 0
+        }
+    }
+    
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/vpn.log {
+            roll_size 100mb
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+    }
+}
+
+# Main domain (optional - for marketing site)
+DOMAIN_PLACEHOLDER {
+    # Serve static files from /var/www/html if they exist
+    root * /var/www/html
+    file_server
+    
+    # Or redirect to api subdomain
+    # redir https://api.DOMAIN_PLACEHOLDER{uri}
+    
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/main.log {
+            roll_size 100mb
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+    }
+}

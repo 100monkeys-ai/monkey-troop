@@ -55,7 +55,115 @@ wget https://github.com/monkeytroop/monkey-troop/releases/latest/monkey-troop-cl
 
 ## 🏠 Self-Hosting a Private Cluster
 
-Deploy your own coordinator for a private cluster.
+Deploy your own coordinator for a private cluster. **Two audiences:**
+
+1. **Network Operators** - Deploy the coordinator hub (this section)
+2. **End Users** - Join existing networks with workers/clients (see section above)
+
+---
+
+### ⚡ Quick Start: Automated Installation (Recommended)
+
+The easiest way to deploy a coordinator hub with Headscale VPN.
+
+**Prerequisites:**
+- VPS with at least 2GB RAM, 20GB disk, 2 vCPUs
+- Domain with DNS A records configured
+- Root or sudo access
+- Ports 80, 443, 8000, 8080 available
+
+**Installation:**
+
+```bash
+# SSH into your VPS
+ssh root@your-vps.example.com
+
+# Clone repository
+git clone https://github.com/monkeytroop/monkey-troop.git
+cd monkey-troop
+
+# Run automated installer (interactive mode)
+./install-coordinator.sh
+
+# Or with command-line flags (automated mode)
+./install-coordinator.sh \
+  --domain troop.example.com \
+  --email admin@example.com \
+  --routing-mode path \
+  --enable-backups \
+  --backup-retention-days 14
+```
+
+**What it installs:**
+- ✅ Headscale VPN server (for node discovery)
+- ✅ Coordinator API (FastAPI + PostgreSQL + Redis)
+- ✅ Caddy reverse proxy (automatic HTTPS)
+- ✅ Systemd services (auto-restart on failure)
+- ✅ Database backups (optional, daily with rolling retention)
+
+**Routing Modes:**
+
+| Mode | Coordinator URL | Headscale URL | Use Case |
+|------|----------------|---------------|----------|
+| **Path** (default) | `https://DOMAIN/api` | `https://DOMAIN/vpn` | Single domain, supports marketing site at root |
+| **Subdomain** | `https://api.DOMAIN` | `https://vpn.DOMAIN` | Separate subdomains, requires additional DNS |
+
+**After Installation:**
+
+The script outputs:
+- Admin credentials
+- Pre-auth key for workers
+- Connection URLs
+- Log file locations
+
+**Worker Registration:**
+
+Share this with your network users:
+
+```bash
+# Workers install client/worker
+curl -fsSL https://raw.githubusercontent.com/monkeytroop/monkey-troop/main/install.sh | bash
+
+# Connect to your network
+export COORDINATOR_URL="https://troop.example.com/api"
+export TS_AUTHKEY="<key-from-install-output>"
+tailscale up --login-server=https://troop.example.com/vpn --authkey=$TS_AUTHKEY
+
+# Start worker
+monkey-troop-worker
+```
+
+**Management Commands:**
+
+```bash
+# View services status
+systemctl status headscale
+systemctl status coordinator-stack
+systemctl status caddy
+
+# View logs
+journalctl -u headscale -f
+docker logs -f troop-coordinator
+journalctl -u caddy -f
+
+# Generate new pre-auth key
+headscale preauthkeys create --namespace default --expiration 90d --reusable
+
+# List connected nodes
+headscale nodes list
+
+# Manual backup
+sudo /usr/local/bin/backup-troop-db.sh
+
+# View backups
+ls -lh /var/backups/troop/
+```
+
+---
+
+### 🔧 Manual Installation (Advanced)
+
+For users who want more control or custom configurations.
 
 ### Requirements
 

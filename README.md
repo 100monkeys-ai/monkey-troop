@@ -48,24 +48,62 @@ Enable anyone to:
 
 ## 🚀 Quick Start
 
-### Join the Public Network
+There are **two installation paths** depending on your role:
+
+### 👥 End Users: Join a Network
+
+Install the worker (to donate GPU) or client (to use GPU) to join an existing network.
 
 ```bash
-# Install the worker
-curl -sSL https://troop.100monkeys.ai/install.sh | bash
+# Install worker/client binaries
+curl -fsSL https://raw.githubusercontent.com/monkeytroop/monkey-troop/main/install.sh | bash
+
+# Join the public network
+export COORDINATOR_URL="https://troop.100monkeys.ai/api"
+tailscale up --login-server=https://troop.100monkeys.ai/vpn --authkey=<provided-key>
 
 # Start donating compute
-monkey-troop-worker up
+monkey-troop-worker
 
-# Use the network (in another terminal)
-monkey-troop-client up
-
+# OR use the network (in another terminal)
+monkey-troop-client
 # Point your AI tool to: http://localhost:9000/v1
 ```
 
-### Self-Host a Private Cluster
+### 🏢 Network Operators: Deploy a Coordinator Hub
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for Headscale setup instructions.
+Deploy your own coordinator with Headscale VPN for a private network.
+
+```bash
+# Clone repository on your VPS
+git clone https://github.com/monkeytroop/monkey-troop.git
+cd monkey-troop
+
+# Run automated installer (interactive)
+./install-coordinator.sh
+
+# OR with command-line flags
+./install-coordinator.sh \
+  --domain troop.example.com \
+  --email admin@example.com \
+  --routing-mode path \
+  --enable-backups
+```
+
+**What gets installed:**
+- ✅ Headscale VPN server (node discovery)
+- ✅ Coordinator API (FastAPI + PostgreSQL + Redis)
+- ✅ Caddy reverse proxy (automatic HTTPS)
+- ✅ Systemd services (auto-restart)
+- ✅ Optional: Daily database backups
+
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed documentation.
+
+---
+
+### Self-Host a Private Cluster (Manual)
+
+For advanced users who want full control, see [DEPLOYMENT.md](docs/DEPLOYMENT.md) for manual Headscale setup instructions.
 
 ## 🛠️ Development
 

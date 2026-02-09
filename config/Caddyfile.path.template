@@ -1,0 +1,92 @@
+# Caddy configuration for Monkey Troop (Path-based routing)
+# Automatic HTTPS via Let's Encrypt
+
+{
+    email EMAIL_PLACEHOLDER
+}
+
+DOMAIN_PLACEHOLDER {
+    # Coordinator API routes
+    handle_path /api/* {
+        reverse_proxy localhost:8000 {
+            # Health check
+            health_uri /health
+            health_interval 10s
+            health_timeout 5s
+        }
+        
+        # Security headers for API
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "DENY"
+            X-XSS-Protection "1; mode=block"
+            Referrer-Policy "strict-origin-when-cross-origin"
+        }
+    }
+    
+    # Headscale VPN routes
+    handle_path /vpn/* {
+        reverse_proxy localhost:8080 {
+            # Longer timeouts for VPN connections
+            transport http {
+                dial_timeout 30s
+                read_timeout 0
+                write_timeout 0
+            }
+        }
+        
+        # Security headers for VPN
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+        }
+    }
+    
+    # Health check endpoint (proxied directly without /api prefix)
+    handle /health {
+        reverse_proxy localhost:8000
+    }
+    
+    # WebSocket support for coordinator (if needed)
+    handle /ws* {
+        reverse_proxy localhost:8000 {
+            transport http {
+                dial_timeout 30s
+                read_timeout 0
+                write_timeout 0
+            }
+        }
+    }
+    
+    # Default: serve static files (marketing site)
+    handle {
+        root * /var/www/html
+        file_server
+        
+        # Try files, fallback to index.html (SPA support)
+        try_files {path} {path}/ /index.html
+        
+        # If no files exist, show simple info page
+        handle_errors {
+            respond "Monkey Troop Coordinator - Visit /api/health for API status" 200
+        }
+    }
+    
+    # Global security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 100mb
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+    }
+}

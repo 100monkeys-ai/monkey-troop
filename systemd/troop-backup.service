@@ -1,0 +1,18 @@
+[Unit]
+Description=Monkey Troop Database Backup
+Documentation=https://github.com/100monkeys-ai/monkey-troop
+Requires=docker.service coordinator-stack.service
+After=docker.service coordinator-stack.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup-troop-db.sh
+User=root
+StandardOutput=journal
+StandardError=journal
+
+# Timeout (backups should complete within 30 minutes)
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target
