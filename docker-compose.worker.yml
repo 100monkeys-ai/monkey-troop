@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: troop_ollama
+    restart: unless-stopped
+    volumes:
+      - ./ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - worker_net
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: troop_vpn
+    hostname: troop-worker-node
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_EXTRA_ARGS=--login-server=https://troop.100monkeys.ai
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - ./tailscale_data:/var/lib/tailscale
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      - worker_net
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: troop_agent
+    environment:
+      - NODE_ID=${NODE_ID}
+      - COORDINATOR_URL=https://troop.100monkeys.ai
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      - ollama
+      - tailscale
+    network_mode: service:tailscale
+    restart: unless-stopped
+
+networks:
+  worker_net:
+    driver: bridge

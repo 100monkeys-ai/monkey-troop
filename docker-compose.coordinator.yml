@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  coordinator:
+    build: ./coordinator
+    container_name: troop_coordinator
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - REDIS_HOST=redis
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - troop_net
+
+  db:
+    image: postgres:15-alpine
+    container_name: troop_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - troop_net
+
+  redis:
+    image: redis:alpine
+    container_name: troop_redis
+    restart: unless-stopped
+    networks:
+      - troop_net
+
+volumes:
+  postgres_data:
+
+networks:
+  troop_net:
+    driver: bridge
