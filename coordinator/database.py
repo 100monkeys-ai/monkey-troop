@@ -1,8 +1,7 @@
 """Database models and connection management."""
 
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger, DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger, DateTime, ForeignKey, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -23,7 +22,7 @@ class AuditLog(Base):
     event_type = Column(String(50), index=True, nullable=False)
     user_id = Column(String(255), index=True, nullable=True)
     ip_address = Column(String(45), nullable=True)
-    details = Column(JSONB, nullable=True)
+    details = Column(JSON, nullable=True)
 
 
 class User(Base):
@@ -31,14 +30,10 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), nullable=False)
     public_key = Column(String, unique=True, nullable=False)  # Wallet address
     balance_seconds = Column(BigInteger, default=3600)  # Start with 1 free hour
     created_at = Column(DateTime, default=datetime.utcnow)
-
-    # Relationships
-    nodes = relationship("Node", back_populates="owner")
-    transactions_sent = relationship("Transaction", foreign_keys="Transaction.requester_id", back_populates="requester")
+    last_active = Column(DateTime, default=datetime.utcnow)
 
 
 class Node(Base):
@@ -46,19 +41,21 @@ class Node(Base):
     __tablename__ = "nodes"
 
     id = Column(Integer, primary_key=True, index=True)
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     node_id = Column(String(50), unique=True, nullable=False)
-    node_name = Column(String(50))
-    hardware_model = Column(String(50))
+    owner_public_key = Column(String, nullable=False, index=True)
+
     multiplier = Column(Float, default=1.0)  # Credit multiplier based on hardware
     benchmark_score = Column(Float)  # Seconds to complete standard task
-    last_benchmark = Column(DateTime)
     trust_score = Column(Integer, default=100)  # Reputation
-    created_at = Column(DateTime, default=datetime.utcnow)
+    total_jobs_completed = Column(Integer, default=0)
 
-    # Relationships
-    owner = relationship("User", back_populates="nodes")
-    transactions = relationship("Transaction", foreign_keys="Transaction.worker_node_id", back_populates="worker_node")
+    # Extra fields used in logic but maybe not in migration 001?
+    # We should include them if code uses them.
+    hardware_model = Column(String(50))
+    last_benchmark = Column(DateTime)
+    last_seen = Column(DateTime, default=datetime.utcnow)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Transaction(Base):
@@ -66,16 +63,18 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    job_id = Column(String, nullable=False, unique=True)
-    requester_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    worker_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=False)
+    job_id = Column(String, nullable=True) # Can be null for system grants
+
+    from_user = Column(String, index=True, nullable=True) # Public Key
+    to_user = Column(String, index=True, nullable=True)   # Public Key
+
+    node_id = Column(String, nullable=True)
+
     duration_seconds = Column(Integer, nullable=False)
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    # Relationships
-    requester = relationship("User", foreign_keys=[requester_id], back_populates="transactions_sent")
-    worker_node = relationship("Node", foreign_keys=[worker_node_id], back_populates="transactions")
+    meta_data = Column("metadata", JSON, nullable=True) # Map to "metadata" column in DB
 
 
 def init_db():

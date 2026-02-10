@@ -1,11 +1,8 @@
 """Integration tests for Monkey Troop end-to-end flow."""
 
 import pytest
-import asyncio
 import httpx
 import time
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import redis
 
 # Test configuration

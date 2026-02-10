@@ -4,6 +4,7 @@ import os
 import uuid
 import json
 import random
+from datetime import datetime
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,7 +47,6 @@ redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_client = Redis(host=redis_host, port=6379, db=0, decode_responses=True)
 
 # Rate limiter (order matters - outermost first)
-app.add_middleware(TimeoutMiddleware)
 # Add timeout middleware (outermost layer)
 app.add_middleware(TimeoutMiddleware)
 
@@ -205,7 +205,6 @@ async def get_public_key():
     Workers fetch this on startup to verify tickets.
     """
     return {"public_key": get_public_key_string()}
-    return {"status": "healthy", "service": "monkey-troop-coordinator"}
 
 
 # ----------------------

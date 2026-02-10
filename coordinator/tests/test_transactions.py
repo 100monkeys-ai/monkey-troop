@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database import Base, User, Node, Transaction
+from database import Base, Node, Transaction
 from transactions import (
     create_user_if_not_exists,
     get_user_balance,
