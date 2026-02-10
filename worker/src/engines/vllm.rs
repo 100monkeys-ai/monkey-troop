@@ -37,7 +37,7 @@ impl EngineDriver for VllmDriver {
     fn detect(&self) -> Result<bool> {
         let client = reqwest::blocking::Client::new();
         let response = client
-            .get(format!("{}/v1/models", self.base_url))
+            .get(&format!("{}/v1/models", self.base_url))
             .timeout(std::time::Duration::from_secs(2))
             .send();
 
@@ -49,7 +49,7 @@ impl EngineDriver for VllmDriver {
 
         // Try to get version from /health endpoint
         let version = match client
-            .get(format!("{}/health", self.base_url))
+            .get(&format!("{}/health", self.base_url))
             .timeout(std::time::Duration::from_secs(2))
             .send()
         {
@@ -76,7 +76,7 @@ impl EngineDriver for VllmDriver {
 
     fn get_models(&self) -> Result<Vec<String>> {
         let client = reqwest::blocking::Client::new();
-        let response = client.get(format!("{}/v1/models", self.base_url)).send()?;
+        let response = client.get(&format!("{}/v1/models", self.base_url)).send()?;
 
         let models_info: VllmModels = response.json()?;
 

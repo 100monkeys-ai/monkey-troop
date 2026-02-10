@@ -16,7 +16,7 @@ fn check_nvidia_idle(threshold: f32) -> Result<bool> {
     use std::process::Command;
 
     let output = Command::new("nvidia-smi")
-        .args([
+        .args(&[
             "--query-gpu=utilization.gpu",
             "--format=csv,noheader,nounits",
         ])
@@ -63,7 +63,7 @@ fn get_nvidia_info() -> Result<(String, u64)> {
 
     // Get GPU name
     let name_output = Command::new("nvidia-smi")
-        .args(["--query-gpu=name", "--format=csv,noheader"])
+        .args(&["--query-gpu=name", "--format=csv,noheader"])
         .output()?;
 
     let name = String::from_utf8_lossy(&name_output.stdout)
@@ -72,7 +72,7 @@ fn get_nvidia_info() -> Result<(String, u64)> {
 
     // Get free VRAM in MB
     let vram_output = Command::new("nvidia-smi")
-        .args(["--query-gpu=memory.free", "--format=csv,noheader,nounits"])
+        .args(&["--query-gpu=memory.free", "--format=csv,noheader,nounits"])
         .output()?;
 
     let vram = String::from_utf8_lossy(&vram_output.stdout)

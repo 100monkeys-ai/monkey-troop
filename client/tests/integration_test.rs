@@ -31,6 +31,7 @@ async fn test_client_requires_coordinator() {
 #[tokio::test]
 async fn test_health_endpoint() {
     // Test that health endpoint structure is correct
+    use serde_json::Value;
 
     // We can't actually start the server in tests, so we just verify
     // the expected structure would be valid JSON
@@ -71,5 +72,5 @@ fn test_chat_request_default_stream() {
     let request: ChatCompletionRequest = serde_json::from_str(json).unwrap();
 
     // stream should default to false
-    assert!(!request.stream);
+    assert_eq!(request.stream, false);
 }

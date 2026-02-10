@@ -183,7 +183,7 @@ async fn refresh_model_registry(registry: &Arc<RwLock<ModelRegistry>>) -> Result
 fn get_tailscale_ip() -> Result<String> {
     use std::process::Command;
 
-    let output = Command::new("tailscale").args(["ip", "-4"]).output()?;
+    let output = Command::new("tailscale").args(&["ip", "-4"]).output()?;
 
     if output.status.success() {
         let ip = String::from_utf8_lossy(&output.stdout);

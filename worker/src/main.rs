@@ -9,6 +9,7 @@ use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{error, info};
+use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {
