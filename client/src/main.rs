@@ -2,6 +2,7 @@ mod config;
 mod proxy;
 
 use anyhow::Result;
+use monkey_troop_shared::BalanceResponse;
 use clap::{Parser, Subcommand};
 use tracing::info;
 use tracing_subscriber;
@@ -39,8 +40,8 @@ async fn main() -> Result<()> {
         }
         Commands::Balance => {
             info!("Checking balance...");
-            // TODO: Implement balance check
-            println!("Balance check not yet implemented");
+            let config = config::Config::from_env()?;
+            check_balance(&config).await?;
         }
         Commands::Nodes => {
             info!("Listing available nodes...");
@@ -49,6 +50,26 @@ async fn main() -> Result<()> {
         }
     }
     
+    Ok(())
+}
+
+async fn check_balance(config: &config::Config) -> Result<()> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/users/{}/balance", config.coordinator_url, config.requester_id);
+
+    let balance: BalanceResponse = client
+        .get(&url)
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    println!("\n💰 Monkey Troop Balance");
+    println!("-----------------------");
+    println!("Public Key: {}", balance.public_key);
+    println!("Balance:    {} seconds ({:.2} hours)", balance.balance_seconds, balance.balance_hours);
+    println!("-----------------------\n");
+
     Ok(())
 }
 
