@@ -29,7 +29,7 @@ struct InferenceRequest {
 }
 
 struct ProxyState {
-    config: Config,
+    _config: Config,
     public_key: RwLock<Option<DecodingKey>>,
     model_registry: Arc<RwLock<ModelRegistry>>,
 }
@@ -39,7 +39,7 @@ pub async fn run_proxy_server(config: Config, model_registry: Arc<RwLock<ModelRe
     info!("🔐 Starting JWT verification proxy on {}", addr);
     
     let state = Arc::new(ProxyState {
-        config: config.clone(),
+        _config: config.clone(),
         public_key: RwLock::new(None),
         model_registry,
     });

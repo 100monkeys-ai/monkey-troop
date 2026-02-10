@@ -122,14 +122,3 @@ pub fn build_model_registry(engines: &[Box<dyn EngineDriver + Send + Sync>]) -> 
     
     Ok(registry)
 }
-
-/// Legacy function for backward compatibility - returns first available engine
-pub async fn detect_engine() -> Result<Box<dyn EngineDriver + Send + Sync>> {
-    let engines = detect_all_engines().await;
-    
-    if engines.is_empty() {
-        return Err(anyhow::anyhow!("No inference engine detected"));
-    }
-    
-    Ok(engines.into_iter().next().unwrap())
-}
