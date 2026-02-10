@@ -4,7 +4,6 @@ mod proxy;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing::info;
-use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(name = "monkey-troop-client")]

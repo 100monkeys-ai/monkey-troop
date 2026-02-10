@@ -5,6 +5,7 @@ import time
 import httpx
 import pytest
 import redis
+import pytest_asyncio
 
 # Test configuration
 COORDINATOR_URL = "http://localhost:8000"
@@ -12,7 +13,7 @@ TEST_USER_KEY = "test_user_12345"
 TEST_MODEL = "llama2:7b"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def coordinator_client():
     """HTTP client for coordinator."""
     async with httpx.AsyncClient(base_url=COORDINATOR_URL, timeout=30.0) as client:
