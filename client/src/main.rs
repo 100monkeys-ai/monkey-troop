@@ -30,9 +30,9 @@ enum Commands {
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
-    
+
     let cli = Cli::parse();
-    
+
     match cli.command {
         Commands::Up => {
             info!("🐒 Monkey Troop Client starting...");
@@ -61,12 +61,12 @@ async fn main() -> Result<()> {
 
 async fn check_balance(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
-    let url = format!("{}/users/{}/balance", config.coordinator_url, config.requester_id);
+    let url = format!(
+        "{}/users/{}/balance",
+        config.coordinator_url, config.requester_id
+    );
 
-    let response = client
-        .get(&url)
-        .send()
-        .await?;
+    let response = client.get(&url).send().await?;
 
     if response.status().is_success() {
         let balance: serde_json::Value = response.json().await?;
@@ -80,12 +80,12 @@ async fn check_balance(config: &config::Config) -> Result<()> {
 
 async fn list_transactions(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
-    let url = format!("{}/users/{}/transactions", config.coordinator_url, config.requester_id);
+    let url = format!(
+        "{}/users/{}/transactions",
+        config.coordinator_url, config.requester_id
+    );
 
-    let response = client
-        .get(&url)
-        .send()
-        .await?;
+    let response = client.get(&url).send().await?;
 
     if response.status().is_success() {
         let transactions: serde_json::Value = response.json().await?;
@@ -93,22 +93,17 @@ async fn list_transactions(config: &config::Config) -> Result<()> {
     } else {
         println!("Failed to get transactions: {}", response.status());
     }
-    
+
     Ok(())
 }
 
 async fn list_nodes(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
     let url = format!("{}/peers", config.coordinator_url);
-    
-    let response: serde_json::Value = client
-        .get(&url)
-        .send()
-        .await?
-        .json()
-        .await?;
-    
+
+    let response: serde_json::Value = client.get(&url).send().await?.json().await?;
+
     println!("{}", serde_json::to_string_pretty(&response)?);
-    
+
     Ok(())
 }

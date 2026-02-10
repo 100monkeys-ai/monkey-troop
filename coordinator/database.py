@@ -1,12 +1,25 @@
 """Database models and connection management."""
 
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger, DateTime, ForeignKey, JSON
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger")
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    create_engine,
+)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger"
+)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -15,8 +28,9 @@ Base = declarative_base()
 
 class AuditLog(Base):
     """Audit log entries stored in PostgreSQL."""
+
     __tablename__ = "audit_logs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True, nullable=False)
     event_type = Column(String(50), index=True, nullable=False)
@@ -27,6 +41,7 @@ class AuditLog(Base):
 
 class User(Base):
     """User account with credit balance."""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -38,6 +53,7 @@ class User(Base):
 
 class Node(Base):
     """GPU node in the network."""
+
     __tablename__ = "nodes"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -60,13 +76,14 @@ class Node(Base):
 
 class Transaction(Base):
     """Credit transaction ledger."""
+
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    job_id = Column(String, nullable=True) # Can be null for system grants
+    job_id = Column(String, nullable=True)  # Can be null for system grants
 
-    from_user = Column(String, index=True, nullable=True) # Public Key
-    to_user = Column(String, index=True, nullable=True)   # Public Key
+    from_user = Column(String, index=True, nullable=True)  # Public Key
+    to_user = Column(String, index=True, nullable=True)  # Public Key
 
     node_id = Column(String, nullable=True)
 
@@ -74,7 +91,7 @@ class Transaction(Base):
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    meta_data = Column("metadata", JSON, nullable=True) # Map to "metadata" column in DB
+    meta_data = Column("metadata", JSON, nullable=True)  # Map to "metadata" column in DB
 
 
 def init_db():

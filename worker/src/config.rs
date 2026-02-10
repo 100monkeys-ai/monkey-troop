@@ -7,7 +7,7 @@ pub struct Config {
     pub node_id: String,
     pub coordinator_url: String,
     pub proxy_port: u16,
-    pub heartbeat_interval: u64, // seconds
+    pub heartbeat_interval: u64,     // seconds
     pub model_refresh_interval: u64, // seconds
 }
 

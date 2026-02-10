@@ -19,28 +19,28 @@ pub const CIRCUIT_BREAKER_TIMEOUT: Duration = Duration::from_secs(60);
 pub enum TroopError {
     /// Network connection failed
     NetworkError(String),
-    
+
     /// Request timed out
     Timeout(String),
-    
+
     /// Authentication/authorization failed
     AuthError(String),
-    
+
     /// No nodes available to service request
     NoNodesAvailable,
-    
+
     /// Insufficient credits
     InsufficientCredits { required: u64, available: u64 },
-    
+
     /// Invalid request format
     InvalidRequest(String),
-    
+
     /// Worker is busy or unavailable
     WorkerUnavailable(String),
-    
+
     /// Circuit breaker is open
     CircuitBreakerOpen,
-    
+
     /// Internal server error
     InternalError(String),
 }
@@ -52,12 +52,21 @@ impl fmt::Display for TroopError {
             TroopError::Timeout(msg) => write!(f, "Timeout: {}", msg),
             TroopError::AuthError(msg) => write!(f, "Authentication error: {}", msg),
             TroopError::NoNodesAvailable => write!(f, "No nodes available to service request"),
-            TroopError::InsufficientCredits { required, available } => {
-                write!(f, "Insufficient credits: need {}, have {}", required, available)
+            TroopError::InsufficientCredits {
+                required,
+                available,
+            } => {
+                write!(
+                    f,
+                    "Insufficient credits: need {}, have {}",
+                    required, available
+                )
             }
             TroopError::InvalidRequest(msg) => write!(f, "Invalid request: {}", msg),
             TroopError::WorkerUnavailable(msg) => write!(f, "Worker unavailable: {}", msg),
-            TroopError::CircuitBreakerOpen => write!(f, "Circuit breaker open, service temporarily unavailable"),
+            TroopError::CircuitBreakerOpen => {
+                write!(f, "Circuit breaker open, service temporarily unavailable")
+            }
             TroopError::InternalError(msg) => write!(f, "Internal error: {}", msg),
         }
     }
