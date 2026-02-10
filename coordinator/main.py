@@ -4,10 +4,11 @@ import os
 import uuid
 import json
 import random
+from datetime import datetime
 from typing import Optional
+from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from redis import Redis
 from sqlalchemy.orm import Session
 
@@ -16,8 +17,7 @@ from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
 from transactions import (
     create_user_if_not_exists, get_user_balance, check_sufficient_balance,
-    reserve_credits, record_job_completion, get_transaction_history,
-    generate_receipt_signature
+    reserve_credits, record_job_completion
 )
 from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
@@ -45,9 +45,10 @@ app.add_middleware(
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_client = Redis(host=redis_host, port=6379, db=0, decode_responses=True)
 
+# Rate limiter instance
+rate_limiter = RateLimiter(redis_client)
+
 # Rate limiter (order matters - outermost first)
-app.add_middleware(TimeoutMiddleware)
-# Add timeout middleware (outermost layer)
 app.add_middleware(TimeoutMiddleware)
 
 # Add request tracing and rate limiting
@@ -67,7 +68,6 @@ ESTIMATED_JOB_DURATION = 300  # 5 minutes default reservation
 # ----------------------
 # DATA MODELS (Pydantic)
 # ----------------------
-from pydantic import BaseModel
 
 
 class EngineInfo(BaseModel):
