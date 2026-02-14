@@ -259,8 +259,8 @@ async def list_peers(model: Optional[str] = None):
     nodes = []
 
     if keys:
-        for key in keys:
-            raw_data = redis_client.get(key)
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
             if raw_data:
                 node = json.loads(raw_data)
 
@@ -383,6 +383,15 @@ async def authorize_request(req: AuthorizeRequest, request: Request, db: Session
             if node.get("status") == "IDLE" and req.model in node.get("models", []):
                 candidates.append(node)
 
+    
+    if keys:
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
+            if raw_data:
+                node = json.loads(raw_data)
+                if node.get("status") == "IDLE" and req.model in node.get("models", []):
+                    candidates.append(node)
+    
     if not candidates:
         audit.log_authorization(
             req.requester, req.model, "none", client_ip, False, "no_nodes_available"
@@ -519,6 +528,14 @@ async def list_models():
             node = json.loads(raw_data)
             unique_models.update(node.get("models", []))
 
+    
+    if keys:
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
+            if raw_data:
+                node = json.loads(raw_data)
+                unique_models.update(node.get("models", []))
+    
     return {
         "object": "list",
         "data": [
