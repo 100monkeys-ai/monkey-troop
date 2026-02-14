@@ -2,6 +2,7 @@ mod config;
 mod proxy;
 
 use anyhow::Result;
+use monkey_troop_shared::BalanceResponse;
 use clap::{Parser, Subcommand};
 use tracing::info;
 use tracing_subscriber;
@@ -93,6 +94,26 @@ async fn list_transactions(config: &config::Config) -> Result<()> {
     } else {
         println!("Failed to get transactions: {}", response.status());
     }
+
+    Ok(())
+}
+
+async fn check_balance(config: &config::Config) -> Result<()> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/users/{}/balance", config.coordinator_url, config.requester_id);
+
+    let balance: BalanceResponse = client
+        .get(&url)
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    println!("\n💰 Monkey Troop Balance");
+    println!("-----------------------");
+    println!("Public Key: {}", balance.public_key);
+    println!("Balance:    {} seconds ({:.2} hours)", balance.balance_seconds, balance.balance_hours);
+    println!("-----------------------\n");
 
     Ok(())
 }
