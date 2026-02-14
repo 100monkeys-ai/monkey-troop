@@ -62,6 +62,7 @@ redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_client = Redis(host=redis_host, port=6379, db=0, decode_responses=True)
 
 # Rate limiter instance
+# Initialize rate limiter
 rate_limiter = RateLimiter(redis_client)
 
 # Rate limiter (order matters - outermost first)
@@ -74,7 +75,9 @@ app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
 
 # HTTP Basic Auth for admin endpoints
 security = HTTPBasic()
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "change-me-in-production")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD environment variable is not set. This is required for security.")
 
 # Constants
 CHALLENGE_TTL = 60  # Challenge expires in 60 seconds
