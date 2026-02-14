@@ -60,25 +60,6 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn check_balance(config: &config::Config) -> Result<()> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "{}/users/{}/balance",
-        config.coordinator_url, config.requester_id
-    );
-
-    let response = client.get(&url).send().await?;
-
-    if response.status().is_success() {
-        let balance: serde_json::Value = response.json().await?;
-        println!("{}", serde_json::to_string_pretty(&balance)?);
-    } else {
-        println!("Failed to get balance: {}", response.status());
-    }
-
-    Ok(())
-}
-
 async fn list_transactions(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
     let url = format!(
