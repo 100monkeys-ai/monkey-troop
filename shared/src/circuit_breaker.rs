@@ -30,11 +30,11 @@ impl CircuitBreaker {
             last_failure_time: Arc::new(RwLock::new(None)),
         }
     }
-    
+
     /// Check if request should be allowed
     pub async fn allow_request(&self) -> bool {
         let state = *self.state.read().await;
-        
+
         match state {
             CircuitState::Closed => true,
             CircuitState::Open => {
@@ -55,23 +55,23 @@ impl CircuitBreaker {
             CircuitState::HalfOpen => true,
         }
     }
-    
+
     /// Record successful request
     pub async fn record_success(&self) {
         self.failure_count.store(0, Ordering::Relaxed);
         *self.state.write().await = CircuitState::Closed;
     }
-    
+
     /// Record failed request
     pub async fn record_failure(&self) {
         let count = self.failure_count.fetch_add(1, Ordering::Relaxed) + 1;
         *self.last_failure_time.write().await = Some(Instant::now());
-        
+
         if count >= self.threshold {
             *self.state.write().await = CircuitState::Open;
         }
     }
-    
+
     /// Get current state
     pub async fn state(&self) -> CircuitState {
         *self.state.read().await
