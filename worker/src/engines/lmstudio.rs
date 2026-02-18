@@ -32,10 +32,10 @@ impl EngineDriver for LMStudioDriver {
             .get(&format!("{}/v1/models", self.base_url))
             .timeout(std::time::Duration::from_secs(2))
             .send();
-        
+
         Ok(response.is_ok())
     }
-    
+
     fn get_info(&self) -> Result<EngineInfo> {
         Ok(EngineInfo {
             engine_type: "lmstudio".to_string(),
@@ -43,18 +43,16 @@ impl EngineDriver for LMStudioDriver {
             port: 1234,
         })
     }
-    
+
     fn get_models(&self) -> Result<Vec<String>> {
         let client = reqwest::blocking::Client::new();
-        let response = client
-            .get(&format!("{}/v1/models", self.base_url))
-            .send()?;
-        
+        let response = client.get(&format!("{}/v1/models", self.base_url)).send()?;
+
         let models_info: LMStudioModels = response.json()?;
-        
+
         Ok(models_info.data.into_iter().map(|m| m.id).collect())
     }
-    
+
     fn get_base_url(&self) -> String {
         self.base_url.clone()
     }

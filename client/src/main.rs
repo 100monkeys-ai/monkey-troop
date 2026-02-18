@@ -2,8 +2,8 @@ mod config;
 mod proxy;
 
 use anyhow::Result;
-use monkey_troop_shared::BalanceResponse;
 use clap::{Parser, Subcommand};
+use monkey_troop_shared::BalanceResponse;
 use tracing::info;
 use tracing_subscriber;
 
@@ -29,9 +29,9 @@ enum Commands {
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
-    
+
     let cli = Cli::parse();
-    
+
     match cli.command {
         Commands::Up => {
             info!("🐒 Monkey Troop Client starting...");
@@ -49,25 +49,26 @@ async fn main() -> Result<()> {
             list_nodes(&config).await?;
         }
     }
-    
+
     Ok(())
 }
 
 async fn check_balance(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
-    let url = format!("{}/users/{}/balance", config.coordinator_url, config.requester_id);
+    let url = format!(
+        "{}/users/{}/balance",
+        config.coordinator_url, config.requester_id
+    );
 
-    let balance: BalanceResponse = client
-        .get(&url)
-        .send()
-        .await?
-        .json()
-        .await?;
+    let balance: BalanceResponse = client.get(&url).send().await?.json().await?;
 
     println!("\n💰 Monkey Troop Balance");
     println!("-----------------------");
     println!("Public Key: {}", balance.public_key);
-    println!("Balance:    {} seconds ({:.2} hours)", balance.balance_seconds, balance.balance_hours);
+    println!(
+        "Balance:    {} seconds ({:.2} hours)",
+        balance.balance_seconds, balance.balance_hours
+    );
     println!("-----------------------\n");
 
     Ok(())
@@ -76,15 +77,10 @@ async fn check_balance(config: &config::Config) -> Result<()> {
 async fn list_nodes(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
     let url = format!("{}/peers", config.coordinator_url);
-    
-    let response: serde_json::Value = client
-        .get(&url)
-        .send()
-        .await?
-        .json()
-        .await?;
-    
+
+    let response: serde_json::Value = client.get(&url).send().await?.json().await?;
+
     println!("{}", serde_json::to_string_pretty(&response)?);
-    
+
     Ok(())
 }
