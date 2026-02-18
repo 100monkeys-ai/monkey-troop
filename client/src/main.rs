@@ -28,9 +28,9 @@ enum Commands {
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
-    
+
     let cli = Cli::parse();
-    
+
     match cli.command {
         Commands::Up => {
             info!("🐒 Monkey Troop Client starting...");
@@ -48,22 +48,17 @@ async fn main() -> Result<()> {
             list_nodes(&config).await?;
         }
     }
-    
+
     Ok(())
 }
 
 async fn list_nodes(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
     let url = format!("{}/peers", config.coordinator_url);
-    
-    let response: serde_json::Value = client
-        .get(&url)
-        .send()
-        .await?
-        .json()
-        .await?;
-    
+
+    let response: serde_json::Value = client.get(&url).send().await?.json().await?;
+
     println!("{}", serde_json::to_string_pretty(&response)?);
-    
+
     Ok(())
 }
