@@ -7,6 +7,8 @@ def parse_allowed_origins(allowed_origins_raw):
     """
     Parse and validate ALLOWED_ORIGINS environment variable.
     Returns tuple of (allowed_origins list, allow_credentials bool).
+
+    This replicates the logic in main.py for testing purposes.
     """
     if allowed_origins_raw == "*":
         return ["*"], False
@@ -14,13 +16,17 @@ def parse_allowed_origins(allowed_origins_raw):
         allowed_origins = [
             origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()
         ]
-        if "*" in allowed_origins and len(allowed_origins) > 1:
+        if not allowed_origins:
+            # If the result is empty after parsing (e.g., only commas), use default
+            return ["http://localhost:3000"], True
+        elif "*" in allowed_origins and len(allowed_origins) > 1:
             raise RuntimeError(
                 "Invalid ALLOWED_ORIGINS configuration: '*' cannot be combined with other "
                 "origins when credentials are allowed. Either set ALLOWED_ORIGINS='*' "
                 "to disable credentials, or remove '*' from the list."
             )
-        return allowed_origins, True
+        else:
+            return allowed_origins, True
     else:
         # Default to local development if not specified
         return ["http://localhost:3000"], True
@@ -99,10 +105,8 @@ def test_cors_empty_entries_ignored():
     assert credentials is True
 
 
-def test_cors_only_commas_results_in_empty_list():
-    """Test that a string with only commas results in an empty list (edge case)."""
-    # This is an edge case - the actual code doesn't handle this specially
-    # It will result in an empty list, which means no origins are allowed
+def test_cors_only_commas_defaults_to_localhost():
+    """Test that a string with only commas defaults to localhost after parsing."""
     origins, credentials = parse_allowed_origins(",,,")
-    assert origins == []
+    assert origins == ["http://localhost:3000"]
     assert credentials is True

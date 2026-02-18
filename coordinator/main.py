@@ -46,13 +46,18 @@ elif allowed_origins_raw:
     allowed_origins = [
         origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()
     ]
-    if "*" in allowed_origins and len(allowed_origins) > 1:
+    if not allowed_origins:
+        # If the result is empty after parsing (e.g., only commas), use default
+        allowed_origins = ["http://localhost:3000"]
+        allow_credentials = True
+    elif "*" in allowed_origins and len(allowed_origins) > 1:
         raise RuntimeError(
             "Invalid ALLOWED_ORIGINS configuration: '*' cannot be combined with other "
             "origins when credentials are allowed. Either set ALLOWED_ORIGINS='*' "
             "to disable credentials, or remove '*' from the list."
         )
-    allow_credentials = True
+    else:
+        allow_credentials = True
 else:
     # Default to local development if not specified
     allowed_origins = ["http://localhost:3000"]
