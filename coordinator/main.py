@@ -25,13 +25,11 @@ from transactions import (
     check_sufficient_balance,
     reserve_credits,
     record_job_completion,
+    get_transaction_history,
 )
 from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
 from timeout_middleware import TimeoutMiddleware
-from transactions import (
-    get_transaction_history,
-)
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -48,6 +46,12 @@ elif allowed_origins_raw:
     allowed_origins = [
         origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()
     ]
+    if "*" in allowed_origins and len(allowed_origins) > 1:
+        raise RuntimeError(
+            "Invalid ALLOWED_ORIGINS configuration: '*' cannot be combined with other "
+            "origins when credentials are allowed. Either set ALLOWED_ORIGINS='*' "
+            "to disable credentials, or remove '*' from the list."
+        )
     allow_credentials = True
 else:
     # Default to local development if not specified
@@ -383,13 +387,6 @@ async def authorize_request(req: AuthorizeRequest, request: Request, db: Session
     keys = redis_client.keys("node:*")
     candidates = []
 
-    for key in keys:
-        raw_data = redis_client.get(key)
-        if raw_data:
-            node = json.loads(raw_data)
-            if node.get("status") == "IDLE" and req.model in node.get("models", []):
-                candidates.append(node)
-
     if keys:
         raw_nodes = redis_client.mget(keys)
         for raw_data in raw_nodes:
@@ -526,12 +523,6 @@ async def list_models():
     """
     keys = redis_client.keys("node:*")
     unique_models = set()
-
-    for key in keys:
-        raw_data = redis_client.get(key)
-        if raw_data:
-            node = json.loads(raw_data)
-            unique_models.update(node.get("models", []))
 
     if keys:
         raw_nodes = redis_client.mget(keys)
