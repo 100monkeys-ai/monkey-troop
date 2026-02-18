@@ -186,6 +186,8 @@ jobs:
           REDIS_URL: redis://localhost:6379
           JWT_PRIVATE_KEY_PATH: /tmp/test_private.pem
           JWT_PUBLIC_KEY_PATH: /tmp/test_public.pem
+          RECEIPT_SECRET: test-receipt-secret
+          ADMIN_PASSWORD: test-admin-password
         run: |
           # Generate test RSA keys
           openssl genrsa -out /tmp/test_private.pem 2048

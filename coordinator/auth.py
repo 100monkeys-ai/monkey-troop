@@ -1,6 +1,5 @@
 """JWT token generation and validation."""
 
-import os
 from datetime import datetime, timedelta
 from typing import Optional
 

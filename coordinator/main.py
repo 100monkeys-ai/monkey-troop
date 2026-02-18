@@ -158,6 +158,15 @@ class PeersResponse(BaseModel):
 # ----------------------
 # HELPER FUNCTIONS
 # ----------------------
+def _get_all_nodes() -> list[dict]:
+    """Retrieve all node data from Redis."""
+    keys = redis_client.keys("node:*")
+    if not keys:
+        return []
+    raw_nodes = redis_client.mget(keys)
+    return [json.loads(raw_data) for raw_data in raw_nodes if raw_data]
+
+
 def calculate_multiplier(duration: float) -> float:
     """
     Calculate hardware multiplier based on benchmark duration.
@@ -246,24 +255,17 @@ async def list_peers(model: Optional[str] = None):
     """
     List available nodes, optionally filtered by model.
     """
-    keys = redis_client.keys("node:*")
     nodes = []
+    for node in _get_all_nodes():
+        # Filter by status
+        if node.get("status") != "IDLE":
+            continue
 
-    if keys:
-        raw_nodes = redis_client.mget(keys)
-        for raw_data in raw_nodes:
-            if raw_data:
-                node = json.loads(raw_data)
+        # Filter by model if requested
+        if model and model not in node.get("models", []):
+            continue
 
-                # Filter by status
-                if node.get("status") != "IDLE":
-                    continue
-
-                # Filter by model if requested
-                if model and model not in node.get("models", []):
-                    continue
-
-                nodes.append(node)
+        nodes.append(node)
 
     return {"count": len(nodes), "nodes": nodes}
 
@@ -364,16 +366,11 @@ async def authorize_request(req: AuthorizeRequest, request: Request, db: Session
         )
 
     # Find available nodes with requested model
-    keys = redis_client.keys("node:*")
-    candidates = []
-
-    if keys:
-        raw_nodes = redis_client.mget(keys)
-        for raw_data in raw_nodes:
-            if raw_data:
-                node = json.loads(raw_data)
-                if node.get("status") == "IDLE" and req.model in node.get("models", []):
-                    candidates.append(node)
+    candidates = [
+        node
+        for node in _get_all_nodes()
+        if node.get("status") == "IDLE" and req.model in node.get("models", [])
+    ]
 
     if not candidates:
         audit.log_authorization(
@@ -456,10 +453,11 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 async def get_transactions(
     public_key: str,
     limit: int = 50,
+    db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
 
-    return {"transactions": get_transaction_history(public_key, limit)}
+    return {"transactions": get_transaction_history(db, public_key, limit)}
 
 
 @app.get("/admin/audit")
@@ -501,15 +499,10 @@ async def list_models():
     OpenAI-compatible models endpoint.
     Aggregates all models from active nodes.
     """
-    keys = redis_client.keys("node:*")
     unique_models = set()
 
-    if keys:
-        raw_nodes = redis_client.mget(keys)
-        for raw_data in raw_nodes:
-            if raw_data:
-                node = json.loads(raw_data)
-                unique_models.update(node.get("models", []))
+    for node in _get_all_nodes():
+        unique_models.update(node.get("models", []))
 
     return {
         "object": "list",
