@@ -102,6 +102,9 @@ jobs:
   python-lint:
     name: Python Lint
     runs-on: ubuntu-latest
+    env:
+      RECEIPT_SECRET: test-receipt-secret-for-ci
+      ADMIN_PASSWORD: test-admin-password-for-ci
     steps:
       - uses: actions/checkout@v4
       
@@ -184,6 +187,8 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:testpass@localhost:5432/test_troop
           REDIS_URL: redis://localhost:6379
+          RECEIPT_SECRET: test-receipt-secret-for-ci
+          ADMIN_PASSWORD: test-admin-password-for-ci
           JWT_PRIVATE_KEY_PATH: /tmp/test_private.pem
           JWT_PUBLIC_KEY_PATH: /tmp/test_public.pem
         run: |
