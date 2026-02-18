@@ -12,7 +12,9 @@ from database import Node, Transaction, User
 # HMAC secret for job receipts - must be shared with workers
 RECEIPT_SECRET = os.getenv("RECEIPT_SECRET")
 if not RECEIPT_SECRET:
-    raise RuntimeError("RECEIPT_SECRET environment variable is not set. This is required for security.")
+    raise RuntimeError(
+        "RECEIPT_SECRET environment variable is not set. This is required for security."
+    )
 
 # Starter credits: 1 hour = 3600 seconds
 STARTER_CREDITS = 3600
