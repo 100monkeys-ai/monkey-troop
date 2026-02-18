@@ -3,9 +3,13 @@ use sysinfo::System;
 
 /// Check if GPU is idle based on utilization threshold
 pub async fn is_gpu_idle(threshold: f32) -> Result<bool> {
-    // Try nvidia-smi first
-    if let Ok(nvidia_idle) = check_nvidia_idle(threshold) {
-        return Ok(nvidia_idle);
+    // Try nvidia-smi first on a blocking thread to avoid blocking the async runtime
+    if let Ok(nvidia_result) =
+        tokio::task::spawn_blocking(move || check_nvidia_idle(threshold)).await
+    {
+        if let Ok(nvidia_idle) = nvidia_result {
+            return Ok(nvidia_idle);
+        }
     }
 
     // Fallback: check CPU idle as proxy
