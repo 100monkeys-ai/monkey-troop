@@ -1,13 +1,24 @@
 """Database models and connection management."""
 
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger, DateTime, ForeignKey
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Float,
+    BigInteger,
+    DateTime,
+    ForeignKey,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger"
+)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -16,8 +27,9 @@ Base = declarative_base()
 
 class AuditLog(Base):
     """Audit log entries stored in PostgreSQL."""
+
     __tablename__ = "audit_logs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True, nullable=False)
     event_type = Column(String(50), index=True, nullable=False)
@@ -28,6 +40,7 @@ class AuditLog(Base):
 
 class User(Base):
     """User account with credit balance."""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -38,11 +51,14 @@ class User(Base):
 
     # Relationships
     nodes = relationship("Node", back_populates="owner")
-    transactions_sent = relationship("Transaction", foreign_keys="Transaction.requester_id", back_populates="requester")
+    transactions_sent = relationship(
+        "Transaction", foreign_keys="Transaction.requester_id", back_populates="requester"
+    )
 
 
 class Node(Base):
     """GPU node in the network."""
+
     __tablename__ = "nodes"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -58,11 +74,14 @@ class Node(Base):
 
     # Relationships
     owner = relationship("User", back_populates="nodes")
-    transactions = relationship("Transaction", foreign_keys="Transaction.worker_node_id", back_populates="worker_node")
+    transactions = relationship(
+        "Transaction", foreign_keys="Transaction.worker_node_id", back_populates="worker_node"
+    )
 
 
 class Transaction(Base):
     """Credit transaction ledger."""
+
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -74,7 +93,9 @@ class Transaction(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    requester = relationship("User", foreign_keys=[requester_id], back_populates="transactions_sent")
+    requester = relationship(
+        "User", foreign_keys=[requester_id], back_populates="transactions_sent"
+    )
     worker_node = relationship("Node", foreign_keys=[worker_node_id], back_populates="transactions")
 
 

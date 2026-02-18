@@ -15,9 +15,13 @@ from database import init_db, get_db, Node, User
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
 from transactions import (
-    create_user_if_not_exists, get_user_balance, check_sufficient_balance,
-    reserve_credits, record_job_completion, get_transaction_history,
-    generate_receipt_signature
+    create_user_if_not_exists,
+    get_user_balance,
+    check_sufficient_balance,
+    reserve_credits,
+    record_job_completion,
+    get_transaction_history,
+    generate_receipt_signature,
 )
 from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
@@ -29,7 +33,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 app = FastAPI(
     title="Monkey Troop Coordinator",
     description="Discovery and verification service for distributed AI compute",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 # CORS middleware
@@ -154,10 +158,10 @@ def calculate_multiplier(duration: float) -> float:
     """
     if duration <= 0:
         return 0.0
-    
+
     baseline = 35.0
     multiplier = baseline / duration
-    
+
     # Cap at 20x to prevent exploits
     return round(min(multiplier, 20.0), 2)
 
@@ -170,7 +174,7 @@ def run_migrations():
     try:
         from alembic.config import Config
         from alembic import command
-        
+
         # Run migrations
         alembic_cfg = Config("alembic.ini")
         command.upgrade(alembic_cfg, "head")
@@ -179,7 +183,9 @@ def run_migrations():
         print(f"⚠️  Migration error: {e}")
         print("Creating tables directly...")
         from database import Base, engine
+
         Base.metadata.create_all(bind=engine)
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -218,11 +224,11 @@ async def receive_heartbeat(data: NodeHeartbeat):
     Store in Redis with 15-second TTL for automatic cleanup.
     """
     key = f"node:{data.node_id}"
-    
+
     # Store node data
     redis_client.set(key, data.model_dump_json())
     redis_client.expire(key, HEARTBEAT_TTL)
-    
+
     return {"status": "seen"}
 
 
@@ -236,23 +242,23 @@ async def list_peers(model: Optional[str] = None):
     """
     keys = redis_client.keys("node:*")
     nodes = []
-    
+
     if keys:
         raw_nodes = redis_client.mget(keys)
         for raw_data in raw_nodes:
             if raw_data:
                 node = json.loads(raw_data)
-                
+
                 # Filter by status
                 if node.get("status") != "IDLE":
                     continue
-                
+
                 # Filter by model if requested
                 if model and model not in node.get("models", []):
                     continue
-                
+
                 nodes.append(node)
-    
+
     return {"count": len(nodes), "nodes": nodes}
 
 
@@ -267,17 +273,13 @@ async def request_challenge(req: ChallengeRequest, db: Session = Depends(get_db)
     """
     seed = uuid.uuid4().hex
     token = uuid.uuid4().hex
-    
+
     # Store challenge in Redis with expiration
     redis_client.setex(f"challenge:{token}", CHALLENGE_TTL, seed)
-    
+
     print(f"📊 Issued challenge to {req.node_id}: {seed}")
-    
-    return {
-        "challenge_token": token,
-        "seed": seed,
-        "matrix_size": 4096
-    }
+
+    return {"challenge_token": token, "seed": seed, "matrix_size": 4096}
 
 
 @app.post("/hardware/verify", response_model=VerifyResponse)
@@ -288,93 +290,77 @@ async def submit_proof(req: VerifyRequest, db: Session = Depends(get_db)):
     """
     # Retrieve original seed
     original_seed = redis_client.get(f"challenge:{req.challenge_token}")
-    
+
     if not original_seed:
         raise HTTPException(status_code=400, detail="Challenge expired or invalid")
-    
+
     # Basic validation
     if len(req.proof_hash) != 64:
         raise HTTPException(status_code=400, detail="Invalid hash format")
-    
+
     # Calculate score
     score = calculate_multiplier(req.duration)
-    
+
     # Update or create node in database
     node = db.query(Node).filter(Node.node_id == req.node_id).first()
-    
+
     if not node:
         # Auto-register node (in production, require explicit registration)
         # For now, assign to a default user
         default_user = db.query(User).first()
         if not default_user:
             # Create default user
-            default_user = User(
-                username="system",
-                public_key="system-key",
-                balance_seconds=0
-            )
+            default_user = User(username="system", public_key="system-key", balance_seconds=0)
             db.add(default_user)
             db.commit()
-        
-        node = Node(
-            node_id=req.node_id,
-            owner_id=default_user.id
-        )
+
+        node = Node(node_id=req.node_id, owner_id=default_user.id)
         db.add(node)
-    
+
     node.multiplier = score
     node.hardware_model = req.device_name
     node.benchmark_score = req.duration
     node.last_benchmark = datetime.utcnow()
-    
+
     db.commit()
-    
+
     # Cleanup
     redis_client.delete(f"challenge:{req.challenge_token}")
-    
+
     tier = "High Performance" if score > 3 else "Standard"
     print(f"✅ Verified {req.node_id}. Time: {req.duration}s. Score: {score}x ({tier})")
-    
-    return {
-        "status": "verified",
-        "assigned_multiplier": score,
-        "tier": tier
-    }
+
+    return {"status": "verified", "assigned_multiplier": score, "tier": tier}
 
 
 # ----------------------
 # AUTHORIZATION
 # ----------------------
 @app.post("/authorize", response_model=AuthorizeResponse)
-async def authorize_request(
-    req: AuthorizeRequest,
-    request: Request,
-    db: Session = Depends(get_db)
-):
+async def authorize_request(req: AuthorizeRequest, request: Request, db: Session = Depends(get_db)):
     """
     Client requests authorization to use a node.
     Returns JWT ticket and target node IP.
     """
     client_ip = request.client.host if request.client else "unknown"
-    
+
     # Create user if doesn't exist (gets starter credits)
     user = create_user_if_not_exists(db, req.requester)
-    
+
     # Check sufficient balance
     if not check_sufficient_balance(db, req.requester, ESTIMATED_JOB_DURATION):
         audit.log_authorization(
-            req.requester, req.model, "none",
-            client_ip, False, "insufficient_credits"
+            req.requester, req.model, "none", client_ip, False, "insufficient_credits"
         )
         raise HTTPException(
             status_code=402,
-            detail=f"Insufficient credits. Balance: {user.balance_seconds}s, Required: {ESTIMATED_JOB_DURATION}s"
+            detail=f"Insufficient credits. Balance: {user.balance_seconds}s, Required: {ESTIMATED_JOB_DURATION}s",
         )
-    
+
     # Find available nodes with requested model
     keys = redis_client.keys("node:*")
     candidates = []
-    
+
     if keys:
         raw_nodes = redis_client.mget(keys)
         for raw_data in raw_nodes:
@@ -382,63 +368,54 @@ async def authorize_request(
                 node = json.loads(raw_data)
                 if node.get("status") == "IDLE" and req.model in node.get("models", []):
                     candidates.append(node)
-    
+
     if not candidates:
         audit.log_authorization(
-            req.requester, req.model, "none",
-            client_ip, False, "no_nodes_available"
+            req.requester, req.model, "none", client_ip, False, "no_nodes_available"
         )
-        raise HTTPException(
-            status_code=503,
-            detail=f"No idle nodes found for model: {req.model}"
-        )
-    
+        raise HTTPException(status_code=503, detail=f"No idle nodes found for model: {req.model}")
+
     # Simple random selection (can be upgraded to load balancing)
     selected = random.choice(candidates)
-    
+
     # Reserve credits for job
     if not reserve_credits(db, req.requester, ESTIMATED_JOB_DURATION):
         raise HTTPException(status_code=402, detail="Failed to reserve credits")
-    
+
     # Create JWT ticket
     token = create_jwt_ticket(
-        user_id=req.requester,
-        target_node_id=selected["node_id"],
-        project="free-tier"
+        user_id=req.requester, target_node_id=selected["node_id"], project="free-tier"
     )
-    
-    audit.log_authorization(
-        req.requester, req.model, selected["node_id"],
-        client_ip, True, None
+
+    audit.log_authorization(req.requester, req.model, selected["node_id"], client_ip, True, None)
+
+    print(
+        f"🎫 Authorized {req.requester} to use {selected['node_id']} ({selected['tailscale_ip']})"
     )
-    
-    print(f"🎫 Authorized {req.requester} to use {selected['node_id']} ({selected['tailscale_ip']})")
-    
+
     return {
         "target_ip": selected["tailscale_ip"],
         "token": token,
-        "estimated_cost": ESTIMATED_JOB_DURATION
+        "estimated_cost": ESTIMATED_JOB_DURATION,
     }
 
 
 @app.post("/transactions/submit")
 async def submit_job_completion(
-    receipt: JobReceiptRequest,
-    request: Request,
-    db: Session = Depends(get_db)
+    receipt: JobReceiptRequest, request: Request, db: Session = Depends(get_db)
 ):
     """Worker submits job completion receipt for credit transfer."""
     client_ip = request.client.host if request.client else "unknown"
-    
+
     result = record_job_completion(
         db=db,
         job_id=receipt.job_id,
         requester_public_key=receipt.requester_public_key,
         worker_node_id=receipt.worker_node_id,
         duration_seconds=receipt.duration_seconds,
-        receipt_signature=receipt.signature
+        receipt_signature=receipt.signature,
     )
-    
+
     if result["status"] == "success":
         audit.log_transaction(
             receipt.job_id,
@@ -446,15 +423,15 @@ async def submit_job_completion(
             receipt.worker_node_id,
             receipt.duration_seconds,
             result["credits_transferred"],
-            client_ip
+            client_ip,
         )
     else:
         audit.log_security_event(
             "invalid_receipt",
             {"job_id": receipt.job_id, "reason": result.get("message")},
-            client_ip
+            client_ip,
         )
-    
+
     return result
 
 
@@ -465,7 +442,7 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
     return {
         "public_key": public_key,
         "balance_seconds": balance,
-        "balance_hours": round(balance / 3600, 2)
+        "balance_hours": round(balance / 3600, 2),
     }
 
 
@@ -476,6 +453,7 @@ async def get_transactions(
 ):
     """Get transaction history for a user."""
     from transactions import get_transaction_history
+
     return {"transactions": get_transaction_history(public_key, limit)}
 
 
@@ -485,11 +463,11 @@ async def get_audit_logs_endpoint(
     limit: int = 100,
     offset: int = 0,
     event_type: Optional[str] = None,
-    user_id: Optional[str] = None
+    user_id: Optional[str] = None,
 ):
     """
     Get audit logs (admin only, requires HTTP Basic Auth).
-    
+
     Query parameters:
     - limit: Number of records to return (default 100)
     - offset: Number of records to skip (default 0)
@@ -499,24 +477,14 @@ async def get_audit_logs_endpoint(
     # Verify password
     if not compare_digest(credentials.password, ADMIN_PASSWORD):
         raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"}
+            status_code=401, detail="Invalid credentials", headers={"WWW-Authenticate": "Basic"}
         )
-    
+
     logs = audit.get_audit_logs(
-        limit=min(limit, 1000),  # Cap at 1000
-        offset=offset,
-        event_type=event_type,
-        user_id=user_id
+        limit=min(limit, 1000), offset=offset, event_type=event_type, user_id=user_id  # Cap at 1000
     )
-    
-    return {
-        "logs": logs,
-        "count": len(logs),
-        "limit": limit,
-        "offset": offset
-    }
+
+    return {"logs": logs, "count": len(logs), "limit": limit, "offset": offset}
 
 
 # ----------------------
@@ -530,23 +498,23 @@ async def list_models():
     """
     keys = redis_client.keys("node:*")
     unique_models = set()
-    
+
     if keys:
         raw_nodes = redis_client.mget(keys)
         for raw_data in raw_nodes:
             if raw_data:
                 node = json.loads(raw_data)
                 unique_models.update(node.get("models", []))
-    
+
     return {
         "object": "list",
         "data": [
-            {"id": m, "object": "model", "owned_by": "monkey-troop"}
-            for m in sorted(unique_models)
-        ]
+            {"id": m, "object": "model", "owned_by": "monkey-troop"} for m in sorted(unique_models)
+        ],
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
