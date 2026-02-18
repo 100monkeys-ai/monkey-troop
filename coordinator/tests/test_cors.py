@@ -35,7 +35,9 @@ def test_cors_wildcard_disables_credentials():
 
 def test_cors_specific_origins_enables_credentials():
     """Test that specific origins in ALLOWED_ORIGINS sets allow_credentials=True."""
-    origins, credentials = parse_allowed_origins("https://app.example.com,https://admin.example.com")
+    origins, credentials = parse_allowed_origins(
+        "https://app.example.com,https://admin.example.com"
+    )
     assert origins == ["https://app.example.com", "https://admin.example.com"]
     assert credentials is True
 
@@ -104,4 +106,3 @@ def test_cors_only_commas_results_in_empty_list():
     origins, credentials = parse_allowed_origins(",,,")
     assert origins == []
     assert credentials is True
-
