@@ -27,3 +27,6 @@ clap = { version = "4.4", features = ["derive"] }  # CLI interface
 
 # Shared types
 monkey-troop-shared = { path = "../shared" }
+
+[dev-dependencies]
+serial_test = "3.0"
