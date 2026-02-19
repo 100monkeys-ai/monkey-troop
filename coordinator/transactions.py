@@ -31,6 +31,7 @@ def create_user_if_not_exists(db: Session, public_key: str) -> User:
 
     if not user:
         user = User(
+            username=public_key,
             public_key=public_key,
             balance_seconds=STARTER_CREDITS,
             created_at=datetime.utcnow(),
@@ -78,7 +79,6 @@ def reserve_credits(db: Session, public_key: str, amount: int) -> bool:
         return False
 
     user.balance_seconds -= amount
-    user.last_active = datetime.utcnow()
     db.commit()
     return True
 
@@ -161,12 +161,11 @@ def record_job_completion(
 
     # Record transaction
     txn = Transaction(
-        from_user=requester_public_key,
-        to_user=worker_public_key,
+        requester_id=requester.id,
+        worker_node_id=node.id,
         duration_seconds=duration_seconds,
         credits_transferred=credits_to_transfer,
         job_id=job_id,
-        node_id=worker_node_id,
         timestamp=datetime.utcnow(),
         meta_data={"type": "job_completion", "multiplier": multiplier},
     )
@@ -201,8 +200,8 @@ def get_transaction_history(db: Session, public_key: str, limit: int = 50) -> li
     return [
         {
             "id": txn.id,
-            "from_user": txn.from_user,
-            "to_user": txn.to_user,
+            "requester": txn.requester.public_key if txn.requester else None,
+            "worker_node_id": txn.worker_node_id,
             "credits": txn.credits_transferred,
             "duration": txn.duration_seconds,
             "job_id": txn.job_id,
