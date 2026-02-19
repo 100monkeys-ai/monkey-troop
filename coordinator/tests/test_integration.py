@@ -5,6 +5,7 @@ import time
 import httpx
 import pytest
 import redis
+from main import app
 
 from main import app
 
