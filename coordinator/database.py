@@ -3,8 +3,16 @@
 import os
 from datetime import datetime
 
-from sqlalchemy import (BigInteger, Column, DateTime, Float, ForeignKey,
-                        Integer, String, create_engine)
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    create_engine,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker

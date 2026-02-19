@@ -4,8 +4,9 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 
-from crypto import load_private_key, load_public_key
 from jose import JWTError, jwt
+
+from crypto import load_private_key, load_public_key
 
 ALGORITHM = "RS256"  # RSA signing
 ACCESS_TOKEN_EXPIRE_MINUTES = 5
