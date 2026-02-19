@@ -1,6 +1,7 @@
 """Test credit accounting and transactions."""
 
 import pytest
+from database import Base, Node, Transaction, User
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 

@@ -9,8 +9,17 @@ from sqlalchemy.orm import Session
 
 from database import Node, Transaction, User
 
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+
+from database import Node, Transaction, User
+
 # HMAC secret for job receipts - must be shared with workers
-RECEIPT_SECRET = os.getenv("RECEIPT_SECRET", "change-me-in-production")
+RECEIPT_SECRET = os.getenv("RECEIPT_SECRET")
+if not RECEIPT_SECRET:
+    raise RuntimeError(
+        "RECEIPT_SECRET environment variable is not set. This is required for security."
+    )
 
 # Starter credits: 1 hour = 3600 seconds
 STARTER_CREDITS = 3600
@@ -40,7 +49,7 @@ def create_user_if_not_exists(db: Session, public_key: str) -> User:
             job_id="starter_grant",
             node_id=None,
             timestamp=datetime.utcnow(),
-            metadata={"type": "starter_grant"},
+            meta_data={"type": "starter_grant"},
         )
         db.add(txn)
         db.commit()
@@ -92,7 +101,7 @@ def refund_credits(db: Session, public_key: str, amount: int, job_id: str):
         job_id=job_id,
         node_id=None,
         timestamp=datetime.utcnow(),
-        metadata={"type": "refund"},
+        meta_data={"type": "refund"},
     )
     db.add(txn)
     db.commit()
@@ -159,7 +168,7 @@ def record_job_completion(
         job_id=job_id,
         node_id=worker_node_id,
         timestamp=datetime.utcnow(),
-        metadata={"type": "job_completion", "multiplier": multiplier},
+        meta_data={"type": "job_completion", "multiplier": multiplier},
     )
     db.add(txn)
     db.commit()
@@ -198,7 +207,7 @@ def get_transaction_history(db: Session, public_key: str, limit: int = 50) -> li
             "duration": txn.duration_seconds,
             "job_id": txn.job_id,
             "timestamp": txn.timestamp.isoformat(),
-            "type": txn.metadata.get("type") if txn.metadata else "job",
+            "type": txn.meta_data.get("type") if txn.meta_data else "job",
         }
         for txn in transactions
     ]
