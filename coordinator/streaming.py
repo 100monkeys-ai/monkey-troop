@@ -3,19 +3,18 @@
 from typing import AsyncIterator
 import json
 
-async def stream_chat_completion(
-    response_stream: AsyncIterator[bytes]
-) -> AsyncIterator[str]:
+
+async def stream_chat_completion(response_stream: AsyncIterator[bytes]) -> AsyncIterator[str]:
     """
     Convert streaming response to SSE format.
-    
+
     Yields SSE-formatted chunks: data: {...}\n\n
     """
     async for chunk in response_stream:
         # Parse chunk (assuming JSON lines format from Ollama)
         try:
             # Ollama sends newline-delimited JSON
-            for line in chunk.decode('utf-8').strip().split('\n'):
+            for line in chunk.decode("utf-8").strip().split("\n"):
                 if line:
                     data = json.loads(line)
                     # Convert to SSE format
@@ -26,7 +25,7 @@ async def stream_chat_completion(
             error_data = {"error": f"Parse error: {str(e)}"}
             yield f"data: {json.dumps(error_data)}\n\n"
             continue
-    
+
     # Send done signal
     yield "data: [DONE]\n\n"
 
