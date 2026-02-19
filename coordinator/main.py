@@ -278,11 +278,12 @@ async def list_peers(model: Optional[str] = None):
     """
     List available nodes, optionally filtered by model.
     """
+    keys = list(redis_client.scan_iter("node:*"))
     nodes = []
 
     if keys:
-        for key in keys:
-            raw_data = redis_client.get(key)
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
             if raw_data:
                 node = json.loads(raw_data)
 
@@ -395,15 +396,16 @@ async def authorize_request(req: AuthorizeRequest, request: Request, db: Session
         )
 
     # Find available nodes with requested model
-    keys = redis_client.keys("node:*")
+    keys = list(redis_client.scan_iter("node:*"))
     candidates = []
 
-    for key in keys:
-        raw_data = redis_client.get(key)
-        if raw_data:
-            node = json.loads(raw_data)
-            if node.get("status") == "IDLE" and req.model in node.get("models", []):
-                candidates.append(node)
+    if keys:
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
+            if raw_data:
+                node = json.loads(raw_data)
+                if node.get("status") == "IDLE" and req.model in node.get("models", []):
+                    candidates.append(node)
 
     if not candidates:
         audit.log_authorization(
@@ -490,7 +492,7 @@ async def get_transactions(
     """Get transaction history for a user."""
     from transactions import get_transaction_history
 
-    return {"transactions": get_transaction_history(db, public_key, limit)}
+    return {"transactions": get_transaction_history(public_key, limit)}
 
 
 @app.get("/admin/audit")
@@ -532,13 +534,15 @@ async def list_models():
     OpenAI-compatible models endpoint.
     Aggregates all models from active nodes.
     """
+    keys = list(redis_client.scan_iter("node:*"))
     unique_models = set()
 
-    for key in keys:
-        raw_data = redis_client.get(key)
-        if raw_data:
-            node = json.loads(raw_data)
-            unique_models.update(node.get("models", []))
+    if keys:
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
+            if raw_data:
+                node = json.loads(raw_data)
+                unique_models.update(node.get("models", []))
 
     return {
         "object": "list",

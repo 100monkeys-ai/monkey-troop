@@ -39,7 +39,7 @@ def create_jwt_ticket(user_id: str, target_node_id: str, project: str = "free-ti
 
 
 def verify_jwt_ticket(token: str) -> Optional[dict]:
-    """Verify JWT ticket using RSA public key.
+    """using RSA public key.
 
     Args:
         token: The JWT token to verify

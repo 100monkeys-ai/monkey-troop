@@ -8,6 +8,7 @@ from audit import log_authorization, log_security_event
 
 
 
+
 def test_audit_log_created():
     """Test that audit log file is created."""
     # Ensure logs directory exists

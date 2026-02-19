@@ -59,25 +59,6 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn list_transactions(config: &config::Config) -> Result<()> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "{}/users/{}/transactions",
-        config.coordinator_url, config.requester_id
-    );
-
-    let response = client.get(&url).send().await?;
-
-    if response.status().is_success() {
-        let transactions: serde_json::Value = response.json().await?;
-        println!("{}", serde_json::to_string_pretty(&transactions)?);
-    } else {
-        println!("Failed to get transactions: {}", response.status());
-    }
-
-    Ok(())
-}
-
 async fn list_nodes(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
     let url = format!("{}/peers", config.coordinator_url);

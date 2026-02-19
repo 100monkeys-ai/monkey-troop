@@ -151,6 +151,7 @@ def test_job_completion_credit_transfer(db_session):
 
 
 
+
 def test_invalid_signature_rejected(db_session):
     """Test that invalid HMAC signatures are rejected."""
     requester = create_user_if_not_exists(db_session, "requester_sig_test")
