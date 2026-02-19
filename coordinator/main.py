@@ -211,6 +211,7 @@ async def startup_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    return {"status": "healthy"}
 
 
 @app.get("/public-key")
@@ -461,7 +462,6 @@ async def get_transactions(
     db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-
     return {"transactions": get_transaction_history(db, public_key, limit)}
 
 

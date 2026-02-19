@@ -4,7 +4,7 @@ use sysinfo::System;
 /// Check if GPU is idle based on utilization threshold
 pub async fn is_gpu_idle(threshold: f32) -> Result<bool> {
     // Try nvidia-smi first
-    if let Ok(nvidia_idle) = check_nvidia_idle(threshold).await {
+    if let Ok(nvidia_idle) = check_nvidia_idle(threshold) {
         return Ok(nvidia_idle);
     }
 
@@ -12,16 +12,15 @@ pub async fn is_gpu_idle(threshold: f32) -> Result<bool> {
     Ok(check_cpu_idle(threshold).await)
 }
 
-async fn check_nvidia_idle(threshold: f32) -> Result<bool> {
-    use tokio::process::Command;
+fn check_nvidia_idle(threshold: f32) -> Result<bool> {
+    use std::process::Command;
 
     let output = Command::new("nvidia-smi")
         .args(&[
             "--query-gpu=utilization.gpu",
             "--format=csv,noheader,nounits",
         ])
-        .output()
-        .await?;
+        .output()?;
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -50,8 +49,8 @@ async fn check_cpu_idle(threshold: f32) -> bool {
 }
 
 /// Get GPU information
-pub async fn get_gpu_info() -> (String, u64) {
-    if let Ok((name, vram)) = get_nvidia_info().await {
+pub fn get_gpu_info() -> (String, u64) {
+    if let Ok((name, vram)) = get_nvidia_info() {
         return (name, vram);
     }
 
@@ -59,14 +58,13 @@ pub async fn get_gpu_info() -> (String, u64) {
     ("Unknown GPU".to_string(), 0)
 }
 
-async fn get_nvidia_info() -> Result<(String, u64)> {
-    use tokio::process::Command;
+fn get_nvidia_info() -> Result<(String, u64)> {
+    use std::process::Command;
 
     // Get GPU name
     let name_output = Command::new("nvidia-smi")
         .args(&["--query-gpu=name", "--format=csv,noheader"])
-        .output()
-        .await?;
+        .output()?;
 
     let name = String::from_utf8_lossy(&name_output.stdout)
         .trim()
@@ -75,8 +73,7 @@ async fn get_nvidia_info() -> Result<(String, u64)> {
     // Get free VRAM in MB
     let vram_output = Command::new("nvidia-smi")
         .args(&["--query-gpu=memory.free", "--format=csv,noheader,nounits"])
-        .output()
-        .await?;
+        .output()?;
 
     let vram = String::from_utf8_lossy(&vram_output.stdout)
         .trim()

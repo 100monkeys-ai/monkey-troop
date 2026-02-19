@@ -127,7 +127,7 @@ async fn send_heartbeat(
     }
 
     // Get GPU info
-    let (gpu_name, vram_free) = gpu::get_gpu_info().await;
+    let (gpu_name, vram_free) = gpu::get_gpu_info();
 
     // Determine status
     let status = if gpu::is_gpu_idle(10.0).await.unwrap_or(false) {
