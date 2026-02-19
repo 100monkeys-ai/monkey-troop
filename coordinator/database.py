@@ -13,8 +13,7 @@ from sqlalchemy import (
     String,
     create_engine,
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger"
