@@ -9,6 +9,11 @@ from sqlalchemy.orm import Session
 
 from database import Node, Transaction, User
 
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+
+from database import Node, Transaction, User
+
 # HMAC secret for job receipts - must be shared with workers
 RECEIPT_SECRET = os.getenv("RECEIPT_SECRET")
 if not RECEIPT_SECRET:

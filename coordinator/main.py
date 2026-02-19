@@ -20,6 +20,9 @@ from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
 from database import Node, User, get_db, init_db
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
+from rate_limit import RateLimiter
+from redis import Redis
+from sqlalchemy.orm import Session
 from timeout_middleware import TimeoutMiddleware
 from transactions import (
     check_sufficient_balance,
@@ -59,6 +62,7 @@ app.add_middleware(
 # Redis connection
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_client = Redis(host=redis_host, port=6379, db=0, decode_responses=True)
+rate_limiter = RateLimiter(redis_client)
 
 # Rate limiter instance
 # Initialize rate limiter
