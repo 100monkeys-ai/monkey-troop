@@ -1,9 +1,10 @@
 """Test audit logging functionality."""
 
-import pytest
-from audit import log_authorization, log_transaction, log_rate_limit, log_security_event
-import os
 import json
+import os
+
+from audit import log_authorization, log_security_event
+
 
 
 def test_audit_log_created():
@@ -32,7 +33,7 @@ def test_audit_entries_valid_json():
             assert "timestamp" in last_entry
             assert "message" in last_entry
             # The message field contains the nested JSON
-            message = json.loads(last_entry["message"])
+            message = last_entry["message"]
             assert message["event"] == "authorization"
             assert message["requester_id"] == "user_json"
 
@@ -41,7 +42,7 @@ def test_security_event_logging():
     """Test security event logging."""
     os.makedirs("logs", exist_ok=True)
 
-    log_security_event("invalid_token", {"token": "abc123", "reason": "expired"}, "10.0.0.1")
+    log_security_event("invalid_token", "10.0.0.1", {"token": "abc123", "reason": "expired"})
 
     # Verify logged
     assert os.path.exists("logs/audit.log")

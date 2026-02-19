@@ -1,10 +1,10 @@
 """Audit logging for security and compliance."""
 
-import logging
-from datetime import datetime, timedelta
-from typing import Optional
 import json
-from database import SessionLocal, AuditLog
+import logging
+from typing import Optional
+
+from database import AuditLog, SessionLocal
 
 # Configure audit logger to write to separate file
 audit_logger = logging.getLogger("audit")
@@ -86,7 +86,7 @@ def log_rate_limit(ip_address: str, endpoint: str, limit: int, window: int):
     _write_to_db("rate_limit", None, ip_address, details)
 
 
-def log_security_event(event_type: str, details: dict, ip_address: Optional[str] = None):
+def log_security_event(event_type: str, ip_address: Optional[str], details: dict):
     """Log a security event."""
     log_data = {"event": "security", "type": event_type, **details}
 

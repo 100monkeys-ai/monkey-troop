@@ -1,16 +1,25 @@
 """Credit accounting and transaction management for Monkey Troop."""
 
-import hmac
 import hashlib
+import hmac
 import os
 from datetime import datetime
-from sqlalchemy.orm import Session, joinedload
+
+from sqlalchemy.orm import Session
+
+from database import Node, Transaction, User
+
 from sqlalchemy import and_
-from database import User, Node, Transaction
-from typing import Optional
+from sqlalchemy.orm import Session
+
+from database import Node, Transaction, User
 
 # HMAC secret for job receipts - must be shared with workers
-RECEIPT_SECRET = os.getenv("RECEIPT_SECRET", "change-me-in-production")
+RECEIPT_SECRET = os.getenv("RECEIPT_SECRET")
+if not RECEIPT_SECRET:
+    raise RuntimeError(
+        "RECEIPT_SECRET environment variable is not set. This is required for security."
+    )
 
 # Starter credits: 1 hour = 3600 seconds
 STARTER_CREDITS = 3600
@@ -26,10 +35,25 @@ def create_user_if_not_exists(db: Session, public_key: str) -> User:
             public_key=public_key,
             balance_seconds=STARTER_CREDITS,
             created_at=datetime.utcnow(),
+            last_active=datetime.utcnow(),
         )
         db.add(user)
         db.commit()
         db.refresh(user)
+
+        # Record starter credit transaction
+        txn = Transaction(
+            from_user=None,  # System grant
+            to_user=public_key,
+            duration_seconds=0,
+            credits_transferred=STARTER_CREDITS,
+            job_id="starter_grant",
+            node_id=None,
+            timestamp=datetime.utcnow(),
+            meta_data={"type": "starter_grant"},
+        )
+        db.add(txn)
+        db.commit()
 
     return user
 
@@ -68,6 +92,20 @@ def refund_credits(db: Session, public_key: str, amount: int, job_id: str):
     user.balance_seconds += amount
     db.commit()
 
+    # Record refund transaction
+    txn = Transaction(
+        from_user=None,
+        to_user=public_key,
+        duration_seconds=0,
+        credits_transferred=amount,
+        job_id=job_id,
+        node_id=None,
+        timestamp=datetime.utcnow(),
+        meta_data={"type": "refund"},
+    )
+    db.add(txn)
+    db.commit()
+
 
 def record_job_completion(
     db: Session,
@@ -93,7 +131,7 @@ def record_job_completion(
     if not node:
         return {"status": "error", "message": "Worker node not found"}
 
-    worker_public_key = node.owner.public_key
+    worker_public_key = node.owner_public_key
 
     # Get multiplier for credits calculation
     multiplier = node.multiplier
@@ -114,8 +152,12 @@ def record_job_completion(
     # The actual deduction happened in reserve_credits, so we just add to worker
     worker_owner.balance_seconds += credits_to_transfer
 
+    # Update node stats
+    node.total_jobs_completed += 1
+    node.last_seen = datetime.utcnow()
+
     # Update trust score (simple increment for now)
-    node.trust_score = min(100, node.trust_score + 1)
+    node.trust_score = min(1.0, node.trust_score + 0.01)
 
     # Record transaction
     txn = Transaction(
@@ -125,6 +167,7 @@ def record_job_completion(
         credits_transferred=credits_to_transfer,
         job_id=job_id,
         timestamp=datetime.utcnow(),
+        meta_data={"type": "job_completion", "multiplier": multiplier},
     )
     db.add(txn)
     db.commit()
@@ -146,14 +189,9 @@ def generate_receipt_signature(job_id: str, node_id: str, duration_seconds: int)
 
 def get_transaction_history(db: Session, public_key: str, limit: int = 50) -> list[dict]:
     """Get transaction history for a user."""
-    user = db.query(User).filter(User.public_key == public_key).first()
-    if not user:
-        return []
-
     transactions = (
         db.query(Transaction)
-        .options(joinedload(Transaction.requester))
-        .filter(Transaction.requester_id == user.id)
+        .filter((Transaction.from_user == public_key) | (Transaction.to_user == public_key))
         .order_by(Transaction.timestamp.desc())
         .limit(limit)
         .all()
@@ -168,6 +206,7 @@ def get_transaction_history(db: Session, public_key: str, limit: int = 50) -> li
             "duration": txn.duration_seconds,
             "job_id": txn.job_id,
             "timestamp": txn.timestamp.isoformat(),
+            "type": txn.meta_data.get("type") if txn.meta_data else "job",
         }
         for txn in transactions
     ]

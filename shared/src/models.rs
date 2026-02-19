@@ -115,6 +115,14 @@ pub struct PeersResponse {
     pub nodes: Vec<NodeHeartbeat>,
 }
 
+/// User credit balance response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BalanceResponse {
+    pub public_key: String,
+    pub balance_seconds: i64,
+    pub balance_hours: f64,
+}
+
 /// OpenAI-compatible model list
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelInfo {

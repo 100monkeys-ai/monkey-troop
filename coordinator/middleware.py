@@ -1,12 +1,14 @@
 """FastAPI middleware for rate limiting and request tracking."""
 
-from fastapi import Request, HTTPException, status
-from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 import time
 import uuid
-from rate_limit import RateLimiter
+
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from audit import log_rate_limit
+from rate_limit import RateLimiter
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

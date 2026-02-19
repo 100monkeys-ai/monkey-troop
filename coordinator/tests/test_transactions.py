@@ -1,18 +1,20 @@
 """Test credit accounting and transactions."""
 
 import pytest
+from database import Base, Node, Transaction, User
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database import Base, User, Node, Transaction
+
+from database import Base, Node, Transaction
 from transactions import (
-    create_user_if_not_exists,
-    get_user_balance,
-    check_sufficient_balance,
-    reserve_credits,
-    refund_credits,
-    record_job_completion,
-    generate_receipt_signature,
     STARTER_CREDITS,
+    check_sufficient_balance,
+    create_user_if_not_exists,
+    generate_receipt_signature,
+    get_user_balance,
+    record_job_completion,
+    refund_credits,
+    reserve_credits,
 )
 
 # Use in-memory SQLite for testing
@@ -38,6 +40,15 @@ def test_new_user_gets_starter_credits(db_session):
 
     assert user.public_key == public_key
     assert user.balance_seconds == STARTER_CREDITS
+
+    # Check transaction was recorded
+    txn = (
+        db_session.query(Transaction)
+        .filter(Transaction.to_user == public_key, Transaction.job_id == "starter_grant")
+        .first()
+    )
+    assert txn is not None
+    assert txn.credits_transferred == STARTER_CREDITS
 
 
 def test_existing_user_not_duplicated(db_session):
@@ -104,7 +115,8 @@ def test_job_completion_credit_transfer(db_session):
         owner_id=worker_owner.id,
         multiplier=2.0,
         benchmark_score=15.5,
-        trust_score=50,
+        trust_score=0.5,
+        total_jobs_completed=0,
     )
     db_session.add(node)
     db_session.commit()
@@ -137,12 +149,13 @@ def test_job_completion_credit_transfer(db_session):
     assert node.trust_score > 50  # Increased
 
 
+
 def test_invalid_signature_rejected(db_session):
     """Test that invalid HMAC signatures are rejected."""
     requester = create_user_if_not_exists(db_session, "requester_sig_test")
     worker_owner = create_user_if_not_exists(db_session, "worker_sig_test")
 
-    node = Node(node_id="node_sig_test", owner_id=worker_owner.id, multiplier=1.0)
+    node = Node(node_id="node_sig_test", owner_public_key=worker_owner.public_key, multiplier=1.0)
     db_session.add(node)
     db_session.commit()
 

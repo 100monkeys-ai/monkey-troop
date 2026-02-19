@@ -1,8 +1,6 @@
 """Redis-based rate limiting."""
 
 import redis
-from typing import Optional
-from datetime import datetime
 
 # Rate limit configuration
 DISCOVERY_LIMIT = 100  # requests per hour
