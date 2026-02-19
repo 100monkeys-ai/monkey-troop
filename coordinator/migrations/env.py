@@ -9,7 +9,6 @@ from sqlalchemy import engine_from_config, pool
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-import database  # Import to ensure all models are loaded
 from database import Base
 
 # this is the Alembic Config object
