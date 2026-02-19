@@ -4,26 +4,31 @@ import json
 import os
 import random
 import uuid
+from datetime import datetime
 from secrets import compare_digest
 from typing import Optional
+
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import BaseModel
+from redis import Redis
+from sqlalchemy.orm import Session
 
 import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
 from database import Node, User, get_db, init_db
-from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
 from rate_limit import RateLimiter
 from redis import Redis
 from sqlalchemy.orm import Session
 from timeout_middleware import TimeoutMiddleware
-from transactions import (check_sufficient_balance, create_user_if_not_exists,
-                          generate_receipt_signature, get_transaction_history,
-                          get_user_balance, record_job_completion,
-                          reserve_credits)
+from transactions import (
+    check_sufficient_balance,
+    create_user_if_not_exists,
+    get_transaction_history,
+)
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -31,11 +36,25 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS middleware
+# CORS configuration
+allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_raw == "*":
+    allowed_origins = ["*"]
+    allow_credentials = False
+elif allowed_origins_raw:
+    allowed_origins = [
+        origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()
+    ]
+    allow_credentials = True
+else:
+    # Default to local development if not specified
+    allowed_origins = ["http://localhost:3000"]
+    allow_credentials = True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -45,7 +64,12 @@ redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_client = Redis(host=redis_host, port=6379, db=0, decode_responses=True)
 rate_limiter = RateLimiter(redis_client)
 
-# Add middleware (order matters - outermost first)
+# Rate limiter instance
+# Initialize rate limiter
+rate_limiter = RateLimiter(redis_client)
+
+# Rate limiter (order matters - outermost first)
+# Add timeout middleware (outermost layer)
 app.add_middleware(TimeoutMiddleware)
 
 # Add request tracing and rate limiting
@@ -54,7 +78,11 @@ app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
 
 # HTTP Basic Auth for admin endpoints
 security = HTTPBasic()
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "change-me-in-production")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError(
+        "ADMIN_PASSWORD environment variable is not set. This is required for security."
+    )
 
 # Constants
 CHALLENGE_TTL = 60  # Challenge expires in 60 seconds
@@ -144,6 +172,15 @@ class PeersResponse(BaseModel):
 # ----------------------
 # HELPER FUNCTIONS
 # ----------------------
+def _get_all_nodes() -> list[dict]:
+    """Retrieve all node data from Redis."""
+    keys = redis_client.keys("node:*")
+    if not keys:
+        return []
+    raw_nodes = redis_client.mget(keys)
+    return [json.loads(raw_data) for raw_data in raw_nodes if raw_data]
+
+
 def calculate_multiplier(duration: float) -> float:
     """
     Calculate hardware multiplier based on benchmark duration.
@@ -195,7 +232,7 @@ async def startup_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "monkey-troop-coordinator"}
+    return {"status": "healthy"}
 
 
 @app.get("/public-key")
@@ -233,24 +270,17 @@ async def list_peers(model: Optional[str] = None):
     """
     List available nodes, optionally filtered by model.
     """
-    keys = redis_client.keys("node:*")
     nodes = []
+    for node in _get_all_nodes():
+        # Filter by status
+        if node.get("status") != "IDLE":
+            continue
 
-    if keys:
-        for key in keys:
-            raw_data = redis_client.get(key)
-            if raw_data:
-                node = json.loads(raw_data)
+        # Filter by model if requested
+        if model and model not in node.get("models", []):
+            continue
 
-                # Filter by status
-                if node.get("status") != "IDLE":
-                    continue
-
-                # Filter by model if requested
-                if model and model not in node.get("models", []):
-                    continue
-
-                nodes.append(node)
+        nodes.append(node)
 
     return {"count": len(nodes), "nodes": nodes}
 
@@ -354,12 +384,13 @@ async def authorize_request(req: AuthorizeRequest, request: Request, db: Session
     keys = redis_client.keys("node:*")
     candidates = []
 
-    for key in keys:
-        raw_data = redis_client.get(key)
-        if raw_data:
-            node = json.loads(raw_data)
-            if node.get("status") == "IDLE" and req.model in node.get("models", []):
-                candidates.append(node)
+    if keys:
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
+            if raw_data:
+                node = json.loads(raw_data)
+                if node.get("status") == "IDLE" and req.model in node.get("models", []):
+                    candidates.append(node)
 
     if not candidates:
         audit.log_authorization(
@@ -442,11 +473,10 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 async def get_transactions(
     public_key: str,
     limit: int = 50,
+    db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-    from transactions import get_transaction_history
-
-    return {"transactions": get_transaction_history(public_key, limit)}
+    return {"transactions": get_transaction_history(db, public_key, limit)}
 
 
 @app.get("/admin/audit")
@@ -488,14 +518,14 @@ async def list_models():
     OpenAI-compatible models endpoint.
     Aggregates all models from active nodes.
     """
-    keys = redis_client.keys("node:*")
     unique_models = set()
 
-    for key in keys:
-        raw_data = redis_client.get(key)
-        if raw_data:
-            node = json.loads(raw_data)
-            unique_models.update(node.get("models", []))
+    if keys:
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
+            if raw_data:
+                node = json.loads(raw_data)
+                unique_models.update(node.get("models", []))
 
     return {
         "object": "list",

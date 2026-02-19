@@ -1,13 +1,15 @@
 """Integration tests for Monkey Troop end-to-end flow."""
 
-import asyncio
+import json
 import time
 
 import httpx
 import pytest
+import pytest_asyncio
 import redis
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from main import app
+
+from main import app
 
 # Test configuration
 COORDINATOR_URL = "http://localhost:8000"
@@ -15,10 +17,12 @@ TEST_USER_KEY = "test_user_12345"
 TEST_MODEL = "llama2:7b"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def coordinator_client():
     """HTTP client for coordinator."""
-    async with httpx.AsyncClient(base_url=COORDINATOR_URL, timeout=30.0) as client:
+    # Ensure database is initialized
+    await startup_event()
+    async with httpx.AsyncClient(app=app, base_url="http://test", timeout=30.0) as client:
         yield client
 
 
@@ -54,7 +58,7 @@ async def test_starter_credits_on_first_auth(coordinator_client):
     test_user = f"test_user_{int(time.time())}"
 
     # Check balance before authorization (should create user with starter credits)
-    response = await coordinator_client.get(f"/users/{test_user}/balance")
+    await coordinator_client.get(f"/users/{test_user}/balance")
 
     # First request might be 0 if user doesn't exist yet
     # After authorization, balance should exist
@@ -149,8 +153,6 @@ async def test_jwt_structure(coordinator_client, redis_client):
         "hardware": {"gpu": "Test GPU", "vram_free": 8192},
         "engine": {"type": "ollama", "version": "0.1.0", "port": 11434},
     }
-
-    import json
 
     redis_client.setex("node:test_node_integration", 60, json.dumps(node_data))
 

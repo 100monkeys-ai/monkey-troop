@@ -1,8 +1,5 @@
 """Redis-based rate limiting."""
 
-from datetime import datetime
-from typing import Optional
-
 import redis
 
 # Rate limit configuration

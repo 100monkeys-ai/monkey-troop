@@ -5,7 +5,6 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use monkey_troop_shared::BalanceResponse;
 use tracing::info;
-use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(name = "monkey-troop-client")]
@@ -23,6 +22,8 @@ enum Commands {
     Balance,
     /// List available nodes
     Nodes,
+    /// List transaction history
+    Transactions,
 }
 
 #[tokio::main]
@@ -48,6 +49,30 @@ async fn main() -> Result<()> {
             let config = config::Config::from_env()?;
             list_nodes(&config).await?;
         }
+        Commands::Transactions => {
+            info!("Fetching transactions...");
+            let config = config::Config::from_env()?;
+            list_transactions(&config).await?;
+        }
+    }
+
+    Ok(())
+}
+
+async fn list_transactions(config: &config::Config) -> Result<()> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "{}/users/{}/transactions",
+        config.coordinator_url, config.requester_id
+    );
+
+    let response = client.get(&url).send().await?;
+
+    if response.status().is_success() {
+        let transactions: serde_json::Value = response.json().await?;
+        println!("{}", serde_json::to_string_pretty(&transactions)?);
+    } else {
+        println!("Failed to get transactions: {}", response.status());
     }
 
     Ok(())
