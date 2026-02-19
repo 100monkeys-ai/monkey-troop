@@ -13,8 +13,8 @@ from transactions import (
     generate_receipt_signature,
     get_user_balance,
     record_job_completion,
-    refund_credits,
-    reserve_credits,
+    generate_receipt_signature,
+    STARTER_CREDITS,
 )
 
 # Use in-memory SQLite for testing
@@ -147,6 +147,7 @@ def test_job_completion_credit_transfer(db_session):
 
     # Node stats should update
     assert node.trust_score > 50  # Increased
+
 
 
 

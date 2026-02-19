@@ -18,7 +18,16 @@ from sqlalchemy.orm import Session
 import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
-from database import Node, User, get_db, init_db
+from transactions import (
+    create_user_if_not_exists,
+    get_user_balance,
+    check_sufficient_balance,
+    reserve_credits,
+    record_job_completion,
+    get_transaction_history,
+    generate_receipt_signature,
+)
+from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
 from rate_limit import RateLimiter
 from redis import Redis
@@ -68,7 +77,7 @@ rate_limiter = RateLimiter(redis_client)
 # Initialize rate limiter
 rate_limiter = RateLimiter(redis_client)
 
-# Rate limiter (order matters - outermost first)
+# Middleware (order matters - outermost first)
 # Add timeout middleware (outermost layer)
 app.add_middleware(TimeoutMiddleware)
 
@@ -203,7 +212,6 @@ def run_migrations():
     """Run database migrations using Alembic"""
     try:
         from alembic import command
-        from alembic.config import Config
 
         # Run migrations
         alembic_cfg = Config("alembic.ini")
@@ -271,16 +279,22 @@ async def list_peers(model: Optional[str] = None):
     List available nodes, optionally filtered by model.
     """
     nodes = []
-    for node in _get_all_nodes():
-        # Filter by status
-        if node.get("status") != "IDLE":
-            continue
 
-        # Filter by model if requested
-        if model and model not in node.get("models", []):
-            continue
+    if keys:
+        for key in keys:
+            raw_data = redis_client.get(key)
+            if raw_data:
+                node = json.loads(raw_data)
 
-        nodes.append(node)
+                # Filter by status
+                if node.get("status") != "IDLE":
+                    continue
+
+                # Filter by model if requested
+                if model and model not in node.get("models", []):
+                    continue
+
+                nodes.append(node)
 
     return {"count": len(nodes), "nodes": nodes}
 
@@ -384,13 +398,12 @@ async def authorize_request(req: AuthorizeRequest, request: Request, db: Session
     keys = redis_client.keys("node:*")
     candidates = []
 
-    if keys:
-        raw_nodes = redis_client.mget(keys)
-        for raw_data in raw_nodes:
-            if raw_data:
-                node = json.loads(raw_data)
-                if node.get("status") == "IDLE" and req.model in node.get("models", []):
-                    candidates.append(node)
+    for key in keys:
+        raw_data = redis_client.get(key)
+        if raw_data:
+            node = json.loads(raw_data)
+            if node.get("status") == "IDLE" and req.model in node.get("models", []):
+                candidates.append(node)
 
     if not candidates:
         audit.log_authorization(
@@ -472,10 +485,11 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 @app.get("/users/{public_key}/transactions")
 async def get_transactions(
     public_key: str,
-    limit: int = 50,
     db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
+    from transactions import get_transaction_history
+
     return {"transactions": get_transaction_history(db, public_key, limit)}
 
 
@@ -520,12 +534,11 @@ async def list_models():
     """
     unique_models = set()
 
-    if keys:
-        raw_nodes = redis_client.mget(keys)
-        for raw_data in raw_nodes:
-            if raw_data:
-                node = json.loads(raw_data)
-                unique_models.update(node.get("models", []))
+    for key in keys:
+        raw_data = redis_client.get(key)
+        if raw_data:
+            node = json.loads(raw_data)
+            unique_models.update(node.get("models", []))
 
     return {
         "object": "list",

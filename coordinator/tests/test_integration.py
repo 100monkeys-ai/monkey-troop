@@ -17,7 +17,7 @@ TEST_USER_KEY = "test_user_12345"
 TEST_MODEL = "llama2:7b"
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def coordinator_client():
     """HTTP client for coordinator."""
     # Ensure database is initialized
@@ -58,7 +58,7 @@ async def test_starter_credits_on_first_auth(coordinator_client):
     test_user = f"test_user_{int(time.time())}"
 
     # Check balance before authorization (should create user with starter credits)
-    await coordinator_client.get(f"/users/{test_user}/balance")
+    response = await coordinator_client.get(f"/users/{test_user}/balance")
 
     # First request might be 0 if user doesn't exist yet
     # After authorization, balance should exist
@@ -153,6 +153,8 @@ async def test_jwt_structure(coordinator_client, redis_client):
         "hardware": {"gpu": "Test GPU", "vram_free": 8192},
         "engine": {"type": "ollama", "version": "0.1.0", "port": 11434},
     }
+
+    import json
 
     redis_client.setex("node:test_node_integration", 60, json.dumps(node_data))
 

@@ -1,19 +1,20 @@
 """Database models and connection management."""
 
 import os
-from datetime import datetime
-
 from sqlalchemy import (
-    JSON,
-    BigInteger,
+    create_engine,
     Column,
-    DateTime,
-    Float,
     Integer,
     String,
-    create_engine,
+    Float,
+    BigInteger,
+    DateTime,
+    ForeignKey,
 )
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
+from datetime import datetime
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger"
@@ -46,7 +47,12 @@ class User(Base):
     public_key = Column(String, unique=True, nullable=False)  # Wallet address
     balance_seconds = Column(BigInteger, default=3600)  # Start with 1 free hour
     created_at = Column(DateTime, default=datetime.utcnow)
-    last_active = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    nodes = relationship("Node", back_populates="owner")
+    transactions_sent = relationship(
+        "Transaction", foreign_keys="Transaction.requester_id", back_populates="requester"
+    )
 
 
 class Node(Base):
@@ -63,13 +69,11 @@ class Node(Base):
     trust_score = Column(Integer, default=100)  # Reputation
     total_jobs_completed = Column(Integer, default=0)
 
-    # Extra fields used in logic but maybe not in migration 001?
-    # We should include them if code uses them.
-    hardware_model = Column(String(50))
-    last_benchmark = Column(DateTime)
-    last_seen = Column(DateTime, default=datetime.utcnow)
-
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # Relationships
+    owner = relationship("User", back_populates="nodes")
+    transactions = relationship(
+        "Transaction", foreign_keys="Transaction.worker_node_id", back_populates="worker_node"
+    )
 
 
 class Transaction(Base):
@@ -89,7 +93,11 @@ class Transaction(Base):
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    meta_data = Column("metadata", JSON, nullable=True)  # Map to "metadata" column in DB
+    # Relationships
+    requester = relationship(
+        "User", foreign_keys=[requester_id], back_populates="transactions_sent"
+    )
+    worker_node = relationship("Node", foreign_keys=[worker_node_id], back_populates="transactions")
 
 
 def init_db():
