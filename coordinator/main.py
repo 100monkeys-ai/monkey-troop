@@ -366,11 +366,16 @@ async def authorize_request(req: AuthorizeRequest, request: Request, db: Session
         )
 
     # Find available nodes with requested model
-    candidates = [
-        node
-        for node in _get_all_nodes()
-        if node.get("status") == "IDLE" and req.model in node.get("models", [])
-    ]
+    keys = redis_client.keys("node:*")
+    candidates = []
+
+    if keys:
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
+            if raw_data:
+                node = json.loads(raw_data)
+                if node.get("status") == "IDLE" and req.model in node.get("models", []):
+                    candidates.append(node)
 
     if not candidates:
         audit.log_authorization(
@@ -456,7 +461,6 @@ async def get_transactions(
     db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-
     return {"transactions": get_transaction_history(db, public_key, limit)}
 
 
@@ -501,8 +505,12 @@ async def list_models():
     """
     unique_models = set()
 
-    for node in _get_all_nodes():
-        unique_models.update(node.get("models", []))
+    if keys:
+        raw_nodes = redis_client.mget(keys)
+        for raw_data in raw_nodes:
+            if raw_data:
+                node = json.loads(raw_data)
+                unique_models.update(node.get("models", []))
 
     return {
         "object": "list",
