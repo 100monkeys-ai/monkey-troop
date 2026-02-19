@@ -3,11 +3,12 @@
 import time
 import uuid
 
-from audit import log_rate_limit
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
-from rate_limit import RateLimiter
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from audit import log_rate_limit
+from rate_limit import RateLimiter
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

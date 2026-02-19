@@ -43,10 +43,9 @@ app.add_middleware(
 # Redis connection
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_client = Redis(host=redis_host, port=6379, db=0, decode_responses=True)
+rate_limiter = RateLimiter(redis_client)
 
-# Rate limiter (order matters - outermost first)
-app.add_middleware(TimeoutMiddleware)
-# Add timeout middleware (outermost layer)
+# Add middleware (order matters - outermost first)
 app.add_middleware(TimeoutMiddleware)
 
 # Add request tracing and rate limiting
@@ -66,7 +65,6 @@ ESTIMATED_JOB_DURATION = 300  # 5 minutes default reservation
 # ----------------------
 # DATA MODELS (Pydantic)
 # ----------------------
-from pydantic import BaseModel
 
 
 class EngineInfo(BaseModel):
@@ -197,6 +195,7 @@ async def startup_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    return {"status": "healthy", "service": "monkey-troop-coordinator"}
 
 
 @app.get("/public-key")
@@ -206,7 +205,6 @@ async def get_public_key():
     Workers fetch this on startup to verify tickets.
     """
     return {"public_key": get_public_key_string()}
-    return {"status": "healthy", "service": "monkey-troop-coordinator"}
 
 
 # ----------------------
