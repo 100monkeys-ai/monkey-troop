@@ -86,7 +86,7 @@ def log_rate_limit(ip_address: str, endpoint: str, limit: int, window: int):
     _write_to_db("rate_limit", None, ip_address, details)
 
 
-def log_security_event(event_type: str, ip_address: Optional[str], details: dict):
+def log_security_event(event_type: str, details: dict, ip_address: Optional[str] = None):
     """Log a security event."""
     log_data = {"event": "security", "type": event_type, **details}
 
