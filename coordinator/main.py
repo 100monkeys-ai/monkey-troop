@@ -450,11 +450,10 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 async def get_transactions(
     public_key: str,
     limit: int = 50,
+    db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-    from transactions import get_transaction_history
-
-    return {"transactions": get_transaction_history(public_key, limit)}
+    return {"transactions": get_transaction_history(db, public_key, limit)}
 
 
 @app.get("/admin/audit")

@@ -39,15 +39,6 @@ def test_new_user_gets_starter_credits(db_session):
     assert user.public_key == public_key
     assert user.balance_seconds == STARTER_CREDITS
 
-    # Check transaction was recorded
-    txn = (
-        db_session.query(Transaction)
-        .filter(Transaction.to_user == public_key, Transaction.job_id == "starter_grant")
-        .first()
-    )
-    assert txn is not None
-    assert txn.credits_transferred == STARTER_CREDITS
-
 
 def test_existing_user_not_duplicated(db_session):
     """Test that existing users don't get duplicate starter credits."""
@@ -110,11 +101,10 @@ def test_job_completion_credit_transfer(db_session):
     # Create worker node
     node = Node(
         node_id="test_node_789",
-        owner_public_key=worker_owner.public_key,
+        owner_id=worker_owner.id,
         multiplier=2.0,
         benchmark_score=15.5,
-        trust_score=0.5,
-        total_jobs_completed=0,
+        trust_score=50,
     )
     db_session.add(node)
     db_session.commit()
@@ -144,8 +134,7 @@ def test_job_completion_credit_transfer(db_session):
     assert worker_owner.balance_seconds == STARTER_CREDITS + (duration * 2)
 
     # Node stats should update
-    assert node.total_jobs_completed == 1
-    assert node.trust_score > 0.5  # Increased
+    assert node.trust_score > 50  # Increased
 
 
 def test_invalid_signature_rejected(db_session):
@@ -153,7 +142,7 @@ def test_invalid_signature_rejected(db_session):
     requester = create_user_if_not_exists(db_session, "requester_sig_test")
     worker_owner = create_user_if_not_exists(db_session, "worker_sig_test")
 
-    node = Node(node_id="node_sig_test", owner_public_key=worker_owner.public_key, multiplier=1.0)
+    node = Node(node_id="node_sig_test", owner_id=worker_owner.id, multiplier=1.0)
     db_session.add(node)
     db_session.commit()
 

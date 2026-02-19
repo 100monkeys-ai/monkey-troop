@@ -4,7 +4,7 @@ import hmac
 import hashlib
 import os
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_
 from database import User, Node, Transaction
 from typing import Optional
@@ -22,28 +22,14 @@ def create_user_if_not_exists(db: Session, public_key: str) -> User:
 
     if not user:
         user = User(
+            username=public_key,
             public_key=public_key,
             balance_seconds=STARTER_CREDITS,
             created_at=datetime.utcnow(),
-            last_active=datetime.utcnow(),
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-
-        # Record starter credit transaction
-        txn = Transaction(
-            from_user=None,  # System grant
-            to_user=public_key,
-            duration_seconds=0,
-            credits_transferred=STARTER_CREDITS,
-            job_id="starter_grant",
-            node_id=None,
-            timestamp=datetime.utcnow(),
-            metadata={"type": "starter_grant"},
-        )
-        db.add(txn)
-        db.commit()
 
     return user
 
@@ -69,7 +55,6 @@ def reserve_credits(db: Session, public_key: str, amount: int) -> bool:
         return False
 
     user.balance_seconds -= amount
-    user.last_active = datetime.utcnow()
     db.commit()
     return True
 
@@ -81,20 +66,6 @@ def refund_credits(db: Session, public_key: str, amount: int, job_id: str):
         return
 
     user.balance_seconds += amount
-    db.commit()
-
-    # Record refund transaction
-    txn = Transaction(
-        from_user=None,
-        to_user=public_key,
-        duration_seconds=0,
-        credits_transferred=amount,
-        job_id=job_id,
-        node_id=None,
-        timestamp=datetime.utcnow(),
-        metadata={"type": "refund"},
-    )
-    db.add(txn)
     db.commit()
 
 
@@ -122,7 +93,7 @@ def record_job_completion(
     if not node:
         return {"status": "error", "message": "Worker node not found"}
 
-    worker_public_key = node.owner_public_key
+    worker_public_key = node.owner.public_key
 
     # Get multiplier for credits calculation
     multiplier = node.multiplier
@@ -143,23 +114,17 @@ def record_job_completion(
     # The actual deduction happened in reserve_credits, so we just add to worker
     worker_owner.balance_seconds += credits_to_transfer
 
-    # Update node stats
-    node.total_jobs_completed += 1
-    node.last_seen = datetime.utcnow()
-
     # Update trust score (simple increment for now)
-    node.trust_score = min(1.0, node.trust_score + 0.01)
+    node.trust_score = min(100, node.trust_score + 1)
 
     # Record transaction
     txn = Transaction(
-        from_user=requester_public_key,
-        to_user=worker_public_key,
+        requester_id=requester.id,
+        worker_node_id=node.id,
         duration_seconds=duration_seconds,
         credits_transferred=credits_to_transfer,
         job_id=job_id,
-        node_id=worker_node_id,
         timestamp=datetime.utcnow(),
-        metadata={"type": "job_completion", "multiplier": multiplier},
     )
     db.add(txn)
     db.commit()
@@ -181,9 +146,14 @@ def generate_receipt_signature(job_id: str, node_id: str, duration_seconds: int)
 
 def get_transaction_history(db: Session, public_key: str, limit: int = 50) -> list[dict]:
     """Get transaction history for a user."""
+    user = db.query(User).filter(User.public_key == public_key).first()
+    if not user:
+        return []
+
     transactions = (
         db.query(Transaction)
-        .filter((Transaction.from_user == public_key) | (Transaction.to_user == public_key))
+        .options(joinedload(Transaction.requester))
+        .filter(Transaction.requester_id == user.id)
         .order_by(Transaction.timestamp.desc())
         .limit(limit)
         .all()
@@ -192,13 +162,12 @@ def get_transaction_history(db: Session, public_key: str, limit: int = 50) -> li
     return [
         {
             "id": txn.id,
-            "from_user": txn.from_user,
-            "to_user": txn.to_user,
+            "requester": txn.requester.public_key if txn.requester else None,
+            "worker_node_id": txn.worker_node_id,
             "credits": txn.credits_transferred,
             "duration": txn.duration_seconds,
             "job_id": txn.job_id,
             "timestamp": txn.timestamp.isoformat(),
-            "type": txn.metadata.get("type") if txn.metadata else "job",
         }
         for txn in transactions
     ]
