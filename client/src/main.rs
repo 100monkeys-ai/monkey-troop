@@ -3,8 +3,8 @@ mod proxy;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use monkey_troop_shared::BalanceResponse;
 use tracing::info;
-use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(name = "monkey-troop-client")]
@@ -22,6 +22,8 @@ enum Commands {
     Balance,
     /// List available nodes
     Nodes,
+    /// List transaction history
+    Transactions,
 }
 
 #[tokio::main]
@@ -39,13 +41,18 @@ async fn main() -> Result<()> {
         }
         Commands::Balance => {
             info!("Checking balance...");
-            // TODO: Implement balance check
-            println!("Balance check not yet implemented");
+            let config = config::Config::from_env()?;
+            check_balance(&config).await?;
         }
         Commands::Nodes => {
             info!("Listing available nodes...");
             let config = config::Config::from_env()?;
             list_nodes(&config).await?;
+        }
+        Commands::Transactions => {
+            info!("Fetching transactions...");
+            let config = config::Config::from_env()?;
+            list_transactions(&config).await?;
         }
     }
 

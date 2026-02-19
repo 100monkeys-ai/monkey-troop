@@ -1,16 +1,25 @@
 """Credit accounting and transaction management for Monkey Troop."""
 
-import hmac
 import hashlib
+import hmac
 import os
 from datetime import datetime
+
 from sqlalchemy.orm import Session
+
+from database import Node, Transaction, User
+
 from sqlalchemy import and_
-from database import User, Node, Transaction
-from typing import Optional
+from sqlalchemy.orm import Session
+
+from database import Node, Transaction, User
 
 # HMAC secret for job receipts - must be shared with workers
-RECEIPT_SECRET = os.getenv("RECEIPT_SECRET", "change-me-in-production")
+RECEIPT_SECRET = os.getenv("RECEIPT_SECRET")
+if not RECEIPT_SECRET:
+    raise RuntimeError(
+        "RECEIPT_SECRET environment variable is not set. This is required for security."
+    )
 
 # Starter credits: 1 hour = 3600 seconds
 STARTER_CREDITS = 3600
@@ -22,6 +31,7 @@ def create_user_if_not_exists(db: Session, public_key: str) -> User:
 
     if not user:
         user = User(
+            username=public_key,
             public_key=public_key,
             balance_seconds=STARTER_CREDITS,
             created_at=datetime.utcnow(),
@@ -69,7 +79,6 @@ def reserve_credits(db: Session, public_key: str, amount: int) -> bool:
         return False
 
     user.balance_seconds -= amount
-    user.last_active = datetime.utcnow()
     db.commit()
     return True
 
@@ -152,12 +161,11 @@ def record_job_completion(
 
     # Record transaction
     txn = Transaction(
-        from_user=requester_public_key,
-        to_user=worker_public_key,
+        requester_id=requester.id,
+        worker_node_id=node.id,
         duration_seconds=duration_seconds,
         credits_transferred=credits_to_transfer,
         job_id=job_id,
-        node_id=worker_node_id,
         timestamp=datetime.utcnow(),
         metadata={"type": "job_completion", "multiplier": multiplier},
     )
@@ -192,8 +200,8 @@ def get_transaction_history(db: Session, public_key: str, limit: int = 50) -> li
     return [
         {
             "id": txn.id,
-            "from_user": txn.from_user,
-            "to_user": txn.to_user,
+            "requester": txn.requester.public_key if txn.requester else None,
+            "worker_node_id": txn.worker_node_id,
             "credits": txn.credits_transferred,
             "duration": txn.duration_seconds,
             "job_id": txn.job_id,

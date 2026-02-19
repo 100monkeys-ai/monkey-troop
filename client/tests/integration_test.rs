@@ -72,5 +72,5 @@ fn test_chat_request_default_stream() {
     let request: ChatCompletionRequest = serde_json::from_str(json).unwrap();
 
     // stream should default to false
-    assert_eq!(request.stream, false);
+    assert!(!request.stream);
 }

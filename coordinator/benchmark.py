@@ -3,9 +3,10 @@ Proof-of-Hardware benchmark using PyTorch matrix multiplication.
 This script is called by worker nodes to prove their hardware capabilities.
 """
 
-import time
 import hashlib
 import sys
+import time
+
 import torch
 
 
