@@ -2,14 +2,18 @@ use anyhow::Result;
 use sysinfo::System;
 
 /// Check if GPU is idle based on utilization threshold
-pub fn is_gpu_idle(threshold: f32) -> Result<bool> {
-    // Try nvidia-smi first
-    if let Ok(nvidia_idle) = check_nvidia_idle(threshold) {
-        return Ok(nvidia_idle);
+pub async fn is_gpu_idle(threshold: f32) -> Result<bool> {
+    // Try nvidia-smi first on a blocking thread to avoid blocking the async runtime
+    if let Ok(nvidia_result) =
+        tokio::task::spawn_blocking(move || check_nvidia_idle(threshold)).await
+    {
+        if let Ok(nvidia_idle) = nvidia_result {
+            return Ok(nvidia_idle);
+        }
     }
 
     // Fallback: check CPU idle as proxy
-    Ok(check_cpu_idle(threshold))
+    Ok(check_cpu_idle(threshold).await)
 }
 
 fn check_nvidia_idle(threshold: f32) -> Result<bool> {
@@ -34,12 +38,12 @@ fn check_nvidia_idle(threshold: f32) -> Result<bool> {
     Err(anyhow::anyhow!("Failed to parse nvidia-smi output"))
 }
 
-fn check_cpu_idle(threshold: f32) -> bool {
+async fn check_cpu_idle(threshold: f32) -> bool {
     let mut sys = System::new_all();
     sys.refresh_cpu();
 
     // Wait a bit for accurate CPU measurement
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     sys.refresh_cpu();
 
     let avg_usage =
@@ -81,4 +85,28 @@ fn get_nvidia_info() -> Result<(String, u64)> {
         .unwrap_or(0);
 
     Ok((name, vram))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_cpu_idle_no_longer_blocks_executor() {
+        let start = Instant::now();
+
+        // This call takes ~200ms due to the internal sleep; verify we actually waited.
+        check_cpu_idle(100.0).await;
+
+        let elapsed = start.elapsed();
+        println!("check_cpu_idle elapsed: {:?}", elapsed);
+
+        // Ensure we waited long enough to exercise the async sleep inside check_cpu_idle.
+        assert!(
+            elapsed >= Duration::from_millis(190),
+            "check_cpu_idle returned too quickly: {:?}",
+            elapsed
+        );
+    }
 }

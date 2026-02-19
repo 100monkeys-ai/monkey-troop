@@ -1,17 +1,21 @@
 """Main FastAPI application for Monkey Troop Coordinator."""
 
-import os
-import uuid
 import json
+import os
 import random
+import uuid
+from datetime import datetime
+from secrets import compare_digest
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Depends, Request
+
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import BaseModel
 from redis import Redis
 from sqlalchemy.orm import Session
 
-from database import init_db, get_db, Node, User
+import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
 from transactions import (
@@ -25,10 +29,15 @@ from transactions import (
 )
 from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
+from rate_limit import RateLimiter
+from redis import Redis
+from sqlalchemy.orm import Session
 from timeout_middleware import TimeoutMiddleware
-import audit
-from secrets import compare_digest
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from transactions import (
+    check_sufficient_balance,
+    create_user_if_not_exists,
+    get_transaction_history,
+)
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -36,11 +45,25 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS middleware
+# CORS configuration
+allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_raw == "*":
+    allowed_origins = ["*"]
+    allow_credentials = False
+elif allowed_origins_raw:
+    allowed_origins = [
+        origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()
+    ]
+    allow_credentials = True
+else:
+    # Default to local development if not specified
+    allowed_origins = ["http://localhost:3000"]
+    allow_credentials = True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -48,7 +71,9 @@ app.add_middleware(
 # Redis connection
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_client = Redis(host=redis_host, port=6379, db=0, decode_responses=True)
+rate_limiter = RateLimiter(redis_client)
 
+# Rate limiter instance
 # Initialize rate limiter
 rate_limiter = RateLimiter(redis_client)
 
@@ -77,7 +102,6 @@ ESTIMATED_JOB_DURATION = 300  # 5 minutes default reservation
 # ----------------------
 # DATA MODELS (Pydantic)
 # ----------------------
-from pydantic import BaseModel
 
 
 class EngineInfo(BaseModel):
@@ -157,6 +181,15 @@ class PeersResponse(BaseModel):
 # ----------------------
 # HELPER FUNCTIONS
 # ----------------------
+def _get_all_nodes() -> list[dict]:
+    """Retrieve all node data from Redis."""
+    keys = redis_client.keys("node:*")
+    if not keys:
+        return []
+    raw_nodes = redis_client.mget(keys)
+    return [json.loads(raw_data) for raw_data in raw_nodes if raw_data]
+
+
 def calculate_multiplier(duration: float) -> float:
     """
     Calculate hardware multiplier based on benchmark duration.
@@ -178,7 +211,6 @@ def calculate_multiplier(duration: float) -> float:
 def run_migrations():
     """Run database migrations using Alembic"""
     try:
-        from alembic.config import Config
         from alembic import command
 
         # Run migrations
@@ -208,6 +240,7 @@ async def startup_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    return {"status": "healthy"}
 
 
 @app.get("/public-key")
@@ -217,7 +250,6 @@ async def get_public_key():
     Workers fetch this on startup to verify tickets.
     """
     return {"public_key": get_public_key_string()}
-    return {"status": "healthy", "service": "monkey-troop-coordinator"}
 
 
 # ----------------------
@@ -246,7 +278,6 @@ async def list_peers(model: Optional[str] = None):
     """
     List available nodes, optionally filtered by model.
     """
-    keys = redis_client.keys("node:*")
     nodes = []
 
     if keys:
@@ -501,7 +532,6 @@ async def list_models():
     OpenAI-compatible models endpoint.
     Aggregates all models from active nodes.
     """
-    keys = redis_client.keys("node:*")
     unique_models = set()
 
     for key in keys:

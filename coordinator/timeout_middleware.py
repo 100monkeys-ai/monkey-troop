@@ -1,10 +1,11 @@
 """Timeout middleware for FastAPI endpoints."""
 
 import asyncio
-from fastapi import Request, Response
+import time
+
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-import time
 
 # Timeout configuration per endpoint pattern
 ENDPOINT_TIMEOUTS = {

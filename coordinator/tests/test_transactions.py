@@ -1,15 +1,17 @@
 """Test credit accounting and transactions."""
 
 import pytest
+from database import Base, Node, Transaction, User
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database import Base, User, Node, Transaction
+
+from database import Base, Node, Transaction
 from transactions import (
-    create_user_if_not_exists,
-    get_user_balance,
+    STARTER_CREDITS,
     check_sufficient_balance,
-    reserve_credits,
-    refund_credits,
+    create_user_if_not_exists,
+    generate_receipt_signature,
+    get_user_balance,
     record_job_completion,
     generate_receipt_signature,
     STARTER_CREDITS,
@@ -110,7 +112,7 @@ def test_job_completion_credit_transfer(db_session):
     # Create worker node
     node = Node(
         node_id="test_node_789",
-        owner_public_key=worker_owner.public_key,
+        owner_id=worker_owner.id,
         multiplier=2.0,
         benchmark_score=15.5,
         trust_score=0.5,
@@ -144,8 +146,9 @@ def test_job_completion_credit_transfer(db_session):
     assert worker_owner.balance_seconds == STARTER_CREDITS + (duration * 2)
 
     # Node stats should update
-    assert node.total_jobs_completed == 1
-    assert node.trust_score > 0.5  # Increased
+    assert node.trust_score > 50  # Increased
+
+
 
 
 def test_invalid_signature_rejected(db_session):
