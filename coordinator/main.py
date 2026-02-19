@@ -7,29 +7,23 @@ import uuid
 from secrets import compare_digest
 from typing import Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from redis import Redis
-from sqlalchemy.orm import Session
-
 import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
 from database import Node, User, get_db, init_db
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
 from rate_limit import RateLimiter
+from redis import Redis
+from sqlalchemy.orm import Session
 from timeout_middleware import TimeoutMiddleware
-from transactions import (
-    check_sufficient_balance,
-    create_user_if_not_exists,
-    generate_receipt_signature,
-    get_transaction_history,
-    get_user_balance,
-    record_job_completion,
-    reserve_credits,
-)
+from transactions import (check_sufficient_balance, create_user_if_not_exists,
+                          generate_receipt_signature, get_transaction_history,
+                          get_user_balance, record_job_completion,
+                          reserve_credits)
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -428,8 +422,8 @@ async def submit_job_completion(
     else:
         audit.log_security_event(
             "invalid_receipt",
-            client_ip,
             {"job_id": receipt.job_id, "reason": result.get("message")},
+            client_ip,
         )
 
     return result
@@ -450,10 +444,11 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 async def get_transactions(
     public_key: str,
     limit: int = 50,
-    db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-    return {"transactions": get_transaction_history(db, public_key, limit)}
+    from transactions import get_transaction_history
+
+    return {"transactions": get_transaction_history(public_key, limit)}
 
 
 @app.get("/admin/audit")
