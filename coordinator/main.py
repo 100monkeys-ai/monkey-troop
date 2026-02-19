@@ -19,17 +19,11 @@ import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
 from database import Node, User, get_db, init_db
-from transactions import (
-    create_user_if_not_exists,
-    get_user_balance,
-    check_sufficient_balance,
-    reserve_credits,
-    record_job_completion,
-)
-from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
 from timeout_middleware import TimeoutMiddleware
 from transactions import (
+    check_sufficient_balance,
+    create_user_if_not_exists,
     get_transaction_history,
 )
 
@@ -160,6 +154,15 @@ class PeersResponse(BaseModel):
 # ----------------------
 # HELPER FUNCTIONS
 # ----------------------
+def _get_all_nodes() -> list[dict]:
+    """Retrieve all node data from Redis."""
+    keys = redis_client.keys("node:*")
+    if not keys:
+        return []
+    raw_nodes = redis_client.mget(keys)
+    return [json.loads(raw_data) for raw_data in raw_nodes if raw_data]
+
+
 def calculate_multiplier(duration: float) -> float:
     """
     Calculate hardware multiplier based on benchmark duration.
@@ -249,24 +252,17 @@ async def list_peers(model: Optional[str] = None):
     """
     List available nodes, optionally filtered by model.
     """
-    keys = redis_client.keys("node:*")
     nodes = []
+    for node in _get_all_nodes():
+        # Filter by status
+        if node.get("status") != "IDLE":
+            continue
 
-    if keys:
-        raw_nodes = redis_client.mget(keys)
-        for raw_data in raw_nodes:
-            if raw_data:
-                node = json.loads(raw_data)
+        # Filter by model if requested
+        if model and model not in node.get("models", []):
+            continue
 
-                # Filter by status
-                if node.get("status") != "IDLE":
-                    continue
-
-                # Filter by model if requested
-                if model and model not in node.get("models", []):
-                    continue
-
-                nodes.append(node)
+        nodes.append(node)
 
     return {"count": len(nodes), "nodes": nodes}
 
@@ -504,7 +500,6 @@ async def list_models():
     OpenAI-compatible models endpoint.
     Aggregates all models from active nodes.
     """
-    keys = redis_client.keys("node:*")
     unique_models = set()
 
     if keys:

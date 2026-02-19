@@ -1,5 +1,7 @@
-import pytest
 import asyncio
+
+import pytest
+
 from streaming import is_streaming_request, stream_chat_completion
 
 

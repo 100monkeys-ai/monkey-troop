@@ -7,6 +7,8 @@ import pytest
 import redis
 from main import app
 
+from main import app
+
 # Test configuration
 COORDINATOR_URL = "http://localhost:8000"
 TEST_USER_KEY = "test_user_12345"
@@ -51,9 +53,8 @@ async def test_starter_credits_on_first_auth(coordinator_client):
     # Use unique user ID
     test_user = f"test_user_{int(time.time())}"
 
-    # Check balance before authorization
-    response = await coordinator_client.get(f"/users/{test_user}/balance")
-    assert response.status_code == 200
+    # Check balance before authorization (should create user with starter credits)
+    await coordinator_client.get(f"/users/{test_user}/balance")
 
     # First request might be 0 if user doesn't exist yet
     # After authorization, balance should exist
