@@ -31,7 +31,7 @@ async fn test_client_requires_coordinator() {
 #[tokio::test]
 async fn test_health_endpoint() {
     // Test that health endpoint structure is correct
-    
+
     // We can't actually start the server in tests, so we just verify
     // the expected structure would be valid JSON
     let expected = serde_json::json!({

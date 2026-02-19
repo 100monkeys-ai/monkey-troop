@@ -12,11 +12,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from datetime import datetime
-from typing import Optional
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Depends, Request
-from fastapi.middleware.cors import CORSMiddleware
 from redis import Redis
 from sqlalchemy.orm import Session
 
@@ -24,11 +20,6 @@ import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
 from database import Node, User, get_db, init_db
-from transactions import (
-    create_user_if_not_exists, get_user_balance, check_sufficient_balance,
-    reserve_credits, record_job_completion
-)
-from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
 from rate_limit import RateLimiter
 from timeout_middleware import TimeoutMiddleware
@@ -77,7 +68,9 @@ app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
 security = HTTPBasic()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 if not ADMIN_PASSWORD:
-    raise RuntimeError("ADMIN_PASSWORD environment variable is not set. This is required for security.")
+    raise RuntimeError(
+        "ADMIN_PASSWORD environment variable is not set. This is required for security."
+    )
 
 # Constants
 CHALLENGE_TTL = 60  # Challenge expires in 60 seconds
@@ -376,14 +369,6 @@ async def authorize_request(req: AuthorizeRequest, request: Request, db: Session
     keys = redis_client.keys("node:*")
     candidates = []
 
-    for key in keys:
-        raw_data = redis_client.get(key)
-        if raw_data:
-            node = json.loads(raw_data)
-            if node.get("status") == "IDLE" and req.model in node.get("models", []):
-                candidates.append(node)
-
-    
     if keys:
         raw_nodes = redis_client.mget(keys)
         for raw_data in raw_nodes:
@@ -391,7 +376,7 @@ async def authorize_request(req: AuthorizeRequest, request: Request, db: Session
                 node = json.loads(raw_data)
                 if node.get("status") == "IDLE" and req.model in node.get("models", []):
                     candidates.append(node)
-    
+
     if not candidates:
         audit.log_authorization(
             req.requester, req.model, "none", client_ip, False, "no_nodes_available"
@@ -473,11 +458,10 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 async def get_transactions(
     public_key: str,
     limit: int = 50,
+    db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-    from transactions import get_transaction_history
-
-    return {"transactions": get_transaction_history(public_key, limit)}
+    return {"transactions": get_transaction_history(db, public_key, limit)}
 
 
 @app.get("/admin/audit")
@@ -522,20 +506,13 @@ async def list_models():
     keys = redis_client.keys("node:*")
     unique_models = set()
 
-    for key in keys:
-        raw_data = redis_client.get(key)
-        if raw_data:
-            node = json.loads(raw_data)
-            unique_models.update(node.get("models", []))
-
-    
     if keys:
         raw_nodes = redis_client.mget(keys)
         for raw_data in raw_nodes:
             if raw_data:
                 node = json.loads(raw_data)
                 unique_models.update(node.get("models", []))
-    
+
     return {
         "object": "list",
         "data": [
