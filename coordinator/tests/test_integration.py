@@ -15,6 +15,9 @@ TEST_USER_KEY = "test_user_12345"
 TEST_MODEL = "llama2:7b"
 
 
+pytestmark = pytest.mark.integration
+
+
 @pytest.fixture
 async def coordinator_client():
     """HTTP client for coordinator."""
