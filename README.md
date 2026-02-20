@@ -1,12 +1,13 @@
 # 🐒 Monkey Troop
 
-**Decentralized AI Compute Grid**
+> **Decentralized AI Compute Grid**
 
 Monkey Troop is a FOSS (MIT Licensed) peer-to-peer network that democratizes access to AI inference. Users donate idle GPU time to run LLM inference for others in exchange for time-based credits, similar to folding@home but for AI.
 
 ## 🌟 Vision
 
 Enable anyone to:
+
 - **Donate** idle GPU compute when not in use locally
 - **Earn** credits based on actual hardware performance (time-based, normalized)
 - **Use** those credits to access high-performance GPUs when needed
@@ -24,7 +25,7 @@ Enable anyone to:
 
 ## 🏗️ Architecture
 
-```
+```markdown
 ┌─────────────┐         ┌──────────────────┐         ┌─────────────┐
 │   Client    │◄───────►│   Coordinator    │◄───────►│   Worker    │
 │  (Sidecar)  │ Tickets │ (troop.monkey.ai)│Discovery│   (Agent)   │
@@ -91,6 +92,7 @@ cd monkey-troop
 ```
 
 **What gets installed:**
+
 - ✅ Headscale VPN server (node discovery)
 - ✅ Coordinator API (FastAPI + PostgreSQL + Redis)
 - ✅ Caddy reverse proxy (automatic HTTPS)
@@ -178,6 +180,7 @@ Monkey Troop automatically detects and supports multiple inference engines:
 Workers detect all available engines at startup and route requests intelligently based on model availability. vLLM models are prioritized for performance.
 
 **Setup vLLM** (optional):
+
 ```bash
 # Install vLLM
 pip install vllm
@@ -190,6 +193,7 @@ export VLLM_HOST=http://localhost:8000
 ```
 
 **Configure model refresh** (optional):
+
 ```bash
 # Check for new models every 5 minutes (default: 3 minutes)
 export MODEL_REFRESH_INTERVAL=300
@@ -216,6 +220,7 @@ MIT License - Copyright (c) 2026 Monkey Troop Contributors
 ## 🙏 Acknowledgments
 
 Inspired by:
+
 - [Petals](https://github.com/bigscience-workshop/petals) - Distributed inference concepts
 - [Folding@home](https://foldingathome.org/) - Distributed computing for good
 - [Ollama](https://ollama.ai/) - Local LLM runtime
@@ -226,6 +231,7 @@ Inspired by:
 **🚨 Status**: Phase 2 Complete - Production-Ready Alpha (93.8%)
 
 The system includes:
+
 - ✅ Credit accounting with PostgreSQL ledger
 - ✅ Rate limiting (100/hr default, 20/hr strict)
 - ✅ Audit logging to PostgreSQL
