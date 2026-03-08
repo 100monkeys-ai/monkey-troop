@@ -4,12 +4,10 @@ use sysinfo::System;
 /// Check if GPU is idle based on utilization threshold
 pub async fn is_gpu_idle(threshold: f32) -> Result<bool> {
     // Try nvidia-smi first on a blocking thread to avoid blocking the async runtime
-    if let Ok(nvidia_result) =
+    if let Ok(Ok(nvidia_idle)) =
         tokio::task::spawn_blocking(move || check_nvidia_idle(threshold)).await
     {
-        if let Ok(nvidia_idle) = nvidia_result {
-            return Ok(nvidia_idle);
-        }
+        return Ok(nvidia_idle);
     }
 
     // Fallback: check CPU idle as proxy
@@ -20,7 +18,7 @@ fn check_nvidia_idle(threshold: f32) -> Result<bool> {
     use std::process::Command;
 
     let output = Command::new("nvidia-smi")
-        .args(&[
+        .args([
             "--query-gpu=utilization.gpu",
             "--format=csv,noheader,nounits",
         ])
@@ -67,7 +65,7 @@ fn get_nvidia_info() -> Result<(String, u64)> {
 
     // Get GPU name
     let name_output = Command::new("nvidia-smi")
-        .args(&["--query-gpu=name", "--format=csv,noheader"])
+        .args(["--query-gpu=name", "--format=csv,noheader"])
         .output()?;
 
     let name = String::from_utf8_lossy(&name_output.stdout)
@@ -76,7 +74,7 @@ fn get_nvidia_info() -> Result<(String, u64)> {
 
     // Get free VRAM in MB
     let vram_output = Command::new("nvidia-smi")
-        .args(&["--query-gpu=memory.free", "--format=csv,noheader,nounits"])
+        .args(["--query-gpu=memory.free", "--format=csv,noheader,nounits"])
         .output()?;
 
     let vram = String::from_utf8_lossy(&vram_output.stdout)

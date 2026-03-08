@@ -1,19 +1,19 @@
 """Test credit accounting and transactions."""
 
 import pytest
-from database import Base, Node, Transaction
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from database import Base, Node, Transaction
 from transactions import (
+    STARTER_CREDITS,
     check_sufficient_balance,
     create_user_if_not_exists,
+    generate_receipt_signature,
     get_user_balance,
     record_job_completion,
-    generate_receipt_signature,
-    reserve_credits,
     refund_credits,
-    STARTER_CREDITS,
+    reserve_credits,
 )
 
 # Use in-memory SQLite for testing

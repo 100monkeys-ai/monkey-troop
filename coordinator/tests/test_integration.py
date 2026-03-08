@@ -6,6 +6,7 @@ import time
 import httpx
 import pytest
 import redis
+
 from main import app, startup_event
 
 # Test configuration

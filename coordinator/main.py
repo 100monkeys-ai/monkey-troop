@@ -14,22 +14,22 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from redis import Redis
 from sqlalchemy.orm import Session
-from database import get_db, init_db, Node, User
 
 import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
-from transactions import (
-    create_user_if_not_exists,
-    get_user_balance,
-    check_sufficient_balance,
-    reserve_credits,
-    record_job_completion,
-    get_transaction_history,
-)
-from rate_limit import RateLimiter
+from database import Node, User, get_db, init_db
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
+from rate_limit import RateLimiter
 from timeout_middleware import TimeoutMiddleware
+from transactions import (
+    check_sufficient_balance,
+    create_user_if_not_exists,
+    get_transaction_history,
+    get_user_balance,
+    record_job_completion,
+    reserve_credits,
+)
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
