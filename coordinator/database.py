@@ -9,7 +9,6 @@ from sqlalchemy import (
     Float,
     BigInteger,
     DateTime,
-    ForeignKey,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
