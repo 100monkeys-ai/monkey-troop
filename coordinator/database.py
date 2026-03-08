@@ -1,6 +1,7 @@
 """Database models and connection management."""
 
 import os
+from sqlalchemy.types import JSON
 from sqlalchemy import (
     create_engine,
     Column,
@@ -95,9 +96,9 @@ class Transaction(Base):
 
     # Relationships
     requester = relationship(
-        "User", foreign_keys=[requester_id], back_populates="transactions_sent"
+        "User", foreign_keys="Transaction.requester_id", back_populates="transactions_sent"
     )
-    worker_node = relationship("Node", foreign_keys=[worker_node_id], back_populates="transactions")
+    worker_node = relationship("Node", foreign_keys="Transaction.worker_node_id", back_populates="transactions")
 
 
 def init_db():

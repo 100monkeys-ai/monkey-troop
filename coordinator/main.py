@@ -14,6 +14,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from redis import Redis
 from sqlalchemy.orm import Session
+from database import get_db, init_db, Node, User
 
 import audit
 from auth import create_jwt_ticket
@@ -25,19 +26,10 @@ from transactions import (
     reserve_credits,
     record_job_completion,
     get_transaction_history,
-    generate_receipt_signature,
 )
 from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
-from rate_limit import RateLimiter
-from redis import Redis
-from sqlalchemy.orm import Session
 from timeout_middleware import TimeoutMiddleware
-from transactions import (
-    check_sufficient_balance,
-    create_user_if_not_exists,
-    get_transaction_history,
-)
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -212,6 +204,7 @@ def run_migrations():
     """Run database migrations using Alembic"""
     try:
         from alembic import command
+        from alembic.config import Config
 
         # Run migrations
         alembic_cfg = Config("alembic.ini")
@@ -321,7 +314,7 @@ async def request_challenge(req: ChallengeRequest, db: Session = Depends(get_db)
 
 
 @app.post("/hardware/verify", response_model=VerifyResponse)
-async def submit_proof(req: VerifyRequest, db: Session = Depends(get_db)):
+def submit_proof(req: VerifyRequest, db: Session = Depends(get_db)):
     """
     Node submits proof-of-hardware result.
     Verify and assign multiplier.
@@ -487,10 +480,10 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 @app.get("/users/{public_key}/transactions")
 async def get_transactions(
     public_key: str,
+    limit: int = 50,
     db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-    from transactions import get_transaction_history
 
     return {"transactions": get_transaction_history(public_key, limit)}
 
