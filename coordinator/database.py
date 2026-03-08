@@ -10,6 +10,7 @@ from sqlalchemy import (
     BigInteger,
     DateTime,
     ForeignKey,
+    JSON,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
