@@ -5,10 +5,6 @@ import hmac
 import os
 from datetime import datetime
 
-from sqlalchemy.orm import Session
-
-from database import Node, Transaction, User
-
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 

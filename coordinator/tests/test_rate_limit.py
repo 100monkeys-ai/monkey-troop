@@ -1,8 +1,10 @@
 """Test rate limiting functionality."""
 
-import pytest
 from unittest.mock import MagicMock
-from rate_limit import RateLimiter, DISCOVERY_LIMIT, INFERENCE_LIMIT, WINDOW_SECONDS
+
+import pytest
+
+from rate_limit import DISCOVERY_LIMIT, INFERENCE_LIMIT, WINDOW_SECONDS, RateLimiter
 
 
 @pytest.fixture

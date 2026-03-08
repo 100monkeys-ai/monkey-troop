@@ -7,7 +7,6 @@ import httpx
 import pytest
 import pytest_asyncio
 import redis
-from main import app
 
 from main import app
 
