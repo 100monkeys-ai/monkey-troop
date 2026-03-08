@@ -38,6 +38,7 @@ from transactions import (
     create_user_if_not_exists,
     get_transaction_history,
 )
+from database import get_db
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
