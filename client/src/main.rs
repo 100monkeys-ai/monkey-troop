@@ -72,27 +72,18 @@ async fn list_nodes(config: &config::Config) -> Result<()> {
 
 async fn check_balance(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
-    let url = format!(
-        "{}/users/{}/balance",
-        config.coordinator_url, config.requester_id
-    );
+    let url = format!("{}/users/{}/balance", config.coordinator_url, config.requester_id);
 
     let response: BalanceResponse = client.get(&url).send().await?.json().await?;
 
-    println!(
-        "Balance: {} seconds ({} hours)",
-        response.balance_seconds, response.balance_hours
-    );
+    println!("Balance: {} seconds ({} hours)", response.balance_seconds, response.balance_hours);
 
     Ok(())
 }
 
 async fn list_transactions(config: &config::Config) -> Result<()> {
     let client = reqwest::Client::new();
-    let url = format!(
-        "{}/users/{}/transactions",
-        config.coordinator_url, config.requester_id
-    );
+    let url = format!("{}/users/{}/transactions", config.coordinator_url, config.requester_id);
 
     let response: serde_json::Value = client.get(&url).send().await?.json().await?;
 
