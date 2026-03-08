@@ -43,7 +43,7 @@ def create_user_if_not_exists(db: Session, public_key: str) -> User:
             job_id="starter_grant",
             node_id=None,
             timestamp=datetime.utcnow(),
-            metadata_={"type": "starter_grant"},
+            meta_data={"type": "starter_grant"},
         )
         db.add(txn)
         db.commit()
@@ -94,7 +94,7 @@ def refund_credits(db: Session, public_key: str, amount: int, job_id: str):
         job_id=job_id,
         node_id=None,
         timestamp=datetime.utcnow(),
-        metadata_={"type": "refund"},
+        meta_data={"type": "refund"},
     )
     db.add(txn)
     db.commit()
@@ -160,7 +160,7 @@ def record_job_completion(
         credits_transferred=credits_to_transfer,
         job_id=job_id,
         timestamp=datetime.utcnow(),
-        metadata_={"type": "job_completion", "multiplier": multiplier},
+        meta_data={"type": "job_completion", "multiplier": multiplier},
     )
     db.add(txn)
     db.commit()
@@ -199,7 +199,7 @@ def get_transaction_history(db: Session, public_key: str, limit: int = 50) -> li
             "duration": txn.duration_seconds,
             "job_id": txn.job_id,
             "timestamp": txn.timestamp.isoformat(),
-            "type": txn.metadata_.get("type") if txn.metadata_ else "job",
+            "type": txn.meta_data.get("type") if txn.meta_data else "job",
         }
         for txn in transactions
     ]

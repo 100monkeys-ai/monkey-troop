@@ -97,7 +97,7 @@ class Transaction(Base):
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    metadata_ = Column("metadata", JSON)
+    meta_data = Column("metadata", JSON)
 
     # Relationships
     requester = relationship(

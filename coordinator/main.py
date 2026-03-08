@@ -485,7 +485,7 @@ async def get_transactions(
 ):
     """Get transaction history for a user."""
 
-    return {"transactions": get_transaction_history(public_key, limit)}
+    return {"transactions": get_transaction_history(db, public_key, limit)}
 
 
 @app.get("/admin/audit")
