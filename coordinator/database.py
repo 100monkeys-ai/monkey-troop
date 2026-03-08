@@ -1,20 +1,22 @@
 """Database models and connection management."""
 
 import os
+from datetime import datetime
+
 from sqlalchemy import (
-    create_engine,
+    BigInteger,
     Column,
+    DateTime,
+    Float,
+    ForeignKey,
     Integer,
     String,
-    Float,
-    BigInteger,
-    DateTime,
-    ForeignKey,
+    create_engine,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime
+from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.types import JSON
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger"
@@ -62,7 +64,7 @@ class Node(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     node_id = Column(String(50), unique=True, nullable=False)
-    owner_public_key = Column(String, nullable=False, index=True)
+    owner_public_key = Column(String, ForeignKey("users.public_key"), nullable=False, index=True)
 
     multiplier = Column(Float, default=1.0)  # Credit multiplier based on hardware
     benchmark_score = Column(Float)  # Seconds to complete standard task
@@ -92,6 +94,9 @@ class Transaction(Base):
     duration_seconds = Column(Integer, nullable=False)
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    worker_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
 
     # Relationships
     requester = relationship(
