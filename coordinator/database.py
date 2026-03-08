@@ -9,6 +9,7 @@ from sqlalchemy import (
     Float,
     BigInteger,
     DateTime,
+    JSON,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
@@ -94,9 +95,9 @@ class Transaction(Base):
 
     # Relationships
     requester = relationship(
-        "User", foreign_keys=[requester_id], back_populates="transactions_sent"
+        "User", foreign_keys="Transaction.requester_id", back_populates="transactions_sent"
     )
-    worker_node = relationship("Node", foreign_keys=[worker_node_id], back_populates="transactions")
+    worker_node = relationship("Node", foreign_keys="Transaction.worker_node_id", back_populates="transactions")
 
 
 def init_db():
