@@ -200,16 +200,28 @@ mod tests {
         assert!(registry.models().contains(&"gemma".to_string()));
 
         // "llama-3" is present in all three, should resolve to vllm URL
-        assert_eq!(registry.get_engine_url("llama-3"), Some(&"http://localhost:8000".to_string()));
+        assert_eq!(
+            registry.get_engine_url("llama-3"),
+            Some(&"http://localhost:8000".to_string())
+        );
 
         // "phi-3" only in ollama
-        assert_eq!(registry.get_engine_url("phi-3"), Some(&"http://localhost:11434".to_string()));
+        assert_eq!(
+            registry.get_engine_url("phi-3"),
+            Some(&"http://localhost:11434".to_string())
+        );
 
         // "gemma" only in lmstudio
-        assert_eq!(registry.get_engine_url("gemma"), Some(&"http://localhost:1234".to_string()));
+        assert_eq!(
+            registry.get_engine_url("gemma"),
+            Some(&"http://localhost:1234".to_string())
+        );
 
         // "mixtral" only in vllm
-        assert_eq!(registry.get_engine_url("mixtral"), Some(&"http://localhost:8000".to_string()));
+        assert_eq!(
+            registry.get_engine_url("mixtral"),
+            Some(&"http://localhost:8000".to_string())
+        );
     }
 
     #[test]
@@ -226,7 +238,10 @@ mod tests {
         let result = build_model_registry(&engines);
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "No models found in any engine");
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "No models found in any engine"
+        );
     }
 
     #[test]
@@ -244,6 +259,9 @@ mod tests {
 
         // Custom engine types are not in priority list, so models won't be collected
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "No models found in any engine");
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "No models found in any engine"
+        );
     }
 }
