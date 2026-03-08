@@ -12,8 +12,8 @@ from transactions import (
     generate_receipt_signature,
     get_user_balance,
     record_job_completion,
-    reserve_credits,
     refund_credits,
+    reserve_credits,
 )
 
 # Use in-memory SQLite for testing
