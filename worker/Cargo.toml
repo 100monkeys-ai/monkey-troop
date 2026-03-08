@@ -29,3 +29,6 @@ hostname = "0.4"  # For getting hostname
 
 # Shared types
 monkey-troop-shared = { path = "../shared" }
+
+[dev-dependencies]
+httpmock = "0.8.3"
