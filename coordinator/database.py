@@ -12,7 +12,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -63,7 +62,7 @@ class Node(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     node_id = Column(String(50), unique=True, nullable=False)
-    owner_public_key = Column(String, nullable=False, index=True)
+    owner_public_key = Column(String, ForeignKey("users.public_key"), nullable=False, index=True)
 
     multiplier = Column(Float, default=1.0)  # Credit multiplier based on hardware
     benchmark_score = Column(Float)  # Seconds to complete standard task
@@ -71,7 +70,7 @@ class Node(Base):
     total_jobs_completed = Column(Integer, default=0)
 
     # Relationships
-    owner = relationship("User", back_populates="nodes")
+    owner = relationship("User", foreign_keys=[owner_public_key], back_populates="nodes")
     transactions = relationship(
         "Transaction", foreign_keys="Transaction.worker_node_id", back_populates="worker_node"
     )
@@ -85,6 +84,9 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(String, nullable=True)  # Can be null for system grants
 
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    worker_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
+
     from_user = Column(String, index=True, nullable=True)  # Public Key
     to_user = Column(String, index=True, nullable=True)  # Public Key
 
@@ -94,11 +96,13 @@ class Transaction(Base):
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+    metadata_ = Column("metadata", JSON)
+
     # Relationships
     requester = relationship(
-        "User", foreign_keys="Transaction.requester_id", back_populates="transactions_sent"
+        "User", foreign_keys=[requester_id], back_populates="transactions_sent"
     )
-    worker_node = relationship("Node", foreign_keys="Transaction.worker_node_id", back_populates="transactions")
+    worker_node = relationship("Node", foreign_keys=[worker_node_id], back_populates="transactions")
 
 
 def init_db():
