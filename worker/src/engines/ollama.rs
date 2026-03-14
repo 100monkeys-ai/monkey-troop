@@ -51,7 +51,8 @@ impl EngineDriver for OllamaDriver {
         let client = reqwest::blocking::Client::new();
         let response = client
             .get(format!("{}/api/version", self.base_url))
-            .send()?;
+            .send()?
+            .error_for_status()?;
 
         let version_info: OllamaVersion = response.json()?;
 
@@ -64,7 +65,10 @@ impl EngineDriver for OllamaDriver {
 
     fn get_models(&self) -> Result<Vec<String>> {
         let client = reqwest::blocking::Client::new();
-        let response = client.get(format!("{}/api/tags", self.base_url)).send()?;
+        let response = client
+            .get(format!("{}/api/tags", self.base_url))
+            .send()?
+            .error_for_status()?;
 
         let models_info: OllamaModels = response.json()?;
 
@@ -108,7 +112,9 @@ mod tests {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::GET).path("/api/version");
-            then.status(500);
+            then.status(500)
+                .header("content-type", "application/json")
+                .body(r#"{"version": "0.1.27"}"#);
         });
 
         let driver = create_driver(&server);
@@ -181,7 +187,9 @@ mod tests {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::GET).path("/api/tags");
-            then.status(500);
+            then.status(500)
+                .header("content-type", "application/json")
+                .body(r#"{"models": [{"name": "llama3:8b"}, {"name": "mistral"}]}"#);
         });
 
         let driver = create_driver(&server);
