@@ -43,6 +43,14 @@ mod tests {
     use serial_test::serial;
     use std::env;
 
+    fn restore_env_var(name: &str, value: Option<String>) {
+        if let Some(v) = value {
+            env::set_var(name, v);
+        } else {
+            env::remove_var(name);
+        }
+    }
+
     #[test]
     #[serial]
     fn test_config_from_env() {
@@ -82,10 +90,10 @@ mod tests {
         assert_eq!(config.model_refresh_interval, 600);
 
         // Restore
-        if let Some(v) = orig_node_id { env::set_var("NODE_ID", v); } else { env::remove_var("NODE_ID"); }
-        if let Some(v) = orig_url { env::set_var("COORDINATOR_URL", v); } else { env::remove_var("COORDINATOR_URL"); }
-        if let Some(v) = orig_port { env::set_var("PROXY_PORT", v); } else { env::remove_var("PROXY_PORT"); }
-        if let Some(v) = orig_hb { env::set_var("HEARTBEAT_INTERVAL", v); } else { env::remove_var("HEARTBEAT_INTERVAL"); }
-        if let Some(v) = orig_refresh { env::set_var("MODEL_REFRESH_INTERVAL", v); } else { env::remove_var("MODEL_REFRESH_INTERVAL"); }
+        restore_env_var("NODE_ID", orig_node_id);
+        restore_env_var("COORDINATOR_URL", orig_url);
+        restore_env_var("PROXY_PORT", orig_port);
+        restore_env_var("HEARTBEAT_INTERVAL", orig_hb);
+        restore_env_var("MODEL_REFRESH_INTERVAL", orig_refresh);
     }
 }

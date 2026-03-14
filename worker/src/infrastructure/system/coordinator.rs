@@ -73,7 +73,12 @@ mod tests {
         };
 
         let result = coordinator
-            .send_heartbeat("node-1", NodeStatus::Idle, vec!["llama3".to_string()], hardware)
+            .send_heartbeat(
+                "node-1",
+                NodeStatus::Idle,
+                vec!["llama3".to_string()],
+                hardware,
+            )
             .await;
 
         assert!(result.is_ok());
@@ -95,7 +100,12 @@ mod tests {
         };
 
         let result = coordinator
-            .send_heartbeat("node-1", NodeStatus::Idle, vec!["llama3".to_string()], hardware)
+            .send_heartbeat(
+                "node-1",
+                NodeStatus::Idle,
+                vec!["llama3".to_string()],
+                hardware,
+            )
             .await;
 
         assert!(result.is_err());

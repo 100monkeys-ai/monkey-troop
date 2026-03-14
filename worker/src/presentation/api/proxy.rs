@@ -79,9 +79,7 @@ async fn handle_chat_completion(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::ports::{
-        AuthTokenVerifier, CoordinatorClient, HardwareMonitor,
-    };
+    use crate::application::ports::{AuthTokenVerifier, CoordinatorClient, HardwareMonitor};
     use crate::domain::models::{EngineType, HardwareStatus, Model, ModelRegistry};
     use anyhow::Result;
     use async_trait::async_trait;
@@ -154,7 +152,9 @@ mod tests {
                     .uri("/v1/chat/completions")
                     .header("Authorization", "Bearer valid-token")
                     .header("Content-Type", "application/json")
-                    .body(Body::from(json!({"model_id": "llama3", "messages": [], "stream": false}).to_string()))
+                    .body(Body::from(
+                        json!({"model_id": "llama3", "messages": [], "stream": false}).to_string(),
+                    ))
                     .unwrap(),
             )
             .await
@@ -183,7 +183,9 @@ mod tests {
                     .uri("/v1/chat/completions")
                     .header("Authorization", "Bearer invalid-token")
                     .header("Content-Type", "application/json")
-                    .body(Body::from(json!({"model_id": "llama3", "messages": [], "stream": false}).to_string()))
+                    .body(Body::from(
+                        json!({"model_id": "llama3", "messages": [], "stream": false}).to_string(),
+                    ))
                     .unwrap(),
             )
             .await
@@ -212,7 +214,10 @@ mod tests {
                     .uri("/v1/chat/completions")
                     .header("Authorization", "Bearer valid-token")
                     .header("Content-Type", "application/json")
-                    .body(Body::from(json!({"model_id": "non-existent", "messages": [], "stream": false}).to_string()))
+                    .body(Body::from(
+                        json!({"model_id": "non-existent", "messages": [], "stream": false})
+                            .to_string(),
+                    ))
                     .unwrap(),
             )
             .await

@@ -107,20 +107,21 @@ mod tests {
             client: reqwest::Client::new(),
         };
 
-        let mock_success = server.mock(|when, then| {
+        let mut mock_success = server.mock(|when, then| {
             when.method(GET).path("/api/version");
             then.status(200);
         });
 
         assert!(engine.is_healthy().await);
         mock_success.assert();
+        mock_success.delete();
 
         let _mock_fail = server.mock(|when, then| {
             when.method(GET).path("/api/version");
             then.status(500);
         });
 
-        // httpmock matches in order or we need to clear/re-setup
-        // For simplicity in this test, we just check that it handles errors
+        // The success mock has been removed, so the next call will hit the 500 mock
+        assert!(!engine.is_healthy().await);
     }
 }
