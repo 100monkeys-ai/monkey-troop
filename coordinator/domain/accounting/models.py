@@ -20,7 +20,7 @@ class CreditAmount:
 
     def __sub__(self, other: "CreditAmount") -> "CreditAmount":
         if self.seconds < other.seconds:
-            raise ValueError("Insufficient credits for subtraction")
+            raise OverflowError("Insufficient credits for subtraction")
         return CreditAmount(self.seconds - other.seconds)
 
 
