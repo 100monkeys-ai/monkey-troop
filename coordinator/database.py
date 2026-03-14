@@ -3,17 +3,8 @@
 import os
 from datetime import datetime
 
-from sqlalchemy import (
-    BigInteger,
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    create_engine,
-)
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import (JSON, BigInteger, Column, DateTime, Float, ForeignKey,
+                        Integer, String, create_engine)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.types import JSON
@@ -107,8 +98,8 @@ class Transaction(Base):
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    requester_id = Column(Integer, nullable=True)
-    worker_node_id = Column(Integer, nullable=True)
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    worker_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
 
     # Relationships
     requester = relationship(

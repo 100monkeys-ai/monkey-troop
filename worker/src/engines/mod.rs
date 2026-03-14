@@ -54,21 +54,21 @@ pub async fn detect_all_engines() -> Vec<Box<dyn EngineDriver + Send + Sync>> {
 
     // Try Ollama
     let ollama = ollama::OllamaDriver::new();
-    if ollama.detect().unwrap_or(false) {
+    if ollama.detect().is_ok() {
         println!("✓ Detected Ollama");
         engines.push(Box::new(ollama));
     }
 
     // Try vLLM
     let vllm = vllm::VllmDriver::new();
-    if vllm.detect().unwrap_or(false) {
+    if vllm.detect().is_ok() {
         println!("✓ Detected vLLM");
         engines.push(Box::new(vllm));
     }
 
     // Try LM Studio
     let lmstudio = lmstudio::LMStudioDriver::new();
-    if lmstudio.detect().unwrap_or(false) {
+    if lmstudio.detect().is_ok() {
         println!("✓ Detected LM Studio");
         engines.push(Box::new(lmstudio));
     }
