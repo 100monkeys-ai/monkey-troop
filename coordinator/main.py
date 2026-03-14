@@ -31,6 +31,7 @@ from transactions import (
     record_job_completion,
     reserve_credits,
 )
+from database import get_db
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
