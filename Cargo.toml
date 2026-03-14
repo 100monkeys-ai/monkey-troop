@@ -20,7 +20,7 @@ tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
 # HTTP client
-reqwest = { version = "0.11", features = ["json", "stream", "blocking"] }
+reqwest = { version = "0.13", features = ["json", "stream", "blocking"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
