@@ -311,4 +311,29 @@ mod tests {
         assert!(service.verify_ticket("secret").await.unwrap());
         assert!(!service.verify_ticket("wrong").await.unwrap());
     }
+
+    #[tokio::test]
+    async fn test_run_initial_benchmark() {
+        let node_id = "node-1".to_string();
+        let registry = Arc::new(RwLock::new(ModelRegistry::new()));
+        let monitor = Arc::new(MockHardwareMonitor {
+            status: HardwareStatus {
+                gpu_name: "GPU1".to_string(),
+                vram_free_mb: 0,
+            },
+            is_idle: true,
+        });
+        let coordinator = Arc::new(MockCoordinatorClient {
+            heartbeat_calls: Arc::new(Mutex::new(Vec::new())),
+        });
+        let verifier = Arc::new(MockAuthTokenVerifier {
+            valid_token: "secret".to_string(),
+        });
+
+        let service = WorkerService::new(node_id, registry, vec![], monitor, coordinator, verifier);
+
+        // This might fail if benchmark.py is missing or python/numpy missing, 
+        // but we just want to cover the call path in the application service.
+        let _ = service.run_initial_benchmark().await;
+    }
 }

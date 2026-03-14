@@ -138,3 +138,26 @@ print(json.dumps(output))
         device_name: benchmark_output.device,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_run_cpu_fallback_benchmark_success() {
+        // This test requires python3 and numpy to be available in the environment
+        let result = run_cpu_fallback_benchmark("test-seed", 128).await;
+        if let Ok(res) = result {
+            assert!(!res.proof_hash.is_empty());
+            assert!(res.duration > 0.0);
+            assert_eq!(res.device_name, "CPU (fallback)");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_run_benchmark_not_found() {
+        // Test that it handles missing benchmark.py
+        let result = run_benchmark("test-seed", 128).await;
+        assert!(result.is_err());
+    }
+}

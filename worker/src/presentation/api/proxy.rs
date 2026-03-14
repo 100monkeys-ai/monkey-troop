@@ -75,3 +75,149 @@ async fn handle_chat_completion(
         }
     })))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::application::ports::{
+        AuthTokenVerifier, CoordinatorClient, HardwareMonitor,
+    };
+    use crate::domain::models::{EngineType, HardwareStatus, Model, ModelRegistry};
+    use anyhow::Result;
+    use async_trait::async_trait;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tokio::sync::RwLock;
+    use tower::ServiceExt;
+
+    struct MockMonitor;
+    #[async_trait]
+    impl HardwareMonitor for MockMonitor {
+        async fn get_status(&self) -> Result<HardwareStatus> {
+            Ok(HardwareStatus {
+                gpu_name: "test".to_string(),
+                vram_free_mb: 0,
+            })
+        }
+        async fn is_idle(&self) -> Result<bool> {
+            Ok(true)
+        }
+    }
+
+    struct MockCoordinator;
+    #[async_trait]
+    impl CoordinatorClient for MockCoordinator {
+        async fn send_heartbeat(
+            &self,
+            _: &str,
+            _: crate::domain::models::NodeStatus,
+            _: Vec<String>,
+            _: HardwareStatus,
+        ) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    struct MockVerifier {
+        valid: bool,
+    }
+    #[async_trait]
+    impl AuthTokenVerifier for MockVerifier {
+        async fn verify_ticket(&self, _: &str, _: &str) -> Result<bool> {
+            Ok(self.valid)
+        }
+    }
+
+    #[tokio::test]
+    async fn test_proxy_auth_success() {
+        let registry = Arc::new(RwLock::new(ModelRegistry::new()));
+        registry.write().await.add_model(Model {
+            id: "llama3".to_string(),
+            engine_type: EngineType::Ollama,
+        });
+
+        let service = Arc::new(WorkerService::new(
+            "node-1".to_string(),
+            registry,
+            vec![],
+            Arc::new(MockMonitor),
+            Arc::new(MockCoordinator),
+            Arc::new(MockVerifier { valid: true }),
+        ));
+
+        let app = create_proxy_router(Arc::new(ProxyState { service }));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header("Authorization", "Bearer valid-token")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(json!({"model_id": "llama3", "messages": [], "stream": false}).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_proxy_auth_failure() {
+        let service = Arc::new(WorkerService::new(
+            "node-1".to_string(),
+            Arc::new(RwLock::new(ModelRegistry::new())),
+            vec![],
+            Arc::new(MockMonitor),
+            Arc::new(MockCoordinator),
+            Arc::new(MockVerifier { valid: false }),
+        ));
+
+        let app = create_proxy_router(Arc::new(ProxyState { service }));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header("Authorization", "Bearer invalid-token")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(json!({"model_id": "llama3", "messages": [], "stream": false}).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn test_proxy_model_not_found() {
+        let service = Arc::new(WorkerService::new(
+            "node-1".to_string(),
+            Arc::new(RwLock::new(ModelRegistry::new())),
+            vec![],
+            Arc::new(MockMonitor),
+            Arc::new(MockCoordinator),
+            Arc::new(MockVerifier { valid: true }),
+        ));
+
+        let app = create_proxy_router(Arc::new(ProxyState { service }));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header("Authorization", "Bearer valid-token")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(json!({"model_id": "non-existent", "messages": [], "stream": false}).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+}

@@ -104,3 +104,24 @@ fn get_nvidia_info() -> Result<(String, u64)> {
 
     Ok((name, vram))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get_status() {
+        let monitor = NvidiaGpuMonitor;
+        let status = monitor.get_status().await.unwrap();
+        // Even without nvidia-smi, it should return "Unknown GPU"
+        assert!(!status.gpu_name.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_is_idle() {
+        let monitor = NvidiaGpuMonitor;
+        let idle = monitor.is_idle().await;
+        // Should fallback to CPU check if nvidia-smi fails
+        assert!(idle.is_ok());
+    }
+}

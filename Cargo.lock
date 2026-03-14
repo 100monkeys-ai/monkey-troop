@@ -1330,6 +1330,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "serial_test",
  "sysinfo",
  "thiserror 2.0.18",
  "tokio",

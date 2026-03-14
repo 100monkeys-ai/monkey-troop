@@ -51,3 +51,54 @@ impl CoordinatorClient for HttpCoordinatorClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use httpmock::prelude::*;
+
+    #[tokio::test]
+    async fn test_send_heartbeat_success() {
+        let server = MockServer::start();
+        let coordinator = HttpCoordinatorClient::new(server.base_url());
+
+        let _mock = server.mock(|when, then| {
+            when.method(POST).path("/heartbeat");
+            then.status(200);
+        });
+
+        let hardware = HardwareStatus {
+            gpu_name: "RTX 4090".to_string(),
+            vram_free_mb: 24576,
+        };
+
+        let result = coordinator
+            .send_heartbeat("node-1", NodeStatus::Idle, vec!["llama3".to_string()], hardware)
+            .await;
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_send_heartbeat_failure() {
+        let server = MockServer::start();
+        let coordinator = HttpCoordinatorClient::new(server.base_url());
+
+        let _mock = server.mock(|when, then| {
+            when.method(POST).path("/heartbeat");
+            then.status(500);
+        });
+
+        let hardware = HardwareStatus {
+            gpu_name: "RTX 4090".to_string(),
+            vram_free_mb: 24576,
+        };
+
+        let result = coordinator
+            .send_heartbeat("node-1", NodeStatus::Idle, vec!["llama3".to_string()], hardware)
+            .await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("500"));
+    }
+}

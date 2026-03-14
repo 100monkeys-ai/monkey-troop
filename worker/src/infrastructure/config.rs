@@ -36,3 +36,56 @@ impl Config {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+    use std::env;
+
+    #[test]
+    #[serial]
+    fn test_config_from_env() {
+        // Save original values
+        let orig_node_id = env::var("NODE_ID").ok();
+        let orig_url = env::var("COORDINATOR_URL").ok();
+        let orig_port = env::var("PROXY_PORT").ok();
+        let orig_hb = env::var("HEARTBEAT_INTERVAL").ok();
+        let orig_refresh = env::var("MODEL_REFRESH_INTERVAL").ok();
+
+        // Scenario 1: Defaults
+        env::remove_var("NODE_ID");
+        env::remove_var("COORDINATOR_URL");
+        env::remove_var("PROXY_PORT");
+        env::remove_var("HEARTBEAT_INTERVAL");
+        env::remove_var("MODEL_REFRESH_INTERVAL");
+
+        let config = Config::from_env().unwrap();
+        assert_eq!(config.coordinator_url, "https://troop.100monkeys.ai");
+        assert_eq!(config.proxy_port, 8080);
+        assert_eq!(config.heartbeat_interval, 10);
+        assert_eq!(config.model_refresh_interval, 180);
+        assert!(!config.node_id.is_empty());
+
+        // Scenario 2: Custom
+        env::set_var("NODE_ID", "test-node");
+        env::set_var("COORDINATOR_URL", "http://localhost:8000");
+        env::set_var("PROXY_PORT", "9999");
+        env::set_var("HEARTBEAT_INTERVAL", "30");
+        env::set_var("MODEL_REFRESH_INTERVAL", "600");
+
+        let config = Config::from_env().unwrap();
+        assert_eq!(config.node_id, "test-node");
+        assert_eq!(config.coordinator_url, "http://localhost:8000");
+        assert_eq!(config.proxy_port, 9999);
+        assert_eq!(config.heartbeat_interval, 30);
+        assert_eq!(config.model_refresh_interval, 600);
+
+        // Restore
+        if let Some(v) = orig_node_id { env::set_var("NODE_ID", v); } else { env::remove_var("NODE_ID"); }
+        if let Some(v) = orig_url { env::set_var("COORDINATOR_URL", v); } else { env::remove_var("COORDINATOR_URL"); }
+        if let Some(v) = orig_port { env::set_var("PROXY_PORT", v); } else { env::remove_var("PROXY_PORT"); }
+        if let Some(v) = orig_hb { env::set_var("HEARTBEAT_INTERVAL", v); } else { env::remove_var("HEARTBEAT_INTERVAL"); }
+        if let Some(v) = orig_refresh { env::set_var("MODEL_REFRESH_INTERVAL", v); } else { env::remove_var("MODEL_REFRESH_INTERVAL"); }
+    }
+}

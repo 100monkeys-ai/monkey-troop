@@ -36,3 +36,26 @@ impl AuthTokenVerifier for JwtVerifier {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Use a simple test RSA key pair (PKCS#8 for private, SPKI for public)
+    // In a real test we might generate one, but for coverage let's use a hardcoded small one or mock it
+    // Actually, JwtVerifier uses RSA256, so we need a real RSA key to test the logic properly.
+    
+    #[tokio::test]
+    async fn test_jwt_verifier_invalid_token() {
+        let verifier = JwtVerifier::new("invalid-key".to_string());
+        let result = verifier.verify_ticket("invalid-token", "node-1").await;
+        // Should return Ok(false) on decode error or key error
+        assert!(result.is_err() || !result.unwrap());
+    }
+
+    #[test]
+    fn test_jwt_verifier_new() {
+        let verifier = JwtVerifier::new("test-key".to_string());
+        assert_eq!(verifier.public_key, "test-key");
+    }
+}
