@@ -133,4 +133,15 @@ When modifying existing procedural code:
 1. Identify the **Bounded Context**.
 2. Identify the **Layer** the code belongs to.
 3. Move the logic to the appropriate directory following the structures above.
-4. Introduce interfaces where dependency inversion is lacking.
+## 8. Mandatory Validation & Production Readiness
+
+### 8.1 Compulsory Validation Command
+After **any** code modification, the following command must be executed and pass without any warnings (warnings are treated as errors):
+```bash
+cargo fmt --all && cargo clippy --workspace --locked -- -D warnings && cargo build --release && cargo test --workspace --locked && cargo doc --no-deps
+```
+
+### 8.2 Production Readiness
+- **No Dead Code**: Unused functions, variables, or structs are strictly forbidden. Use of `#[allow(dead_code)]` or similar attributes is prohibited.
+- **No Stubs/Placeholders**: All logic must be fully implemented according to the ADRs and domain requirements. "TODO" comments or mock implementations are not permitted in the production branch.
+- **Surgical Implementation**: If a feature cannot be fully implemented, it must be removed rather than left in a partial or stubbed state.

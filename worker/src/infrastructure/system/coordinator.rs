@@ -1,7 +1,7 @@
-use async_trait::async_trait;
 use crate::application::ports::CoordinatorClient;
-use crate::domain::models::{NodeStatus, HardwareStatus};
+use crate::domain::models::{HardwareStatus, NodeStatus};
 use anyhow::Result;
+use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::json;
 
@@ -22,14 +22,14 @@ impl HttpCoordinatorClient {
 #[async_trait]
 impl CoordinatorClient for HttpCoordinatorClient {
     async fn send_heartbeat(
-        &self, 
-        node_id: &str, 
-        status: NodeStatus, 
-        models: Vec<String>, 
-        hardware: HardwareStatus
+        &self,
+        node_id: &str,
+        status: NodeStatus,
+        models: Vec<String>,
+        hardware: HardwareStatus,
     ) -> Result<()> {
         let endpoint = format!("{}/heartbeat", self.base_url);
-        
+
         let payload = json!({
             "node_id": node_id,
             "status": format!("{status:?}").to_uppercase(),
@@ -42,11 +42,7 @@ impl CoordinatorClient for HttpCoordinatorClient {
             "engines": [] // To be populated
         });
 
-        let response = self.client
-            .post(endpoint)
-            .json(&payload)
-            .send()
-            .await?;
+        let response = self.client.post(endpoint).json(&payload).send().await?;
 
         if response.status().is_success() {
             Ok(())

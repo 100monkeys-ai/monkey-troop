@@ -1,7 +1,7 @@
-use async_trait::async_trait;
 use crate::application::ports::InferenceEngine;
-use crate::domain::models::{Model, EngineType};
+use crate::domain::models::{EngineType, Model};
 use anyhow::Result;
+use async_trait::async_trait;
 use serde::Deserialize;
 use std::env;
 
@@ -22,7 +22,8 @@ pub struct OllamaEngine {
 
 impl OllamaEngine {
     pub fn new() -> Self {
-        let base_url = env::var("OLLAMA_HOST").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let base_url =
+            env::var("OLLAMA_HOST").unwrap_or_else(|_| "http://localhost:11434".to_string());
         Self {
             base_url,
             client: reqwest::Client::new(),
@@ -32,26 +33,28 @@ impl OllamaEngine {
 
 #[async_trait]
 impl InferenceEngine for OllamaEngine {
-    fn engine_type(&self) -> EngineType {
-        EngineType::Ollama
-    }
-
     async fn get_models(&self) -> Result<Vec<Model>> {
-        let response = self.client
+        let response = self
+            .client
             .get(format!("{}/api/tags", self.base_url))
             .send()
             .await?;
-        
+
         let models_info: OllamaModels = response.json().await?;
-        
-        Ok(models_info.models.into_iter().map(|m| Model {
-            id: m.name,
-            engine_type: EngineType::Ollama,
-        }).collect())
+
+        Ok(models_info
+            .models
+            .into_iter()
+            .map(|m| Model {
+                id: m.name,
+                engine_type: EngineType::Ollama,
+            })
+            .collect())
     }
 
     async fn is_healthy(&self) -> bool {
-        let response = self.client
+        let response = self
+            .client
             .get(format!("{}/api/version", self.base_url))
             .timeout(std::time::Duration::from_secs(2))
             .send()

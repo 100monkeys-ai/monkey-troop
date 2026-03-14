@@ -16,10 +16,4 @@ pub struct InferenceRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InferenceResponse {
     pub content: String,
-    // Other OpenAI fields omitted for brevity
-}
-
-pub struct InferenceTask {
-    pub request: InferenceRequest,
-    pub ticket_token: String,
 }

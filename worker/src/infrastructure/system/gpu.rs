@@ -1,7 +1,7 @@
-use async_trait::async_trait;
 use crate::application::ports::HardwareMonitor;
 use crate::domain::models::HardwareStatus;
 use anyhow::Result;
+use async_trait::async_trait;
 
 pub struct NvidiaGpuMonitor;
 

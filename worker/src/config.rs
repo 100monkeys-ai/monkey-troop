@@ -1,13 +1,15 @@
 use anyhow::Result;
-use serde::Deserialize;
 use std::env;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Config {
     pub node_id: String,
     pub coordinator_url: String,
+    #[allow(dead_code)]
     pub proxy_port: u16,
-    pub heartbeat_interval: u64,     // seconds
+    #[allow(dead_code)]
+    pub heartbeat_interval: u64, // seconds
+    #[allow(dead_code)]
     pub model_refresh_interval: u64, // seconds
 }
 

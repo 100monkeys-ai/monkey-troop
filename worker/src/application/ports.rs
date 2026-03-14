@@ -1,10 +1,9 @@
-use async_trait::async_trait;
-use crate::domain::models::{Model, HardwareStatus, NodeStatus};
+use crate::domain::models::{HardwareStatus, Model, NodeStatus};
 use anyhow::Result;
+use async_trait::async_trait;
 
 #[async_trait]
 pub trait InferenceEngine: Send + Sync {
-    fn engine_type(&self) -> crate::domain::models::EngineType;
     async fn get_models(&self) -> Result<Vec<Model>>;
     async fn is_healthy(&self) -> bool;
 }
@@ -17,11 +16,11 @@ pub trait HardwareMonitor: Send + Sync {
 #[async_trait]
 pub trait CoordinatorClient: Send + Sync {
     async fn send_heartbeat(
-        &self, 
-        node_id: &str, 
-        status: NodeStatus, 
-        models: Vec<String>, 
-        hardware: HardwareStatus
+        &self,
+        node_id: &str,
+        status: NodeStatus,
+        models: Vec<String>,
+        hardware: HardwareStatus,
     ) -> Result<()>;
 }
 

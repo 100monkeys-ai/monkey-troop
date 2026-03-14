@@ -56,10 +56,7 @@ impl fmt::Display for TroopError {
                 required,
                 available,
             } => {
-                write!(
-                    f,
-                    "Insufficient credits: need {required}, have {available}"
-                )
+                write!(f, "Insufficient credits: need {required}, have {available}")
             }
             TroopError::InvalidRequest(msg) => write!(f, "Invalid request: {msg}"),
             TroopError::WorkerUnavailable(msg) => write!(f, "Worker unavailable: {msg}"),

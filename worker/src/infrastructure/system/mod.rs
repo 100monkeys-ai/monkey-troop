@@ -1,3 +1,3 @@
-pub mod gpu;
-pub mod coordinator;
 pub mod auth;
+pub mod coordinator;
+pub mod gpu;
