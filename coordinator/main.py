@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
+from database import get_db, init_db
 from transactions import (
     create_user_if_not_exists,
     get_user_balance,
