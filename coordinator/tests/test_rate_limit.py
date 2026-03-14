@@ -31,6 +31,17 @@ def test_check_rate_limit_first_request(limiter, mock_redis):
     mock_redis.setex.assert_called_once_with("test_key", WINDOW_SECONDS, 1)
 
 
+def test_check_rate_limit_custom_window(limiter, mock_redis):
+    """Test rate limit check uses a custom window value when provided."""
+    mock_redis.get.return_value = None
+
+    custom_window = 10
+    allowed, remaining = limiter.check_rate_limit("test_key", 5, window=custom_window)
+
+    assert allowed is True
+    assert remaining == 4
+    mock_redis.get.assert_called_once_with("test_key")
+    mock_redis.setex.assert_called_once_with("test_key", custom_window, 1)
 def test_check_rate_limit_subsequent_request(limiter, mock_redis):
     """Test rate limit check for a subsequent request within the limit."""
     mock_redis.get.return_value = b"2"
