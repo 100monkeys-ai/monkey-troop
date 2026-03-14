@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from coordinator.application.accounting_services import AccountingService
-from coordinator.domain.accounting.models import User, TransactionType
+from coordinator.domain.accounting.models import TransactionType, User
 
 
 @pytest.fixture
