@@ -1,4 +1,4 @@
-# Quick Start: Testing Phase 2 Features
+# Quick Start: Testing Features
 
 ## Prerequisites
 ```bash

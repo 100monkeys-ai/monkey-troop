@@ -4,33 +4,6 @@
 
 This testing guide helps verify the automated coordinator installation system works correctly.
 
-## What Was Built
-
-### Main Installation Script
-- `install-coordinator.sh` - Main orchestration script (15KB)
-  - Interactive prompts with sensible defaults
-  - CLI flag support for automation
-  - Path-based routing (default) and subdomain routing
-  - Optional automated backups with rolling retention
-
-### Setup Scripts (bin/)
-- `validate-prerequisites.sh` - System requirement validation
-- `setup-headscale.sh` - Headscale VPN installation
-- `setup-coordinator-stack.sh` - Docker stack deployment
-- `setup-caddy.sh` - Reverse proxy with automatic HTTPS
-- `setup-backups.sh` - Automated database backups
-
-### Configuration Templates (config/)
-- `headscale.yaml.template` - Headscale VPN configuration
-- `Caddyfile.path.template` - Path-based routing (https://DOMAIN/api, /vpn)
-- `Caddyfile.subdomain.template` - Subdomain routing (https://api.DOMAIN, vpn.DOMAIN)
-
-### Systemd Services (systemd/)
-- `headscale.service` - Headscale daemon
-- `coordinator-stack.service` - Docker Compose coordinator
-- `troop-backup.service` - Backup execution
-- `troop-backup.timer` - Daily backup scheduler (02:00)
-
 ## Testing on a VPS
 
 ### Prerequisites
@@ -267,19 +240,6 @@ systemctl reload caddy
 # Repository can be kept or removed
 rm -rf ~/monkey-troop
 ```
-
-## Success Criteria
-
-Installation is successful when:
-
-1. ✅ All systemd services are `active (running)`
-2. ✅ Coordinator API responds to health checks
-3. ✅ Headscale VPN endpoint is accessible
-4. ✅ HTTPS certificates are obtained automatically
-5. ✅ Workers can connect using pre-auth key
-6. ✅ Database backups run and old ones are cleaned up
-7. ✅ Services auto-restart on failure
-8. ✅ No errors in service logs
 
 ## Performance Expectations
 

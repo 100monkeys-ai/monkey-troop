@@ -15,13 +15,13 @@ Enable anyone to:
 
 ### Key Features
 
-- **🔒 Secure P2P Mesh**: Direct node-to-node connections via Tailscale/Headscale (WireGuard)
-- **🎯 OpenAI Compatible**: Drop-in replacement for any tool using OpenAI API
-- **⚖️ Fair Economy**: Time-based credits with hardware multipliers (RTX 4090 = 4x, etc.)
-- **🔐 Proof-of-Hardware**: Cryptographic benchmarking prevents hardware spoofing
-- **🤝 Trusted Clusters**: Create private networks with friends/teams
-- **🌍 Public Commons**: Join the global network at `troop.100monkeys.ai`
-- **🔧 Multi-Engine**: Supports Ollama, LM Studio, vLLM, and more
+- **Secure P2P Mesh**: Direct node-to-node connections via Tailscale/Headscale (WireGuard)
+- **OpenAI Compatible**: Drop-in replacement for any tool using OpenAI API
+- **Fair Economy**: Time-based credits with hardware multipliers (RTX 4090 = 4x, etc.)
+- **Proof-of-Hardware**: Cryptographic benchmarking prevents hardware spoofing
+- **Trusted Clusters**: Create private networks with friends/teams
+- **Public Commons**: Join the global network at `troop.100monkeys.ai`
+- **Multi-Engine**: Supports Ollama, LM Studio, vLLM, and more
 
 ## 🏗️ Architecture
 
@@ -90,14 +90,6 @@ cd monkey-troop
   --routing-mode path \
   --enable-backups
 ```
-
-**What gets installed:**
-
-- ✅ Headscale VPN server (node discovery)
-- ✅ Coordinator API (FastAPI + PostgreSQL + Redis)
-- ✅ Caddy reverse proxy (automatic HTTPS)
-- ✅ Systemd services (auto-restart)
-- ✅ Optional: Daily database backups
 
 See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed documentation.
 
@@ -204,7 +196,6 @@ export MODEL_REFRESH_INTERVAL=300
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Deploy your own Headscale coordinator
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Development setup and guidelines
 - [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - Project architecture details
-- [docs/MVP_STATUS.md](docs/MVP_STATUS.md) - Implementation status and roadmap
 - [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) - Testing instructions
 
 ## 🤝 Contributing
@@ -218,31 +209,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
 MIT License - Copyright (c) 2026 Monkey Troop Contributors
 
 ## 🙏 Acknowledgments
-
-Inspired by:
-
-- [Petals](https://github.com/bigscience-workshop/petals) - Distributed inference concepts
-- [Folding@home](https://foldingathome.org/) - Distributed computing for good
-- [Ollama](https://ollama.ai/) - Local LLM runtime
-- [Tailscale](https://tailscale.com/) - Zero-config VPN mesh networking
-
----
-
-**🚨 Status**: Phase 2 Complete - Production-Ready Alpha (93.8%)
-
-The system includes:
-
-- ✅ Credit accounting with PostgreSQL ledger
-- ✅ Rate limiting (100/hr default, 20/hr strict)
-- ✅ Audit logging to PostgreSQL
-- ✅ JWT-based authorization (RSA-2048)
-- ✅ Proof-of-Hardware benchmarking
-- ✅ Timeout enforcement (5s/30s/300s)
-- ✅ Streaming responses (Server-Sent Events)
-- ✅ Multi-engine support (Ollama, vLLM, LM Studio)
-- ✅ Integration tests + CI/CD pipeline
-- 🚧 VPS deployment (handled separately)
-
-See [docs/MVP_STATUS.md](docs/MVP_STATUS.md) for detailed progress.
-
-Join us in building the future of decentralized AI!

@@ -78,7 +78,7 @@ async fn chat_completions_handler(
         payload.model
     );
 
-    // Phase 1: Discovery & Authorization (with retry)
+    // Step 1: Discovery & Authorization (with retry)
     let auth_response = match get_authorization(&config, &payload.model).await {
         Ok(resp) => resp,
         Err(e) => {
@@ -89,7 +89,7 @@ async fn chat_completions_handler(
 
     info!("✓ Got ticket for node: {}", auth_response.target_ip);
 
-    // Phase 2: P2P Connection to worker (with retry)
+    // Step 2: P2P Connection to worker (with retry)
     let is_stream = payload.stream;
     let response = match send_to_worker(&auth_response, &payload).await {
         Ok(resp) => resp,
