@@ -15,7 +15,7 @@ We currently support and provide security updates for the following versions:
 **Please do not report security vulnerabilities through public GitHub issues.**
 
 If you discover a potential security vulnerability, please report it via one of the following channels:
-- **Email**: security@monkeytroop.ai (Response within 48 hours)
+- **Email**: security@100monkeys.ai (Response within 48 hours)
 - **GitHub**: Private Security Advisory (preferred for documented exploits)
 
 Please include:
