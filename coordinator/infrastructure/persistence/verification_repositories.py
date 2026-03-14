@@ -1,12 +1,15 @@
 """Infrastructure layer implementations for the Verification context."""
 
 import json
+import logging
 from typing import Optional
 from sqlalchemy.orm import Session
 from redis import Redis
 from domain.verification.models import Challenge, BenchmarkResult
 from application.verification_ports import ChallengeRepository, BenchmarkRepository
 import database as db_models
+
+logger = logging.getLogger(__name__)
 
 
 class RedisChallengeRepository(ChallengeRepository):
@@ -63,7 +66,11 @@ class SqlAlchemyBenchmarkRepository(BenchmarkRepository):
             # Fallback for now - in production would require explicit registration
             # We skip creating a node here as it's a cross-context concern
             # that should be handled by an orchestrator or event.
-            pass
+            logger.warning(
+                "Benchmark result for unknown node_id '%s' was not saved. "
+                "Ensure the node is registered before saving benchmark results.",
+                result.node_id,
+            )
         else:
             node.multiplier = result.multiplier
             node.benchmark_score = result.duration

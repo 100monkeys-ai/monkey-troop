@@ -87,7 +87,7 @@ async def authorize_request(
     return {"target_ip": selected_node.tailscale_ip, "token": ticket.token, "estimated_cost": 300}
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)

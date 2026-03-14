@@ -58,7 +58,7 @@ class User(Base):
     # Relationships
     nodes = relationship(
         "Node",
-        primaryjoin="User.public_key == foreign(Node.owner_public_key)",
+        primaryjoin="User.id == foreign(Node.owner_id)",
         back_populates="owner",
     )
     transactions_sent = relationship(
@@ -75,7 +75,8 @@ class Node(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     node_id = Column(String(50), unique=True, nullable=False)
-    owner_public_key = Column(String, ForeignKey("users.public_key"), nullable=False, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    owner_public_key = Column(String, nullable=False, index=True)
     tailscale_ip = Column(String(45), nullable=True)
     status = Column(String(20), default="IDLE")
     models = Column(String, nullable=True)  # Comma-separated list
@@ -90,7 +91,7 @@ class Node(Base):
     # Relationships
     owner = relationship(
         "User",
-        primaryjoin="User.public_key == foreign(Node.owner_public_key)",
+        primaryjoin="User.id == foreign(Node.owner_id)",
         back_populates="nodes",
     )
     transactions = relationship(
