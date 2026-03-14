@@ -85,7 +85,14 @@ seed = sys.argv[1]
 matrix_size = int(sys.argv[2])
 
 # Set seed for reproducibility
-np.random.seed(int(seed, 16) % (2**32))
+try:
+    seed_int = int(seed, 16) % (2**32)
+except ValueError:
+    # Fallback: derive a deterministic 32-bit integer from the seed string
+    seed_bytes = seed.encode("utf-8")
+    seed_int = sum(b << (8 * (i % 4)) for i, b in enumerate(seed_bytes)) % (2**32)
+
+np.random.seed(seed_int)
 
 # Generate matrices
 start = time.time()
@@ -158,6 +165,20 @@ mod tests {
     async fn test_run_benchmark_not_found() {
         // Test that it handles missing benchmark.py
         let result = run_benchmark("test-seed", 128).await;
-        assert!(result.is_err());
+        match result {
+            Err(err) => {
+                let msg = err.to_string();
+                // Ensure we are exercising the expected error path
+                assert!(
+                    msg.contains("Failed to execute")
+                        || msg.contains("Benchmark subprocess failed")
+                        || msg.contains("CPU fallback failed"),
+                    "unexpected error message for missing benchmark.py: {msg}"
+                );
+            }
+            Ok(_) => {
+                panic!("expected run_benchmark to fail when benchmark.py is missing");
+            }
+        }
     }
 }
