@@ -145,7 +145,7 @@ def test_job_completion_credit_transfer(db_session):
     assert worker_owner.balance_seconds == STARTER_CREDITS + (duration * 2)
 
     # Node stats should update
-    assert node.trust_score > 0
+    assert node.trust_score > 0.5  # Increased
 
 
 def test_invalid_signature_rejected(db_session):

@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
-from database import get_db, init_db
+from database import Node, User, get_db, init_db
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
 from rate_limit import RateLimiter
 from timeout_middleware import TimeoutMiddleware
@@ -206,6 +206,7 @@ def run_migrations():
     """Run database migrations using Alembic"""
     try:
         from alembic import command
+        from alembic.config import Config
 
         # Run migrations
         alembic_cfg = Config("alembic.ini")
@@ -315,7 +316,7 @@ async def request_challenge(req: ChallengeRequest, db: Session = Depends(get_db)
 
 
 @app.post("/hardware/verify", response_model=VerifyResponse)
-async def submit_proof(req: VerifyRequest, db: Session = Depends(get_db)):
+def submit_proof(req: VerifyRequest, db: Session = Depends(get_db)):
     """
     Node submits proof-of-hardware result.
     Verify and assign multiplier.
@@ -485,7 +486,6 @@ async def get_transactions(
     db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-    from transactions import get_transaction_history
 
     return {"transactions": get_transaction_history(db, public_key, limit)}
 

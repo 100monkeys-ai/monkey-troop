@@ -89,6 +89,9 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(String, nullable=True)  # Can be null for system grants
 
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    worker_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
+
     from_user = Column(String, index=True, nullable=True)  # Public Key
     to_user = Column(String, index=True, nullable=True)  # Public Key
 

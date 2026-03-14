@@ -32,5 +32,4 @@ async def stream_chat_completion(response_stream: AsyncIterator[bytes]) -> Async
 
 def is_streaming_request(request_data: dict) -> bool:
     """Check if request asks for streaming response."""
-    stream = request_data.get("stream", False)
-    return stream is True
+    return request_data.get("stream") is True

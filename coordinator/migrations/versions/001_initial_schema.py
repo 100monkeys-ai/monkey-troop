@@ -8,7 +8,6 @@ Create Date: 2025-01-01 00:00:00
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "001_initial"
@@ -53,6 +52,8 @@ def upgrade() -> None:
     op.create_table(
         "transactions",
         sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("requester_id", sa.Integer(), nullable=True),
+        sa.Column("worker_node_id", sa.Integer(), nullable=True),
         sa.Column("from_user", sa.String(), nullable=True),
         sa.Column("to_user", sa.String(), nullable=True),
         sa.Column("duration_seconds", sa.Integer(), nullable=False),
@@ -60,8 +61,10 @@ def upgrade() -> None:
         sa.Column("job_id", sa.String(), nullable=True),
         sa.Column("node_id", sa.String(), nullable=True),
         sa.Column("timestamp", sa.DateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("metadata", postgresql.JSONB(), nullable=True),
+        sa.Column("metadata", sa.JSON(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["requester_id"], ["users.id"]),
+        sa.ForeignKeyConstraint(["worker_node_id"], ["nodes.id"]),
     )
     op.create_index(op.f("ix_transactions_from_user"), "transactions", ["from_user"], unique=False)
     op.create_index(op.f("ix_transactions_id"), "transactions", ["id"], unique=False)

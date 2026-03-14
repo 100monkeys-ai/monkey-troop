@@ -51,8 +51,7 @@ impl EngineDriver for OllamaDriver {
         let client = reqwest::blocking::Client::new();
         let response = client
             .get(format!("{}/api/version", self.base_url))
-            .send()?
-            .error_for_status()?;
+            .send()?;
 
         let version_info: OllamaVersion = response.json()?;
 
@@ -65,10 +64,7 @@ impl EngineDriver for OllamaDriver {
 
     fn get_models(&self) -> Result<Vec<String>> {
         let client = reqwest::blocking::Client::new();
-        let response = client
-            .get(format!("{}/api/tags", self.base_url))
-            .send()?
-            .error_for_status()?;
+        let response = client.get(format!("{}/api/tags", self.base_url)).send()?;
 
         let models_info: OllamaModels = response.json()?;
 
