@@ -27,14 +27,14 @@ impl Config {
             proxy_port: match env::var("PROXY_PORT") {
                 Ok(s) => s
                     .parse()
-                    .with_context(|| format!("Invalid value for PROXY_PORT: {}", s))?,
+                    .with_context(|| format!("Invalid value for PROXY_PORT: {s}"))?,
                 Err(env::VarError::NotPresent) => 8080,
                 Err(e) => return Err(e).context("Failed to read PROXY_PORT environment variable"),
             },
             heartbeat_interval: match env::var("HEARTBEAT_INTERVAL") {
                 Ok(s) => s
                     .parse()
-                    .with_context(|| format!("Invalid value for HEARTBEAT_INTERVAL: {}", s))?,
+                    .with_context(|| format!("Invalid value for HEARTBEAT_INTERVAL: {s}"))?,
                 Err(env::VarError::NotPresent) => 10,
                 Err(e) => {
                     return Err(e).context("Failed to read HEARTBEAT_INTERVAL environment variable")
@@ -43,7 +43,7 @@ impl Config {
             model_refresh_interval: match env::var("MODEL_REFRESH_INTERVAL") {
                 Ok(s) => s
                     .parse()
-                    .with_context(|| format!("Invalid value for MODEL_REFRESH_INTERVAL: {}", s))?,
+                    .with_context(|| format!("Invalid value for MODEL_REFRESH_INTERVAL: {s}"))?,
                 Err(env::VarError::NotPresent) => 180, // 3 minutes default
                 Err(e) => {
                     return Err(e)
