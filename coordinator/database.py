@@ -1,20 +1,20 @@
 """Database models and connection management."""
 
 import os
-from sqlalchemy import (
-    create_engine,
-    Column,
-    Integer,
-    String,
-    Float,
-    BigInteger,
-    DateTime,
-    JSON,
-)
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    JSON,
+    String,
+    create_engine,
+)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger"

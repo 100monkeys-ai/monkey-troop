@@ -7,7 +7,8 @@ import httpx
 import pytest
 import pytest_asyncio
 import redis
-from main import app, startup_event
+
+from main import app
 
 # Test configuration
 COORDINATOR_URL = "http://localhost:8000"
