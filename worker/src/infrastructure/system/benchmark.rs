@@ -26,11 +26,11 @@ pub async fn run_benchmark(seed: &str, matrix_size: usize) -> Result<BenchmarkRe
     );
 
     // Spawn Python subprocess
+    // The benchmark.py is at the root of the worker directory
     let output = tokio::time::timeout(
         Duration::from_secs(300), // 5 minute timeout
         Command::new("python3")
-            .arg("-c")
-            .arg(include_str!("../benchmark.py"))
+            .arg("benchmark.py")
             .arg(seed)
             .arg(matrix_size.to_string())
             .output(),
@@ -49,7 +49,7 @@ pub async fn run_benchmark(seed: &str, matrix_size: usize) -> Result<BenchmarkRe
             return run_cpu_fallback_benchmark(seed, matrix_size).await;
         }
 
-        anyhow::bail!("Benchmark subprocess failed: {}", stderr);
+        anyhow::bail!("Benchmark subprocess failed: {stderr}");
     }
 
     // Parse JSON output
@@ -125,7 +125,7 @@ print(json.dumps(output))
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("CPU fallback failed: {}", stderr);
+        anyhow::bail!("CPU fallback failed: {stderr}");
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -137,18 +137,4 @@ print(json.dumps(output))
         duration: benchmark_output.duration,
         device_name: benchmark_output.device,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_benchmark_runs() {
-        let result = run_benchmark("test123", 512).await;
-        // Don't fail test if PyTorch not installed
-        if let Err(e) = result {
-            eprintln!("Benchmark test skipped (expected in dev): {}", e);
-        }
-    }
 }

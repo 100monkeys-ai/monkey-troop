@@ -11,6 +11,7 @@ pub trait InferenceEngine: Send + Sync {
 #[async_trait]
 pub trait HardwareMonitor: Send + Sync {
     async fn get_status(&self) -> Result<HardwareStatus>;
+    async fn is_idle(&self) -> Result<bool>;
 }
 
 #[async_trait]

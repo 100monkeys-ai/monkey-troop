@@ -12,7 +12,7 @@ from sqlalchemy import engine_from_config, pool
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from database import Base
+from infrastructure.persistence.database import Base
 
 # this is the Alembic Config object
 config = context.config

@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import database
+from infrastructure.persistence import database
 import fakeredis
 
 # Use in-memory SQLite for testing

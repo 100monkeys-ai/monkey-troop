@@ -1,4 +1,4 @@
-from dependencies import (
+from infrastructure.dependencies import (
     get_accounting_service,
     get_discovery_service,
     get_verification_service,

@@ -2,8 +2,9 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from main import app, get_db
-from dependencies import get_redis_client
+from main import app
+from infrastructure.persistence.database import get_db
+from infrastructure.dependencies import get_redis_client
 import json
 
 
@@ -85,7 +86,7 @@ def test_authorize_request_insufficient_credits(client, db_session, redis_client
     redis_client.setex(f"node:{node_id}", 60, json.dumps(node_data))
 
     # Create user with low balance manually in DB
-    from database import User
+    from infrastructure.persistence.database import User
 
     user = User(public_key="low_balance_user", balance_seconds=100)
     db_session.add(user)

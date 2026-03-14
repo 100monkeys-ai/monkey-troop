@@ -4,7 +4,7 @@ from infrastructure.persistence.verification_repositories import (
     RedisChallengeRepository,
     SqlAlchemyBenchmarkRepository,
 )
-import database as db_models
+from infrastructure.persistence import database as db_models
 
 
 def test_redis_challenge_repository_save_and_get(redis_client):

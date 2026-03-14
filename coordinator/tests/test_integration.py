@@ -5,8 +5,8 @@ import time
 import httpx
 import pytest
 from main import app, startup_event
-from database import get_db
-from dependencies import get_redis_client
+from infrastructure.persistence.database import get_db
+from infrastructure.dependencies import get_redis_client
 
 # Test configuration
 COORDINATOR_URL = "http://localhost:8000"

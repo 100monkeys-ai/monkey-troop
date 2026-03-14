@@ -64,8 +64,25 @@ impl WorkerService {
         Ok(())
     }
 
+    pub async fn run_initial_benchmark(&self) -> Result<()> {
+        info!("Running initial hardware benchmark...");
+        // Use a small matrix size for quick startup verification
+        let result =
+            crate::infrastructure::system::benchmark::run_benchmark("startup", 512).await?;
+        info!(
+            "✓ Hardware verified: {} ({:.4}s)",
+            result.device_name, result.duration
+        );
+        Ok(())
+    }
+
     pub async fn send_heartbeat(&self) -> Result<()> {
-        let status = NodeStatus::Idle; // Simplified for MVP
+        let is_idle = self.monitor.is_idle().await.unwrap_or(false);
+        let status = if is_idle {
+            NodeStatus::Idle
+        } else {
+            NodeStatus::Busy
+        };
         let hardware = self.monitor.get_status().await?;
         let models = self.registry.read().await.get_model_ids();
 
@@ -113,12 +130,16 @@ mod tests {
 
     struct MockHardwareMonitor {
         status: HardwareStatus,
+        is_idle: bool,
     }
 
     #[async_trait]
     impl HardwareMonitor for MockHardwareMonitor {
         async fn get_status(&self) -> Result<HardwareStatus> {
             Ok(self.status.clone())
+        }
+        async fn is_idle(&self) -> Result<bool> {
+            Ok(self.is_idle)
         }
     }
 
@@ -189,6 +210,7 @@ mod tests {
                 gpu_name: "GPU1".to_string(),
                 vram_free_mb: 1024,
             },
+            is_idle: true,
         });
 
         let coordinator = Arc::new(MockCoordinatorClient {
@@ -232,6 +254,7 @@ mod tests {
                 gpu_name: "GPU1".to_string(),
                 vram_free_mb: 8192,
             },
+            is_idle: true,
         });
 
         let heartbeat_calls = Arc::new(Mutex::new(Vec::new()));
@@ -274,6 +297,7 @@ mod tests {
                 gpu_name: "GPU1".to_string(),
                 vram_free_mb: 0,
             },
+            is_idle: true,
         });
         let coordinator = Arc::new(MockCoordinatorClient {
             heartbeat_calls: Arc::new(Mutex::new(Vec::new())),

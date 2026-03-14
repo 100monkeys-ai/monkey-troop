@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 from domain.accounting.models import User, Transaction, CreditAmount
 from application.accounting_ports import UserRepository, TransactionRepository
-import database as db_models
+from . import database as db_models
 
 
 class SqlAlchemyUserRepository(UserRepository):

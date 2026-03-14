@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from redis import Redis
 
 # Database and Core
-from database import get_db
+from .persistence.database import get_db
 
 # Infrastructure Implementations
 from infrastructure.persistence.repositories import (
@@ -26,6 +26,7 @@ from application.accounting_services import AccountingService
 from application.inference_services import DiscoveryService
 from application.verification_services import VerificationService
 from application.security_services import SecurityService
+from application.orchestration_services import OrchestrationService
 
 # Redis Client
 redis_host = os.getenv("REDIS_HOST", "localhost")
@@ -55,3 +56,11 @@ def get_security_service() -> SecurityService:
     key_repo = FileSystemKeyRepository()
     token_service = JoseJwtTokenService(key_repo)
     return SecurityService(token_service, key_repo)
+
+
+def get_orchestration_service(
+    accounting_service: AccountingService = Depends(get_accounting_service),
+    discovery_service: DiscoveryService = Depends(get_discovery_service),
+    security_service: SecurityService = Depends(get_security_service),
+) -> OrchestrationService:
+    return OrchestrationService(accounting_service, discovery_service, security_service)

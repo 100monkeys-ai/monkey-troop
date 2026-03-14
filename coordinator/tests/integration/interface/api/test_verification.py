@@ -1,9 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from database import get_db
-from dependencies import get_redis_client
-import database as db_models
+from infrastructure.persistence.database import get_db
+from infrastructure.dependencies import get_redis_client
+from infrastructure.persistence import database as db_models
 from datetime import datetime
 
 

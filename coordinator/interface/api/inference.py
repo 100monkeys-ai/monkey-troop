@@ -6,11 +6,39 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 
 from application.inference_services import DiscoveryService
-from dependencies import get_discovery_service
+from application.orchestration_services import OrchestrationService
+from infrastructure.dependencies import get_discovery_service, get_orchestration_service
 from domain.inference.models import EngineInfo, HardwareSpec, Node
-from .schemas import NodeHeartbeatSchema
+from .schemas import AuthorizeRequestSchema, AuthorizeResponseSchema, NodeHeartbeatSchema
 
 router = APIRouter(tags=["Inference"])
+
+
+@router.post("/authorize", response_model=AuthorizeResponseSchema)
+async def authorize_request(
+    req: AuthorizeRequestSchema,
+    orchestration_service: OrchestrationService = Depends(get_orchestration_service),
+):
+    """Orchestrated endpoint: Authorize a request across multiple contexts."""
+    from application.orchestration_services import (
+        InsufficientCreditsError,
+        NoNodesAvailableError,
+    )
+    from fastapi import HTTPException
+
+    try:
+        result = orchestration_service.authorize_inference(req.requester, req.model)
+    except InsufficientCreditsError as e:
+        raise HTTPException(status_code=402, detail=str(e))
+    except NoNodesAvailableError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+    return {
+        "target_ip": result.target_ip,
+        "token": result.token,
+        "estimated_cost": result.estimated_cost,
+    }
+
 
 
 @router.post("/heartbeat")

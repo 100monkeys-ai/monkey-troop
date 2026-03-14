@@ -5,7 +5,7 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-import database as db_models
+from ..persistence import database as db_models
 from sqlalchemy.orm import Session
 
 # Configure audit logger

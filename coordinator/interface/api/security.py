@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends
 from application.security_services import SecurityService
-from dependencies import get_security_service
+from infrastructure.dependencies import get_security_service
 
 router = APIRouter(tags=["Security"])
 

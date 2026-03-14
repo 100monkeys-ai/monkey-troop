@@ -1,5 +1,4 @@
 mod application;
-mod config;
 mod domain;
 mod infrastructure;
 mod presentation;
@@ -11,6 +10,7 @@ use tracing::{error, info};
 
 use crate::application::services::WorkerService;
 use crate::domain::models::ModelRegistry;
+use crate::infrastructure::config::Config;
 use crate::infrastructure::engines::ollama::OllamaEngine;
 use crate::infrastructure::system::auth::JwtVerifier;
 use crate::infrastructure::system::coordinator::HttpCoordinatorClient;
@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     info!("🐒 Monkey Troop Worker (DDD Aligned) starting...");
 
-    let config = config::Config::from_env()?;
+    let config = Config::from_env()?;
 
     // Core state
     let registry = Arc::new(RwLock::new(ModelRegistry::new()));
@@ -49,7 +49,12 @@ async fn main() -> Result<()> {
     // 1. Initial registry refresh
     service.refresh_model_registry().await?;
 
-    // 2. Start heartbeat loop
+    // 2. Initial hardware benchmark (log performance)
+    if let Err(e) = service.run_initial_benchmark().await {
+        error!("Initial hardware benchmark failed (non-fatal): {}", e);
+    }
+
+    // 3. Start heartbeat loop
     let service_heartbeat = service.clone();
     let heartbeat_handle = tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));

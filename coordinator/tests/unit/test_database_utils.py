@@ -1,4 +1,4 @@
-from database import get_db
+from infrastructure.persistence.database import get_db
 
 
 def test_get_db_yields_and_closes():

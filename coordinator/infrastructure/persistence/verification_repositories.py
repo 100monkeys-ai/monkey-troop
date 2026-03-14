@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from redis import Redis
 from domain.verification.models import Challenge, BenchmarkResult
 from application.verification_ports import ChallengeRepository, BenchmarkRepository
-import database as db_models
+from . import database as db_models
 
 logger = logging.getLogger(__name__)
 
