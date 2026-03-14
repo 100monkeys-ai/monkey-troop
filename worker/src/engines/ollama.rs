@@ -51,7 +51,8 @@ impl EngineDriver for OllamaDriver {
         let client = reqwest::blocking::Client::new();
         let response = client
             .get(format!("{}/api/version", self.base_url))
-            .send()?;
+            .send()?
+            .error_for_status()?;
 
         let version_info: OllamaVersion = response.json()?;
 
@@ -64,7 +65,10 @@ impl EngineDriver for OllamaDriver {
 
     fn get_models(&self) -> Result<Vec<String>> {
         let client = reqwest::blocking::Client::new();
-        let response = client.get(format!("{}/api/tags", self.base_url)).send()?;
+        let response = client
+            .get(format!("{}/api/tags", self.base_url))
+            .send()?
+            .error_for_status()?;
 
         let models_info: OllamaModels = response.json()?;
 
@@ -120,6 +124,17 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_network_error() {
+        // Point at a port where nothing is listening
+        let driver = OllamaDriver {
+            base_url: "http://127.0.0.1:19999".to_string(),
+        };
+        let result = driver.detect();
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
     fn test_get_info_success() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
@@ -156,6 +171,23 @@ mod tests {
     }
 
     #[test]
+    fn test_get_info_failure_with_valid_json_body() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET).path("/api/version");
+            then.status(500)
+                .header("content-type", "application/json")
+                .body(r#"{"version": "0.1.27"}"#);
+        });
+
+        let driver = create_driver(&server);
+        let result = driver.get_info();
+
+        mock.assert();
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_get_models_success() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
@@ -182,6 +214,23 @@ mod tests {
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::GET).path("/api/tags");
             then.status(500);
+        });
+
+        let driver = create_driver(&server);
+        let result = driver.get_models();
+
+        mock.assert();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_models_failure_with_valid_json_body() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET).path("/api/tags");
+            then.status(500)
+                .header("content-type", "application/json")
+                .body(r#"{"models": [{"name": "llama3:8b"}]}"#);
         });
 
         let driver = create_driver(&server);
