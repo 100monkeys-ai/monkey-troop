@@ -151,7 +151,9 @@ cargo doc --no-deps
 ```bash
 black . && \
 ruff check . && \
-pytest --cov=. --cov-report=term-missing --cov-fail-under=100
+python3 -m compileall . && \
+pytest --cov=. --cov-report=term-missing --cov-fail-under=100 && \
+PYTHONPATH=. pdoc -o docs/api .
 ```
 
 ### 8.2 Production Readiness & Testing
