@@ -2,9 +2,11 @@
 
 import uuid
 from datetime import datetime
-from typing import Dict, Any
-from domain.verification.models import Challenge, BenchmarkResult
-from .verification_ports import ChallengeRepository, BenchmarkRepository
+from typing import Any, Dict
+
+from domain.verification.models import BenchmarkResult, Challenge
+
+from .verification_ports import BenchmarkRepository, ChallengeRepository
 
 
 class VerificationService:

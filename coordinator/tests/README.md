@@ -20,12 +20,6 @@ docker-compose up
 pytest tests/test_integration.py -v
 ```
 
-## Test Coverage
-
-- `test_transactions.py` - Credit accounting, balance checks, job completion
-- `test_integration.py` - End-to-end API workflows, rate limiting, JWT structure
-- `test_audit.py` - Audit logging functionality
-
 ## Adding New Tests
 
 1. Create test file in `tests/test_*.py`

@@ -184,7 +184,7 @@ jobs:
         run: |
           cd coordinator
           pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio
+          pip install pytest pytest-cov pytest-asyncio fakeredis
       
       - name: Run tests
         env:

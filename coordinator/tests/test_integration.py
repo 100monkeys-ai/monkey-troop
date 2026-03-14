@@ -2,11 +2,13 @@
 
 import json
 import time
+
 import httpx
 import pytest
-from main import app, startup_event
-from infrastructure.persistence.database import get_db
+
 from infrastructure.dependencies import get_redis_client
+from infrastructure.persistence.database import get_db
+from main import app, startup_event
 
 # Test configuration
 COORDINATOR_URL = "http://localhost:8000"

@@ -3,10 +3,13 @@
 import json
 import logging
 from typing import Optional
-from sqlalchemy.orm import Session
+
 from redis import Redis
-from domain.verification.models import Challenge, BenchmarkResult
-from application.verification_ports import ChallengeRepository, BenchmarkRepository
+from sqlalchemy.orm import Session
+
+from application.verification_ports import BenchmarkRepository, ChallengeRepository
+from domain.verification.models import BenchmarkResult, Challenge
+
 from . import database as db_models
 
 logger = logging.getLogger(__name__)

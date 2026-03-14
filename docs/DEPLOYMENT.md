@@ -95,11 +95,11 @@ cd monkey-troop
 ```
 
 **What it installs:**
-- ✅ Headscale VPN server (for node discovery)
-- ✅ Coordinator API (FastAPI + PostgreSQL + Redis)
-- ✅ Caddy reverse proxy (automatic HTTPS)
-- ✅ Systemd services (auto-restart on failure)
-- ✅ Database backups (optional, daily with rolling retention)
+- Headscale VPN server (for node discovery)
+- Coordinator API (FastAPI + PostgreSQL + Redis)
+- Caddy reverse proxy (automatic HTTPS)
+- Systemd services (auto-restart on failure)
+- Database backups (optional, daily with rolling retention)
 
 **Routing Modes:**
 

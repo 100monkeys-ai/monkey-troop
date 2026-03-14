@@ -1,10 +1,11 @@
 """Pytest fixtures for Monkey Troop Coordinator."""
 
+import fakeredis
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from infrastructure.persistence import database
-import fakeredis
 
 # Use in-memory SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"

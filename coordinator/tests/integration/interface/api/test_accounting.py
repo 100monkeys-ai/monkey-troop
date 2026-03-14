@@ -1,9 +1,11 @@
+from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
-from main import app
-from infrastructure.persistence.database import get_db
+
 from infrastructure.persistence import database as db_models
-from datetime import datetime
+from infrastructure.persistence.database import get_db
+from main import app
 
 
 @pytest.fixture

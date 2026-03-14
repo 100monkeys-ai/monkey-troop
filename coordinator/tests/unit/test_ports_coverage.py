@@ -1,8 +1,9 @@
-from application.accounting_ports import UserRepository, TransactionRepository
-from application.inference_ports import NodeDiscoveryRepository
-from application.security_ports import TokenService, KeyRepository
-from application.verification_ports import ChallengeRepository, BenchmarkRepository
 import pytest
+
+from application.accounting_ports import TransactionRepository, UserRepository
+from application.inference_ports import NodeDiscoveryRepository
+from application.security_ports import KeyRepository, TokenService
+from application.verification_ports import BenchmarkRepository, ChallengeRepository
 
 
 def test_ports_are_abstract():

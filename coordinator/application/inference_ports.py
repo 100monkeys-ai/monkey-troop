@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import List, Optional
+
 from domain.inference.models import Node
 
 

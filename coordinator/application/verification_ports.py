@@ -2,7 +2,8 @@
 
 from abc import ABC, abstractmethod
 from typing import Optional
-from domain.verification.models import Challenge, BenchmarkResult
+
+from domain.verification.models import BenchmarkResult, Challenge
 
 
 class ChallengeRepository(ABC):

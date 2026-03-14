@@ -1,8 +1,8 @@
+import os
+import signal
 import subprocess
 import sys
-import os
 import time
-import signal
 
 
 def test_main_module_execution():

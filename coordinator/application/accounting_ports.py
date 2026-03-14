@@ -1,8 +1,9 @@
 """Application layer ports (interfaces) for the Accounting context."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, List
-from domain.accounting.models import User, Transaction
+from typing import List, Optional
+
+from domain.accounting.models import Transaction, User
 
 
 class UserRepository(ABC):

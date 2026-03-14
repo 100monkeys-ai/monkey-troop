@@ -12,8 +12,8 @@ from infrastructure.security.key_repository import FileSystemKeyRepository
 # Import Context-Specific Routers (Interface Layer)
 from interface.api.accounting import router as accounting_router
 from interface.api.inference import router as inference_router
-from interface.api.verification import router as verification_router
 from interface.api.security import router as security_router
+from interface.api.verification import router as verification_router
 
 # FastAPI App
 app = FastAPI(title="Monkey Troop Coordinator", version="0.1.0")

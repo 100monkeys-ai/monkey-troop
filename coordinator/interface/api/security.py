@@ -1,6 +1,7 @@
 """FastAPI endpoints for the Security & Identity context."""
 
 from fastapi import APIRouter, Depends
+
 from application.security_services import SecurityService
 from infrastructure.dependencies import get_security_service
 

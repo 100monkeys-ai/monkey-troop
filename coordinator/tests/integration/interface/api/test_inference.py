@@ -1,7 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
-from main import app
+
 from infrastructure.dependencies import get_redis_client
+from main import app
 
 
 @pytest.fixture

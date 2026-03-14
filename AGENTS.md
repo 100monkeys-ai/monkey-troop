@@ -150,6 +150,7 @@ cargo doc --no-deps
 **For Python (Coordinator):**
 ```bash
 black . && \
+isort . && \
 ruff check . && \
 python3 -m compileall . && \
 pytest --cov=. --cov-report=term-missing --cov-fail-under=100 && \

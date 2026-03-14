@@ -1,19 +1,24 @@
 """Dependency injection providers for Monkey Troop Coordinator."""
 
 import os
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from redis import Redis
 
-# Database and Core
-from .persistence.database import get_db
+from fastapi import Depends
+from redis import Redis
+from sqlalchemy.orm import Session
+
+# Application Services
+from application.accounting_services import AccountingService
+from application.inference_services import DiscoveryService
+from application.orchestration_services import OrchestrationService
+from application.security_services import SecurityService
+from application.verification_services import VerificationService
+from infrastructure.persistence.inference_repositories import RedisNodeDiscoveryRepository
 
 # Infrastructure Implementations
 from infrastructure.persistence.repositories import (
     SqlAlchemyTransactionRepository,
     SqlAlchemyUserRepository,
 )
-from infrastructure.persistence.inference_repositories import RedisNodeDiscoveryRepository
 from infrastructure.persistence.verification_repositories import (
     RedisChallengeRepository,
     SqlAlchemyBenchmarkRepository,
@@ -21,12 +26,8 @@ from infrastructure.persistence.verification_repositories import (
 from infrastructure.security.key_repository import FileSystemKeyRepository
 from infrastructure.security.token_service import JoseJwtTokenService
 
-# Application Services
-from application.accounting_services import AccountingService
-from application.inference_services import DiscoveryService
-from application.verification_services import VerificationService
-from application.security_services import SecurityService
-from application.orchestration_services import OrchestrationService
+# Database and Core
+from .persistence.database import get_db
 
 # Redis Client
 redis_host = os.getenv("REDIS_HOST", "localhost")
