@@ -31,6 +31,7 @@ from transactions import (
     record_job_completion,
     reserve_credits,
 )
+from database import get_db
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -345,7 +346,7 @@ async def submit_proof(req: VerifyRequest, db: Session = Depends(get_db)):
             db.add(default_user)
             db.commit()
 
-        node = Node(node_id=req.node_id, owner_id=default_user.id)
+        node = Node(node_id=req.node_id, owner_public_key=default_user.public_key)
         db.add(node)
 
     node.multiplier = score
@@ -480,12 +481,13 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 @app.get("/users/{public_key}/transactions")
 async def get_transactions(
     public_key: str,
+    limit: int = 50,
     db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
     from transactions import get_transaction_history
 
-    return {"transactions": get_transaction_history(public_key, limit)}
+    return {"transactions": get_transaction_history(db, public_key, limit)}
 
 
 @app.get("/admin/audit")
