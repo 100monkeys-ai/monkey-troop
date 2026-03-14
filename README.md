@@ -1,4 +1,4 @@
-[![Join our Discord](https://img.shields.io/discord/100monkeys.ai?label=Discord&logo=discord&color=7289da)](https://discord.gg/zy9vrRE7qE)
+[![Join our Discord](https://img.shields.io/discord/100monkeys.ai?label=Discord&logo=discord&color=7289da)](https://discord.100monkeys.ai)
 # 🐒 Monkey Troop
 
 > **Decentralized AI Compute Grid**
