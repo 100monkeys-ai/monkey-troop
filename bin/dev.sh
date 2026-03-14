@@ -37,12 +37,12 @@ case "$1" in
     
     "coord")
         echo -e "${GREEN}Starting coordinator...${NC}"
-        docker-compose -f docker-compose.coordinator.yml up
+        docker-compose -f docker/docker-compose.coordinator.yml up
         ;;
     
     "coord-logs")
         echo -e "${GREEN}Showing coordinator logs...${NC}"
-        docker-compose -f docker-compose.coordinator.yml logs -f
+        docker-compose -f docker/docker-compose.coordinator.yml logs -f
         ;;
     
     "worker")
@@ -58,8 +58,8 @@ case "$1" in
     "clean")
         echo -e "${RED}Cleaning build artifacts...${NC}"
         cargo clean
-        docker-compose -f docker-compose.coordinator.yml down -v
-        docker-compose -f docker-compose.worker.yml down -v
+        docker-compose -f docker/docker-compose.coordinator.yml down -v
+        docker-compose -f docker/docker-compose.worker.yml down -v
         rm -rf ollama_data/ tailscale_data/ postgres_data/
         ;;
     
@@ -71,12 +71,12 @@ case "$1" in
     
     "db-shell")
         echo -e "${GREEN}Opening database shell...${NC}"
-        docker-compose -f docker-compose.coordinator.yml exec db psql -U troop_admin troop_ledger
+        docker-compose -f docker/docker-compose.coordinator.yml exec db psql -U troop_admin troop_ledger
         ;;
     
     "redis-cli")
         echo -e "${GREEN}Opening Redis CLI...${NC}"
-        docker-compose -f docker-compose.coordinator.yml exec redis redis-cli
+        docker-compose -f docker/docker-compose.coordinator.yml exec redis redis-cli
         ;;
     
     "help"|*)

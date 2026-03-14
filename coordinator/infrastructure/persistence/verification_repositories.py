@@ -73,7 +73,7 @@ class SqlAlchemyBenchmarkRepository(BenchmarkRepository):
 
     def get_last_result(self, node_id: str) -> Optional[BenchmarkResult]:
         node = self.session.query(db_models.Node).filter(db_models.Node.node_id == node_id).first()
-        if not node or not node.multiplier:
+        if not node or node.last_benchmark is None:
             return None
 
         return BenchmarkResult(

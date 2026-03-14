@@ -138,7 +138,7 @@ pip install -r requirements.txt
 
 ```bash
 # Start coordinator stack
-docker-compose -f docker-compose.coordinator.yml up -d
+docker-compose -f docker/docker-compose.coordinator.yml up -d
 
 # Run worker (requires GPU)
 cargo run --bin monkey-troop-worker

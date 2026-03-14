@@ -76,6 +76,9 @@ class Node(Base):
     id = Column(Integer, primary_key=True, index=True)
     node_id = Column(String(50), unique=True, nullable=False)
     owner_public_key = Column(String, ForeignKey("users.public_key"), nullable=False, index=True)
+    tailscale_ip = Column(String(45), nullable=True)
+    status = Column(String(20), default="IDLE")
+    models = Column(String, nullable=True)  # Comma-separated list
 
     multiplier = Column(Float, default=1.0)  # Credit multiplier based on hardware
     benchmark_score = Column(Float)  # Seconds to complete standard task

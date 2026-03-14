@@ -55,8 +55,13 @@ monkey-troop/
 │       ├── lib.rs
 │       └── models.rs               # Common data structures
 │
-├── docker-compose.coordinator.yml  # Coordinator stack
-└── docker-compose.worker.yml       # Worker stack
+└── docker/                         # Docker configuration
+    ├── docker-compose.coordinator.yml
+    ├── docker-compose.worker.yml
+    ├── coordinator/
+    │   └── Dockerfile
+    └── worker/
+        └── Dockerfile
 ```
 
 ## Key Files
@@ -124,11 +129,11 @@ cd coordinator && ruff check .
 
 ```bash
 # Start coordinator
-docker-compose -f docker-compose.coordinator.yml up -d
+docker-compose -f docker/docker-compose.coordinator.yml up -d
 
 # Start worker
-docker-compose -f docker-compose.worker.yml up -d
+docker-compose -f docker/docker-compose.worker.yml up -d
 
 # View logs
-docker-compose logs -f coordinator
+docker-compose -f docker/docker-compose.coordinator.yml logs -f coordinator
 ```

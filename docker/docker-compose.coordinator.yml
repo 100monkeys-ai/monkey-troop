@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   coordinator:
-    build: ./coordinator
+    build:
+      context: ..
+      dockerfile: docker/coordinator/Dockerfile
     container_name: troop_coordinator
     restart: unless-stopped
     ports:
