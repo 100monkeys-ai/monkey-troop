@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from coordinator.application.accounting_services import AccountingService
-from coordinator.domain.accounting.models import User
+from coordinator.domain.accounting.models import User, TransactionType
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def test_create_user_if_not_exists_new_user(accounting_service, mock_user_repo, 
     mock_txn_repo.record_transaction.assert_called_once()
 
     txn = mock_txn_repo.record_transaction.call_args[0][0]
-    assert txn.type == "starter_grant"
+    assert txn.type == TransactionType.STARTER_GRANT
     assert txn.to_user == public_key
     assert txn.amount.seconds == 3600
 

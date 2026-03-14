@@ -1,8 +1,17 @@
 """Domain models and value objects for the Accounting & Credits context."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
+
+
+class TransactionType(str, Enum):
+    """Enumeration of valid transaction types."""
+
+    STARTER_GRANT = "starter_grant"
+    JOB_COMPLETION = "job_completion"
+    REFUND = "refund"
 
 
 @dataclass(frozen=True)
@@ -40,11 +49,15 @@ class User:
             id=None,
             public_key=public_key,
             balance=CreditAmount(starter_credits),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
     def reserve_credits(self, amount: CreditAmount):
-        """Domain logic to reserve credits for an upcoming job."""
+        """Domain logic to reserve credits for an upcoming job.
+
+        Raises:
+            ValueError: If the user has insufficient credits for the reservation.
+        """
         self.balance = self.balance - amount
 
     def add_credits(self, amount: CreditAmount):
@@ -62,4 +75,4 @@ class Transaction:
     to_user: Optional[str]  # Public Key
     amount: CreditAmount
     timestamp: datetime
-    type: str  # "starter_grant", "job_completion", "refund"
+    type: TransactionType
