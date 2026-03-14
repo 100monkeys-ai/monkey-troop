@@ -10,6 +10,9 @@ from database import AuditLog, SessionLocal
 audit_logger = logging.getLogger("audit")
 audit_logger.setLevel(logging.INFO)
 
+import os
+os.makedirs("logs", exist_ok=True)
+
 # File handler for audit logs
 audit_handler = logging.FileHandler("logs/audit.log")
 audit_handler.setFormatter(

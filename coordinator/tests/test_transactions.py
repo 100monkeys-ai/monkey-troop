@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database import Base, Node, Transaction
+from database import Base, Node, Transaction, User
 from transactions import (
     STARTER_CREDITS,
     check_sufficient_balance,
@@ -114,7 +114,7 @@ def test_job_completion_credit_transfer(db_session):
         owner_public_key=worker_owner.public_key,
         multiplier=2.0,
         benchmark_score=15.5,
-        trust_score=0.5,
+        trust_score=100,
         total_jobs_completed=0,
     )
     db_session.add(node)

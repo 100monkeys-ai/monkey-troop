@@ -25,11 +25,13 @@ from timeout_middleware import TimeoutMiddleware
 from transactions import (
     check_sufficient_balance,
     create_user_if_not_exists,
+    generate_receipt_signature,
     get_transaction_history,
     get_user_balance,
     record_job_completion,
     reserve_credits,
 )
+from database import get_db
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -345,7 +347,7 @@ def submit_proof(req: VerifyRequest, db: Session = Depends(get_db)):
             db.add(default_user)
             db.commit()
 
-        node = Node(node_id=req.node_id, owner_id=default_user.id)
+        node = Node(node_id=req.node_id, owner_public_key=default_user.public_key)
         db.add(node)
 
     node.multiplier = score

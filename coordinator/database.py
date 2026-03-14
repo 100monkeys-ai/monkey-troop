@@ -3,16 +3,8 @@
 import os
 from datetime import datetime
 
-from sqlalchemy import (
-    BigInteger,
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    create_engine,
-)
+from sqlalchemy import (JSON, BigInteger, Column, DateTime, Float, ForeignKey,
+                        Integer, String, create_engine)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.types import JSON
@@ -50,9 +42,15 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    nodes = relationship("Node", back_populates="owner")
+    nodes = relationship(
+        "Node",
+        primaryjoin="User.public_key == foreign(Node.owner_public_key)",
+        back_populates="owner",
+    )
     transactions_sent = relationship(
-        "Transaction", foreign_keys="Transaction.requester_id", back_populates="requester"
+        "Transaction",
+        primaryjoin="User.id == foreign(Transaction.requester_id)",
+        back_populates="requester",
     )
 
 
@@ -71,9 +69,15 @@ class Node(Base):
     total_jobs_completed = Column(Integer, default=0)
 
     # Relationships
-    owner = relationship("User", foreign_keys=[owner_public_key], back_populates="nodes")
+    owner = relationship(
+        "User",
+        primaryjoin="User.public_key == foreign(Node.owner_public_key)",
+        back_populates="nodes",
+    )
     transactions = relationship(
-        "Transaction", foreign_keys="Transaction.worker_node_id", back_populates="worker_node"
+        "Transaction",
+        primaryjoin="Node.id == foreign(Transaction.worker_node_id)",
+        back_populates="worker_node",
     )
 
 
@@ -97,13 +101,20 @@ class Transaction(Base):
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    meta_data = Column("metadata", JSON)
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    worker_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
 
     # Relationships
     requester = relationship(
-        "User", foreign_keys=[requester_id], back_populates="transactions_sent"
+        "User",
+        primaryjoin="User.id == foreign(Transaction.requester_id)",
+        back_populates="transactions_sent",
     )
-    worker_node = relationship("Node", foreign_keys=[worker_node_id], back_populates="transactions")
+    worker_node = relationship(
+        "Node",
+        primaryjoin="Node.id == foreign(Transaction.worker_node_id)",
+        back_populates="transactions",
+    )
 
 
 def init_db():
