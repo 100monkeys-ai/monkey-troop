@@ -1,77 +1,74 @@
-mod benchmark;
+mod domain;
+mod application;
+mod infrastructure;
+mod presentation;
 mod config;
-mod engines;
-mod gpu;
-mod heartbeat;
-mod proxy;
 
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{error, info};
 
+use crate::domain::models::ModelRegistry;
+use crate::application::services::WorkerService;
+use crate::infrastructure::engines::ollama::OllamaEngine;
+use crate::infrastructure::system::gpu::NvidiaGpuMonitor;
+use crate::infrastructure::system::coordinator::HttpCoordinatorClient;
+use crate::presentation::api::proxy::{create_proxy_router, ProxyState};
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
     tracing_subscriber::fmt::init();
+    info!("🐒 Monkey Troop Worker (DDD Aligned) starting...");
 
-    info!("🐒 Monkey Troop Worker starting...");
-
-    // Load configuration
     let config = config::Config::from_env()?;
-    info!("Configuration loaded: {}", config.node_id);
+    
+    // Core state
+    let registry = Arc::new(RwLock::new(ModelRegistry::new()));
+    
+    // Dependencies (Infrastructure)
+    let engines: Vec<Box<dyn crate::application::ports::InferenceEngine>> = vec![
+        Box::new(OllamaEngine::new()),
+    ];
+    let monitor = Arc::new(NvidiaGpuMonitor);
+    let coordinator = Arc::new(HttpCoordinatorClient::new(config.coordinator_url.clone()));
 
-    // Optional: Run initial benchmark on startup
-    if std::env::var("RUN_INITIAL_BENCHMARK").unwrap_or_default() == "true" {
-        info!("Running initial hardware benchmark...");
-        match benchmark::run_benchmark("startup", 4096).await {
-            Ok(result) => {
-                info!(
-                    "✓ Benchmark: {}s on {}",
-                    result.duration, result.device_name
-                );
-            }
-            Err(e) => {
-                info!("Benchmark skipped: {}", e);
-            }
-        }
-    }
-
-    // Detect all available engines and build model registry
-    info!("🔍 Detecting inference engines...");
-    let detected_engines = engines::detect_all_engines().await;
-
-    if detected_engines.is_empty() {
-        error!(
-            "No inference engines detected! Please ensure Ollama, vLLM, or LM Studio is running."
-        );
-        std::process::exit(1);
-    }
-
-    let model_registry = match engines::build_model_registry(&detected_engines) {
-        Ok(registry) => {
-            info!("✓ Model registry initialized");
-            Arc::new(RwLock::new(registry))
-        }
-        Err(e) => {
-            error!("Failed to build model registry: {}", e);
-            std::process::exit(1);
-        }
-    };
-
-    // Start heartbeat broadcaster
-    let heartbeat_handle = tokio::spawn(heartbeat::run_heartbeat_loop(
-        config.clone(),
-        model_registry.clone(),
+    // Application Service
+    let service = Arc::new(WorkerService::new(
+        config.node_id.clone(),
+        registry.clone(),
+        engines,
+        monitor,
+        coordinator,
     ));
 
-    // Start JWT verification proxy
-    let proxy_handle = tokio::spawn(proxy::run_proxy_server(
-        config.clone(),
-        model_registry.clone(),
-    ));
+    // 1. Initial registry refresh
+    service.refresh_model_registry().await?;
 
-    // Wait for both tasks
+    // 2. Start heartbeat loop
+    let service_heartbeat = service.clone();
+    let heartbeat_handle = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
+        loop {
+            interval.tick().await;
+            if let Err(e) = service_heartbeat.send_heartbeat().await {
+                error!("Heartbeat failed: {}", e);
+            }
+        }
+    });
+
+    // 3. Start Proxy API (Presentation Layer)
+    let proxy_state = Arc::new(ProxyState {
+        service: service.clone(),
+    });
+    let app = create_proxy_router(proxy_state);
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8001").await?;
+    info!("✓ Proxy API listening on :8001");
+    
+    let proxy_handle = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
     tokio::select! {
         res = heartbeat_handle => {
             error!("Heartbeat task ended: {:?}", res);
