@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    fn test_detect_failure() {
+    fn test_detect_failure_server_error() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::GET).path("/api/version");
@@ -121,6 +121,18 @@ mod tests {
         let result = driver.detect();
 
         mock.assert();
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_detect_failure_network_error() {
+        // Use a port that is not listening to simulate a network error.
+        let driver = OllamaDriver {
+            base_url: "http://127.0.0.1:19999".to_string(),
+        };
+        let result = driver.detect();
+        // Connection refused => Ok(false)
         assert!(result.is_ok());
         assert!(!result.unwrap());
     }
@@ -147,11 +159,29 @@ mod tests {
     }
 
     #[test]
-    fn test_get_info_failure() {
+    fn test_get_info_failure_plain_500() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::GET).path("/api/version");
             then.status(500);
+        });
+
+        let driver = create_driver(&server);
+        let result = driver.get_info();
+
+        mock.assert();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_info_failure_500_with_valid_json() {
+        // Even though the body looks valid, a non-2xx status must produce an error.
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET).path("/api/version");
+            then.status(500)
+                .header("content-type", "application/json")
+                .body(r#"{"version": "0.1.27"}"#);
         });
 
         let driver = create_driver(&server);
@@ -183,13 +213,31 @@ mod tests {
     }
 
     #[test]
-    fn test_get_models_failure() {
+    fn test_get_models_failure_plain_500() {
         let server = MockServer::start();
         let mock = server.mock(|when, then| {
             when.method(httpmock::Method::GET).path("/api/tags");
             then.status(500)
                 .header("content-type", "application/json")
                 .body(r#"{"models": [{"name": "llama3:8b"}, {"name": "mistral"}]}"#);
+        });
+
+        let driver = create_driver(&server);
+        let result = driver.get_models();
+
+        mock.assert();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_models_failure_500_with_valid_json() {
+        // Even though the body looks valid, a non-2xx status must produce an error.
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET).path("/api/tags");
+            then.status(500)
+                .header("content-type", "application/json")
+                .body(r#"{"models": [{"name": "llama3:8b"}]}"#);
         });
 
         let driver = create_driver(&server);
