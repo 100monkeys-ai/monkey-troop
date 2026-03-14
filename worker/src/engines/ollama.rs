@@ -127,7 +127,7 @@ mod tests {
     fn test_detect_network_error() {
         // Point at a port where nothing is listening
         let driver = OllamaDriver {
-            base_url: "http://127.0.0.1:1".to_string(),
+            base_url: "http://127.0.0.1:19999".to_string(),
         };
         let result = driver.detect();
         assert!(result.is_ok());
