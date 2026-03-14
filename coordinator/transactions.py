@@ -27,11 +27,9 @@ def create_user_if_not_exists(db: Session, public_key: str) -> User:
 
     if not user:
         user = User(
-            username=public_key,
             public_key=public_key,
             balance_seconds=STARTER_CREDITS,
             created_at=datetime.utcnow(),
-            last_active=datetime.utcnow(),
         )
         db.add(user)
         db.commit()

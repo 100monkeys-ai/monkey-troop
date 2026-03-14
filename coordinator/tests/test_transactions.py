@@ -109,7 +109,7 @@ def test_job_completion_credit_transfer(db_session):
     # Create worker node
     node = Node(
         node_id="test_node_789",
-        owner_id=worker_owner.id,
+        owner_public_key=worker_owner.public_key,
         multiplier=2.0,
         benchmark_score=15.5,
         trust_score=0.5,
