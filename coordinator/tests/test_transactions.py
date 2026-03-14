@@ -149,9 +149,6 @@ def test_job_completion_credit_transfer(db_session):
     assert node.trust_score > 0  # Increased
 
 
-
-
-
 def test_invalid_signature_rejected(db_session):
     """Test that invalid HMAC signatures are rejected."""
     requester = create_user_if_not_exists(db_session, "requester_sig_test")
