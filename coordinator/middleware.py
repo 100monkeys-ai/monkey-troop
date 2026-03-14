@@ -18,14 +18,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # Skip rate limiting for health checks
-        if request.url.path in ["/health", "/public-key"]:
+        if request.url.path in ["/health"]:
             return await call_next(request)
 
         # Get client IP
         client_ip = request.client.host if request.client else "unknown"
 
         # Check rate limits based on endpoint
-        if request.url.path in ["/heartbeat", "/peers", "/v1/models"]:
+        if request.url.path in ["/heartbeat", "/peers", "/v1/models", "/public-key"]:
             # Discovery endpoints
             allowed, remaining = self.rate_limiter.check_discovery_limit(client_ip)
             if not allowed:

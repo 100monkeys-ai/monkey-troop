@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
+from database import get_db, init_db
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
 from rate_limit import RateLimiter
 from timeout_middleware import TimeoutMiddleware
@@ -482,8 +483,6 @@ async def get_transactions(
     db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-    from transactions import get_transaction_history
-
     return {"transactions": get_transaction_history(public_key, limit)}
 
 
