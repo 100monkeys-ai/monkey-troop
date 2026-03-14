@@ -48,9 +48,9 @@ pub enum TroopError {
 impl fmt::Display for TroopError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TroopError::NetworkError(msg) => write!(f, "Network error: {}", msg),
-            TroopError::Timeout(msg) => write!(f, "Timeout: {}", msg),
-            TroopError::AuthError(msg) => write!(f, "Authentication error: {}", msg),
+            TroopError::NetworkError(msg) => write!(f, "Network error: {msg}"),
+            TroopError::Timeout(msg) => write!(f, "Timeout: {msg}"),
+            TroopError::AuthError(msg) => write!(f, "Authentication error: {msg}"),
             TroopError::NoNodesAvailable => write!(f, "No nodes available to service request"),
             TroopError::InsufficientCredits {
                 required,
@@ -58,16 +58,15 @@ impl fmt::Display for TroopError {
             } => {
                 write!(
                     f,
-                    "Insufficient credits: need {}, have {}",
-                    required, available
+                    "Insufficient credits: need {required}, have {available}"
                 )
             }
-            TroopError::InvalidRequest(msg) => write!(f, "Invalid request: {}", msg),
-            TroopError::WorkerUnavailable(msg) => write!(f, "Worker unavailable: {}", msg),
+            TroopError::InvalidRequest(msg) => write!(f, "Invalid request: {msg}"),
+            TroopError::WorkerUnavailable(msg) => write!(f, "Worker unavailable: {msg}"),
             TroopError::CircuitBreakerOpen => {
                 write!(f, "Circuit breaker open, service temporarily unavailable")
             }
-            TroopError::InternalError(msg) => write!(f, "Internal error: {}", msg),
+            TroopError::InternalError(msg) => write!(f, "Internal error: {msg}"),
         }
     }
 }

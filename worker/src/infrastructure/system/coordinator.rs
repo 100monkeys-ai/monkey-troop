@@ -32,7 +32,7 @@ impl CoordinatorClient for HttpCoordinatorClient {
         
         let payload = json!({
             "node_id": node_id,
-            "status": format!("{:?}", status).to_uppercase(),
+            "status": format!("{status:?}").to_uppercase(),
             "models": models,
             "hardware": {
                 "gpu": hardware.gpu_name,

@@ -1,12 +1,12 @@
 use axum::{
-    extract::{State, HeaderMap},
+    extract::{State, Json},
     routing::post,
-    Json, Router,
-    http::StatusCode,
+    Router,
+    http::{StatusCode, HeaderMap},
 };
 use std::sync::Arc;
 use crate::application::services::WorkerService;
-use crate::domain::inference::{InferenceRequest, InferenceResponse};
+use crate::domain::inference::InferenceRequest;
 use serde_json::{json, Value};
 
 pub struct ProxyState {

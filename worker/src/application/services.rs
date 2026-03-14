@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::domain::models::{ModelRegistry, NodeStatus, HardwareStatus};
+use crate::domain::models::{ModelRegistry, NodeStatus};
 use crate::application::ports::{InferenceEngine, HardwareMonitor, CoordinatorClient};
 use anyhow::Result;
 use tracing::{info, error};
