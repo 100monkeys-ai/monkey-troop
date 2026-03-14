@@ -44,6 +44,17 @@ def test_check_rate_limit_subsequent_request(limiter, mock_redis):
     mock_redis.setex.assert_not_called()
 
 
+def test_check_rate_limit_boundary_last_allowed(limiter, mock_redis):
+    """Test rate limit check when processing the last allowed request."""
+    mock_redis.get.return_value = b"4"
+
+    allowed, remaining = limiter.check_rate_limit("test_key", 5)
+
+    assert allowed is True
+    assert remaining == 0
+    mock_redis.get.assert_called_once_with("test_key")
+    mock_redis.incr.assert_called_once_with("test_key")
+    mock_redis.setex.assert_not_called()
 def test_check_rate_limit_exceeded(limiter, mock_redis):
     """Test rate limit check when the limit is exceeded."""
     mock_redis.get.return_value = b"5"
