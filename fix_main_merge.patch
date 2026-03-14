@@ -1,0 +1,18 @@
+<<<<<<< SEARCH
+<<<<<<< HEAD
+=======
+from database import get_db, init_db
+from transactions import (
+    create_user_if_not_exists,
+    get_user_balance,
+    check_sufficient_balance,
+    reserve_credits,
+    record_job_completion,
+    get_transaction_history,
+    generate_receipt_signature,
+)
+from rate_limit import RateLimiter
+>>>>>>> origin/main
+=======
+from database import get_db, init_db
+>>>>>>> REPLACE
