@@ -4,7 +4,7 @@ sqlalchemy==2.0.25
 psycopg2-binary==2.9.11
 redis==7.3.0
 pydantic==2.12.5
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.22
 torch>=2.2.0
