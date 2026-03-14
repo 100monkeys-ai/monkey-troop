@@ -10,7 +10,7 @@ The easiest way to use Monkey Troop is to join the public network at `troop.100m
 
 ```bash
 # Quick install (coming soon)
-curl -sSL https://troop.100monkeys.ai/install.sh | bash
+curl -sSL https://troop.100monkeys.ai/bin/install.sh | bash
 
 # Manual install
 # 1. Download latest release
@@ -83,10 +83,10 @@ git clone https://github.com/monkeytroop/monkey-troop.git
 cd monkey-troop
 
 # Run automated installer (interactive mode)
-./install-coordinator.sh
+./bin/install-coordinator.sh
 
 # Or with command-line flags (automated mode)
-./install-coordinator.sh \
+./bin/install-coordinator.sh \
   --domain troop.example.com \
   --email admin@example.com \
   --routing-mode path \

@@ -9,8 +9,13 @@ monkey-troop/
 ├── DEPLOYMENT.md                   # Deployment instructions
 ├── .gitignore                      # Git ignore rules
 ├── .env.example                    # Environment template
-├── start.sh                        # Quick start script
-├── install.sh                      # Installation script
+├── bin/                            # Scripts and tools
+│   ├── start.sh                    # Quick start script
+│   ├── install.sh                  # Installation script
+│   ├── install-coordinator.sh      # Coordinator deployment
+│   ├── dev.sh                      # Development tools
+│   ├── setup-headscale.sh          # VPN setup
+│   └── ...                         # Other automation scripts
 │
 ├── coordinator/                    # Python/FastAPI service
 │   ├── __init__.py

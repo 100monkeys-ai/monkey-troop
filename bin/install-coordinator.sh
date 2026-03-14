@@ -11,8 +11,8 @@
 # End Users: Use install.sh instead for worker/client installation
 #
 # Usage:
-#   ./install-coordinator.sh                    # Interactive mode
-#   ./install-coordinator.sh --domain example.com --email admin@example.com
+#   ./bin/install-coordinator.sh                    # Interactive mode
+#   ./bin/install-coordinator.sh --domain example.com --email admin@example.com
 #
 ###############################################################################
 
@@ -85,10 +85,10 @@ OPTIONS:
 
 EXAMPLES:
     # Interactive mode (recommended for first-time setup)
-    ./install-coordinator.sh
+    ./bin/install-coordinator.sh
 
     # Automated mode with all parameters
-    ./install-coordinator.sh \\
+    ./bin/install-coordinator.sh \\
         --domain troop.example.com \\
         --email admin@example.com \\
         --routing-mode path \\
@@ -280,7 +280,7 @@ main() {
     # Step 1: Validate prerequisites
     if [[ "$SKIP_VALIDATION" != "true" ]]; then
         log_info "Step 1/5: Validating prerequisites..."
-        bash "$SCRIPT_DIR/scripts/validate-prerequisites.sh" \
+        bash "$SCRIPT_DIR/validate-prerequisites.sh" \
             --domain "$DOMAIN" \
             --routing-mode "$ROUTING_MODE"
         log_success "Prerequisites validated"
@@ -292,7 +292,7 @@ main() {
     
     # Step 2: Setup Headscale
     log_info "Step 2/5: Installing Headscale VPN server..."
-    TS_AUTHKEY=$(bash "$SCRIPT_DIR/scripts/setup-headscale.sh" \
+    TS_AUTHKEY=$(bash "$SCRIPT_DIR/setup-headscale.sh" \
         --domain "$DOMAIN" \
         --routing-mode "$ROUTING_MODE")
     log_success "Headscale installed successfully"
@@ -300,7 +300,7 @@ main() {
     
     # Step 3: Setup Coordinator Stack
     log_info "Step 3/5: Installing Coordinator stack..."
-    bash "$SCRIPT_DIR/scripts/setup-coordinator-stack.sh" \
+    bash "$SCRIPT_DIR/setup-coordinator-stack.sh" \
         --domain "$DOMAIN" \
         --routing-mode "$ROUTING_MODE" \
         --db-password "$DB_PASSWORD" \
@@ -310,7 +310,7 @@ main() {
     
     # Step 4: Setup Caddy reverse proxy
     log_info "Step 4/5: Installing Caddy reverse proxy..."
-    bash "$SCRIPT_DIR/scripts/setup-caddy.sh" \
+    bash "$SCRIPT_DIR/setup-caddy.sh" \
         --domain "$DOMAIN" \
         --email "$EMAIL" \
         --routing-mode "$ROUTING_MODE"
@@ -320,7 +320,7 @@ main() {
     # Step 5: Setup backups (optional)
     if [[ "$ENABLE_BACKUPS" == "true" ]]; then
         log_info "Step 5/5: Setting up automated backups..."
-        bash "$SCRIPT_DIR/scripts/setup-backups.sh" \
+        bash "$SCRIPT_DIR/setup-backups.sh" \
             --retention-days "$BACKUP_RETENTION_DAYS" \
             --db-password "$DB_PASSWORD"
         log_success "Backup automation configured"

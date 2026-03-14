@@ -80,7 +80,7 @@ case "$1" in
         ;;
     
     "help"|*)
-        echo "Usage: ./dev.sh [command]"
+        echo "Usage: ./bin/dev.sh [command]"
         echo ""
         echo "Commands:"
         echo "  build       - Build Rust binaries (release)"

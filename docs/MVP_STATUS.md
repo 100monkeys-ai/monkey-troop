@@ -15,7 +15,7 @@ The Monkey Troop distributed GPU inferencing network has completed Phase 2 imple
   - `python3 -m py_compile coordinator/*.py` ✅ PASSING
   - `cargo test --workspace` ✅ 12 tests passing
 - **Deployment**: ✅ Automated installation system complete
-  - `install-coordinator.sh` (15KB orchestration script)
+  - `bin/install-coordinator.sh` (15KB orchestration script)
   - 5 setup scripts (validation, headscale, coordinator, caddy, backups)
   - 3 config templates (headscale, 2 Caddyfile variants)
   - 4 systemd service files (auto-restart, timers)
@@ -62,8 +62,8 @@ The Monkey Troop distributed GPU inferencing network has completed Phase 2 imple
 - ✅ Docker Compose configurations for Coordinator and Worker
 - ✅ Dockerfiles for all components
 - ✅ Environment configuration templates (.env.example)
-- ✅ Installation scripts (install.sh for end-users, start.sh for development)
-- ✅ **Coordinator deployment automation** (install-coordinator.sh)
+- ✅ Installation scripts (bin/install.sh for end-users, bin/start.sh for development)
+- ✅ **Coordinator deployment automation** (bin/install-coordinator.sh)
   - Automated Headscale VPN setup
   - Docker stack deployment
   - Caddy reverse proxy with automatic HTTPS
@@ -450,7 +450,7 @@ curl http://localhost:8000/users/PUBLIC_KEY/transactions?limit=50
 - ✅ Create CI/CD pipeline with GitHub Actions
 
 ### Phase 3: Deployment ✅ AUTOMATION COMPLETE
-- ✅ **Deployment automation scripts** (install-coordinator.sh + 5 setup scripts)
+- ✅ **Deployment automation scripts** (bin/install-coordinator.sh + 5 setup scripts)
 - ✅ **Headscale installation automation** (binary download, config, systemd)
 - ✅ **Coordinator stack automation** (Docker, .env generation, health checks)
 - ✅ **Reverse proxy automation** (Caddy with Let's Encrypt HTTPS)
@@ -490,7 +490,7 @@ curl http://localhost:8000/users/PUBLIC_KEY/transactions?limit=50
 - ✅ Headscale installation automated
 - ✅ Coordinator stack deployment automated
 - ✅ Reverse proxy (Caddy) automation complete
-- [ ] Set up troop.100monkeys.ai server (run install-coordinator.sh)
+- [ ] Set up troop.100monkeys.ai server (run bin/install-coordinator.sh)
 - [ ] Create release binaries
 
 ## 🐛 Known Issues
@@ -616,12 +616,12 @@ The architecture is sound and battle-tested:
 - `coordinator/requirements.txt`: Python dependencies
 
 ### Deployment Automation (New)
-- `install-coordinator.sh`: Main orchestration script (15KB)
-- `scripts/validate-prerequisites.sh`: System requirement validation
-- `scripts/setup-headscale.sh`: Headscale VPN installation
-- `scripts/setup-coordinator-stack.sh`: Docker stack deployment
-- `scripts/setup-caddy.sh`: Reverse proxy with automatic HTTPS
-- `scripts/setup-backups.sh`: Database backup automation
+- `bin/install-coordinator.sh`: Main orchestration script (15KB)
+- `bin/validate-prerequisites.sh`: System requirement validation
+- `bin/setup-headscale.sh`: Headscale VPN installation
+- `bin/setup-coordinator-stack.sh`: Docker stack deployment
+- `bin/setup-caddy.sh`: Reverse proxy with automatic HTTPS
+- `bin/setup-backups.sh`: Database backup automation
 - `config/headscale.yaml.template`: Headscale configuration
 - `config/Caddyfile.path.template`: Path-based routing (default)
 - `config/Caddyfile.subdomain.template`: Subdomain routing
@@ -634,9 +634,9 @@ The architecture is sound and battle-tested:
 
 ### Immediate (Week 1)
 1. ✅ ~~Deploy to VPS infrastructure~~ (automation complete, ready to run)
-2. ✅ ~~Configure Headscale coordinator~~ (automated in install-coordinator.sh)
+2. ✅ ~~Configure Headscale coordinator~~ (automated in bin/install-coordinator.sh)
 3. ✅ ~~Set up SSL/TLS certificates~~ (Caddy automatic HTTPS)
-4. Run `./install-coordinator.sh` on production VPS
+4. Run `./bin/install-coordinator.sh` on production VPS
 5. Configure production secrets (passwords auto-generated)
 
 ### Short-term (Month 1)

@@ -13,7 +13,7 @@ This testing guide helps verify the automated coordinator installation system wo
   - Path-based routing (default) and subdomain routing
   - Optional automated backups with rolling retention
 
-### Setup Scripts (scripts/)
+### Setup Scripts (bin/)
 - `validate-prerequisites.sh` - System requirement validation
 - `setup-headscale.sh` - Headscale VPN installation
 - `setup-coordinator-stack.sh` - Docker stack deployment
@@ -60,7 +60,7 @@ git clone https://github.com/100monkeys-ai/monkey-troop.git
 cd monkey-troop
 
 # Run interactive installer
-./install-coordinator.sh
+./bin/install-coordinator.sh
 
 # Follow prompts:
 # - Domain: troop.example.com
@@ -109,7 +109,7 @@ ssh root@your-vps-ip
 cd monkey-troop
 
 # Run with CLI flags
-./install-coordinator.sh \
+./bin/install-coordinator.sh \
   --domain example.com \
   --email admin@example.com \
   --routing-mode subdomain \
@@ -142,7 +142,7 @@ ls -lh /var/backups/troop/
 
 ```bash
 # For testing in environments where validation might fail
-./install-coordinator.sh \
+./bin/install-coordinator.sh \
   --domain test.example.com \
   --email test@example.com \
   --skip-validation
