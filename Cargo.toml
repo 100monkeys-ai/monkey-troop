@@ -41,4 +41,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # Config
-config = "0.14"
+config = "0.15"
