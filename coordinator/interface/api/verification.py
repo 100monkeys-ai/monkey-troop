@@ -2,28 +2,29 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from application.verification_services import VerificationService
+from dependencies import get_verification_service
 from .schemas import ChallengeResponseSchema, VerifyRequestSchema
-from main import get_verification_service
 
 router = APIRouter(prefix="/hardware", tags=["Verification"])
 
+
 @router.post("/challenge", response_model=ChallengeResponseSchema)
 async def request_challenge(
-    node_id: str,
-    verification_service: VerificationService = Depends(get_verification_service)
+    node_id: str, verification_service: VerificationService = Depends(get_verification_service)
 ):
     """Node requests a benchmark challenge."""
     challenge = verification_service.issue_challenge(node_id)
     return {
         "challenge_token": challenge.token,
         "seed": challenge.seed,
-        "matrix_size": challenge.matrix_size
+        "matrix_size": challenge.matrix_size,
     }
+
 
 @router.post("/verify")
 async def submit_proof(
     req: VerifyRequestSchema,
-    verification_service: VerificationService = Depends(get_verification_service)
+    verification_service: VerificationService = Depends(get_verification_service),
 ):
     """Node submits proof-of-hardware result."""
     result = verification_service.verify_proof(
@@ -31,10 +32,10 @@ async def submit_proof(
         node_id=req.node_id,
         duration=req.duration,
         device_name=req.device_name,
-        proof_hash=req.proof_hash
+        proof_hash=req.proof_hash,
     )
-    
+
     if result["status"] == "error":
         raise HTTPException(status_code=400, detail=result["message"])
-        
+
     return result

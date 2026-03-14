@@ -9,7 +9,9 @@ class TokenService(ABC):
     """Port for generating and verifying auth tokens (e.g. JWT)."""
 
     @abstractmethod
-    def generate_ticket(self, user_id: str, target_node_id: str, project: str = "free-tier") -> AuthTicket:
+    def generate_ticket(
+        self, user_id: str, target_node_id: str, project: str = "free-tier"
+    ) -> AuthTicket:
         pass
 
     @abstractmethod

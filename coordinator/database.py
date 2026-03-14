@@ -3,17 +3,31 @@
 import os
 from datetime import datetime
 
-from sqlalchemy import (JSON, BigInteger, Column, DateTime, Float, ForeignKey,
-                        Integer, String, create_engine)
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    create_engine,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy.types import JSON
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger"
 )
 
-engine = create_engine(DATABASE_URL)
+
+# Use dynamic engine creation to allow easier testing overrides
+def create_db_engine(url: str = DATABASE_URL):
+    return create_engine(url)
+
+
+engine = create_db_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -67,6 +81,8 @@ class Node(Base):
     benchmark_score = Column(Float)  # Seconds to complete standard task
     trust_score = Column(Integer, default=100)  # Reputation
     total_jobs_completed = Column(Integer, default=0)
+    hardware_model = Column(String, nullable=True)
+    last_benchmark = Column(DateTime, nullable=True)
 
     # Relationships
     owner = relationship(
@@ -100,9 +116,7 @@ class Transaction(Base):
     duration_seconds = Column(Integer, nullable=False)
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
-
-    requester_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    worker_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
+    meta_data = Column(JSON, nullable=True)
 
     # Relationships
     requester = relationship(

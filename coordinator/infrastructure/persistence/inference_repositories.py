@@ -33,7 +33,7 @@ class RedisNodeDiscoveryRepository(NodeDiscoveryRepository):
         keys = list(self.redis.scan_iter("node:*"))
         if not keys:
             return []
-        
+
         raw_nodes = self.redis.mget(keys)
         nodes = []
         for raw_data in raw_nodes:

@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from domain.accounting.models import User, Transaction, CreditAmount
+from domain.accounting.models import User, Transaction
 
 
 class UserRepository(ABC):

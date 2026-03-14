@@ -45,3 +45,49 @@ impl ModelRegistry {
         self.models.iter().map(|m| m.id.clone()).collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_model_registry_new() {
+        let registry = ModelRegistry::new();
+        assert!(registry.models.is_empty());
+    }
+
+    #[test]
+    fn test_model_registry_add_model() {
+        let mut registry = ModelRegistry::new();
+        let model = Model {
+            id: "test-model".to_string(),
+            engine_type: EngineType::Ollama,
+        };
+
+        registry.add_model(model.clone());
+        assert_eq!(registry.models.len(), 1);
+        assert_eq!(registry.models[0].id, "test-model");
+
+        // Test duplicate prevention
+        registry.add_model(model);
+        assert_eq!(registry.models.len(), 1);
+    }
+
+    #[test]
+    fn test_model_registry_get_model_ids() {
+        let mut registry = ModelRegistry::new();
+        registry.add_model(Model {
+            id: "model1".to_string(),
+            engine_type: EngineType::Ollama,
+        });
+        registry.add_model(Model {
+            id: "model2".to_string(),
+            engine_type: EngineType::Vllm,
+        });
+
+        let ids = registry.get_model_ids();
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&"model1".to_string()));
+        assert!(ids.contains(&"model2".to_string()));
+    }
+}

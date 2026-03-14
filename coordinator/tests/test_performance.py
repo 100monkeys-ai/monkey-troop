@@ -15,7 +15,6 @@ import asyncio
 import time
 
 import httpx
-import pytest
 from fastapi import FastAPI
 
 # Simulated synchronous DB delay (seconds), matches the PR description.
@@ -49,11 +48,10 @@ def _make_async_blocking_app() -> FastAPI:
 
 async def _time_concurrent_requests(app: FastAPI) -> float:
     """Fire CONCURRENT_REQUESTS GET /slow requests concurrently and return elapsed seconds."""
-    async with httpx.AsyncClient(app=app, base_url="http://test") as client:
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         start = time.perf_counter()
-        responses = await asyncio.gather(
-            *[client.get("/slow") for _ in range(CONCURRENT_REQUESTS)]
-        )
+        responses = await asyncio.gather(*[client.get("/slow") for _ in range(CONCURRENT_REQUESTS)])
         elapsed = time.perf_counter() - start
 
     assert all(r.status_code == 200 for r in responses)

@@ -17,3 +17,41 @@ pub struct InferenceRequest {
 pub struct InferenceResponse {
     pub content: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_inference_request_serialization() {
+        let request = InferenceRequest {
+            model_id: "test-model".to_string(),
+            messages: vec![ChatMessage {
+                role: "user".to_string(),
+                content: "hello".to_string(),
+            }],
+            stream: false,
+        };
+
+        let serialized = serde_json::to_string(&request).unwrap();
+        let deserialized: InferenceRequest = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.model_id, "test-model");
+        assert_eq!(deserialized.messages.len(), 1);
+        assert_eq!(deserialized.messages[0].content, "hello");
+        assert!(!deserialized.stream);
+    }
+
+    #[test]
+    fn test_inference_response_serialization() {
+        let response = InferenceResponse {
+            content: "response content".to_string(),
+        };
+
+        let serialized = serde_json::to_string(&response).unwrap();
+        let deserialized: InferenceResponse = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.content, "response content");
+    }
+}

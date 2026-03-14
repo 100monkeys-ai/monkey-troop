@@ -2,12 +2,12 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 
 @dataclass(frozen=True)
 class Challenge:
     """A benchmark challenge issued to a node."""
+
     token: str
     seed: str
     matrix_size: int
@@ -22,6 +22,7 @@ class Challenge:
 @dataclass
 class BenchmarkResult:
     """The result of a completed hardware benchmark."""
+
     node_id: str
     duration: float
     device_name: str

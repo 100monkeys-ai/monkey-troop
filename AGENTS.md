@@ -133,15 +133,30 @@ When modifying existing procedural code:
 1. Identify the **Bounded Context**.
 2. Identify the **Layer** the code belongs to.
 3. Move the logic to the appropriate directory following the structures above.
-## 8. Mandatory Validation & Production Readiness
+## 8. Mandatory Validation, Testing & Production Readiness
 
-### 8.1 Compulsory Validation Command
-After **any** code modification, the following command must be executed and pass without any warnings (warnings are treated as errors):
+### 8.1 Compulsory Validation Commands
+After **any** code modification, the following commands must be executed and pass without any warnings or failures.
+
+**For Rust (Worker/Client/Shared):**
 ```bash
-cargo fmt --all && cargo clippy --workspace --locked -- -D warnings && cargo build --release && cargo test --workspace --locked && cargo doc --no-deps
+cargo fmt --all && \
+cargo clippy --workspace --locked -- -D warnings && \
+cargo build --release && \
+cargo test --workspace --locked && \
+cargo doc --no-deps
 ```
 
-### 8.2 Production Readiness
+**For Python (Coordinator):**
+```bash
+black . && \
+ruff check . && \
+pytest --cov=. --cov-report=term-missing --cov-fail-under=100
+```
+
+### 8.2 Production Readiness & Testing
+- **100% Test Coverage**: All new code and refactored code MUST be covered by automated tests. This includes unit tests for the Domain and Application layers, and integration tests for the Infrastructure and Interface layers.
+- **Passing Test Suite**: No change is considered complete if any test in the workspace fails.
 - **No Dead Code**: Unused functions, variables, or structs are strictly forbidden. Use of `#[allow(dead_code)]` or similar attributes is prohibited.
 - **No Stubs/Placeholders**: All logic must be fully implemented according to the ADRs and domain requirements. "TODO" comments or mock implementations are not permitted in the production branch.
 - **Surgical Implementation**: If a feature cannot be fully implemented, it must be removed rather than left in a partial or stubbed state.

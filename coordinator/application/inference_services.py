@@ -1,7 +1,7 @@
 """Application layer use cases for the Inference context."""
 
 import random
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from domain.inference.models import Node
 from .inference_ports import NodeDiscoveryRepository
 
@@ -19,13 +19,13 @@ class DiscoveryService:
     def select_node_for_model(self, model_name: str) -> Optional[Node]:
         """Use Case: Find an idle node with a specific model."""
         candidates = self.discovery_repo.find_nodes_by_model(model_name)
-        
+
         # Filter for IDLE status
         idle_candidates = [n for n in candidates if n.status == "IDLE"]
-        
+
         if not idle_candidates:
             return None
-            
+
         # Simple random selection
         return random.choice(idle_candidates)
 

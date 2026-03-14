@@ -1,7 +1,6 @@
 """Application layer use cases (services) for the Accounting context."""
 
 from datetime import datetime
-from typing import Optional, List
 from domain.accounting.models import User, Transaction, CreditAmount
 from .accounting_ports import UserRepository, TransactionRepository
 
@@ -29,7 +28,7 @@ class AccountingService:
                 to_user=public_key,
                 amount=CreditAmount(starter_credits),
                 timestamp=datetime.utcnow(),
-                type="starter_grant"
+                type="starter_grant",
             )
             self.txn_repo.record_transaction(txn)
 
@@ -55,7 +54,7 @@ class AccountingService:
         worker_node_id: str,
         worker_owner_pk: str,
         duration_seconds: int,
-        multiplier: float
+        multiplier: float,
     ) -> dict:
         """Use Case: Transfer credits from requester to worker after a job."""
 
@@ -87,7 +86,7 @@ class AccountingService:
             to_user=worker_owner_pk,
             amount=transfer_amount,
             timestamp=datetime.utcnow(),
-            type="job_completion"
+            type="job_completion",
         )
         self.txn_repo.record_transaction(txn)
 
@@ -95,5 +94,5 @@ class AccountingService:
             "status": "success",
             "credits_transferred": credits_to_transfer,
             "requester_balance": requester.balance.seconds,
-            "worker_balance": worker_owner.balance.seconds
+            "worker_balance": worker_owner.balance.seconds,
         }

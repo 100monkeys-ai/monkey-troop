@@ -21,7 +21,7 @@ class RedisChallengeRepository(ChallengeRepository):
             "seed": challenge.seed,
             "matrix_size": challenge.matrix_size,
             "created_at": challenge.created_at.isoformat(),
-            "node_id": challenge.node_id
+            "node_id": challenge.node_id,
         }
         self.redis.setex(key, ttl_seconds, json.dumps(data))
 
@@ -30,15 +30,16 @@ class RedisChallengeRepository(ChallengeRepository):
         raw_data = self.redis.get(key)
         if not raw_data:
             return None
-        
+
         data = json.loads(raw_data)
         from datetime import datetime
+
         return Challenge(
             token=token,
             seed=data["seed"],
             matrix_size=data["matrix_size"],
             created_at=datetime.fromisoformat(data["created_at"]),
-            node_id=data["node_id"]
+            node_id=data["node_id"],
         )
 
     def delete_challenge(self, token: str) -> None:
@@ -53,7 +54,11 @@ class SqlAlchemyBenchmarkRepository(BenchmarkRepository):
 
     def save_result(self, result: BenchmarkResult) -> None:
         # Check if node exists in DB
-        node = self.session.query(db_models.Node).filter(db_models.Node.node_id == result.node_id).first()
+        node = (
+            self.session.query(db_models.Node)
+            .filter(db_models.Node.node_id == result.node_id)
+            .first()
+        )
         if not node:
             # Fallback for now - in production would require explicit registration
             # We skip creating a node here as it's a cross-context concern
@@ -70,11 +75,11 @@ class SqlAlchemyBenchmarkRepository(BenchmarkRepository):
         node = self.session.query(db_models.Node).filter(db_models.Node.node_id == node_id).first()
         if not node or not node.multiplier:
             return None
-            
+
         return BenchmarkResult(
             node_id=node.node_id,
             duration=node.benchmark_score,
             device_name=node.hardware_model,
             multiplier=node.multiplier,
-            timestamp=node.last_benchmark
+            timestamp=node.last_benchmark,
         )

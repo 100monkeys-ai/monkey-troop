@@ -33,7 +33,8 @@ class FileSystemKeyRepository(KeyRepository):
 
         public_key = private_key.public_key()
         public_pem = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
         self.private_key_file.write_bytes(private_pem)
