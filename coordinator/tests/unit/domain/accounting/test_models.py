@@ -1,6 +1,6 @@
 import pytest
-from datetime import datetime
-from coordinator.domain.accounting.models import CreditAmount, User, Transaction
+from datetime import datetime, timezone
+from coordinator.domain.accounting.models import CreditAmount, User, Transaction, TransactionType
 
 
 def test_credit_amount_initialization():
@@ -68,12 +68,12 @@ def test_transaction_creation():
         from_user="alice",
         to_user="bob",
         amount=CreditAmount(100),
-        timestamp=datetime.utcnow(),
-        type="job_completion",
+        timestamp=datetime.now(timezone.utc),
+        type=TransactionType.JOB_COMPLETION,
     )
     assert txn.id == 1
     assert txn.job_id == "job_123"
     assert txn.from_user == "alice"
     assert txn.to_user == "bob"
     assert txn.amount.seconds == 100
-    assert txn.type == "job_completion"
+    assert txn.type == TransactionType.JOB_COMPLETION

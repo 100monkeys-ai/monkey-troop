@@ -52,6 +52,8 @@ async fn handle_chat_completion(
     if !registry.get_model_ids().contains(&payload.model_id) {
         return Err(StatusCode::NOT_FOUND);
     }
+    // Explicitly drop the read lock before proceeding to response construction.
+    drop(registry);
 
     // 3. Routing: Select engine and forward
     // For MVP, return mock response. In production, this would call engine.chat()

@@ -1,7 +1,7 @@
 """Application layer use cases (services) for the Accounting context."""
 
-from datetime import datetime
-from domain.accounting.models import User, Transaction, CreditAmount
+from datetime import datetime, timezone
+from domain.accounting.models import User, Transaction, CreditAmount, TransactionType
 from .accounting_ports import UserRepository, TransactionRepository
 
 
@@ -27,8 +27,8 @@ class AccountingService:
                 from_user=None,
                 to_user=public_key,
                 amount=CreditAmount(starter_credits),
-                timestamp=datetime.utcnow(),
-                type="starter_grant",
+                timestamp=datetime.now(timezone.utc),
+                type=TransactionType.STARTER_GRANT,
             )
             self.txn_repo.record_transaction(txn)
 
@@ -85,8 +85,8 @@ class AccountingService:
             from_user=requester_pk,
             to_user=worker_owner_pk,
             amount=transfer_amount,
-            timestamp=datetime.utcnow(),
-            type="job_completion",
+            timestamp=datetime.now(timezone.utc),
+            type=TransactionType.JOB_COMPLETION,
         )
         self.txn_repo.record_transaction(txn)
 
