@@ -74,15 +74,15 @@ async fn run_cpu_fallback_benchmark(seed: &str, matrix_size: usize) -> Result<Be
     info!("Running CPU fallback benchmark...");
 
     // Simple CPU benchmark using numpy
-    let python_code = r#"
+    let python_code = format!(
+        r#"
 import json
 import hashlib
 import time
-import sys
 import numpy as np
 
-seed = sys.argv[1]
-matrix_size = int(sys.argv[2])
+seed = "{}"
+matrix_size = {}
 
 # Set seed for reproducibility
 np.random.seed(int(seed, 16) % (2**32))
@@ -98,26 +98,23 @@ result = np.matmul(a, b)
 duration = time.time() - start
 
 # Generate proof hash
-proof_data = f"{seed}:{duration:.6f}:{result.sum():.6f}"
+proof_data = f"{{seed}}:{{duration:.6f}}:{{result.sum():.6f}}"
 proof_hash = hashlib.sha256(proof_data.encode()).hexdigest()
 
-output = {
+output = {{
     "proof_hash": proof_hash,
     "duration": duration,
     "device": "CPU (fallback)"
-}
+}}
 
 print(json.dumps(output))
-"#;
+"#,
+        seed, matrix_size
+    );
 
     let output = tokio::time::timeout(
         Duration::from_secs(300),
-        Command::new("python3")
-            .arg("-c")
-            .arg(python_code)
-            .arg(seed)
-            .arg(matrix_size.to_string())
-            .output(),
+        Command::new("python3").arg("-c").arg(&python_code).output(),
     )
     .await
     .context("CPU fallback benchmark timed out")?

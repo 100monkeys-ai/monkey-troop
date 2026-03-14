@@ -57,7 +57,7 @@ Install the worker (to donate GPU) or client (to use GPU) to join an existing ne
 
 ```bash
 # Install worker/client binaries
-curl -fsSL https://raw.githubusercontent.com/100monkeys-ai/monkey-troop/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/monkeytroop/monkey-troop/main/install.sh | bash
 
 # Join the public network
 export COORDINATOR_URL="https://troop.100monkeys.ai/api"
