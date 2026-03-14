@@ -41,7 +41,7 @@ def test_security_event_logging():
     """Test security event logging."""
     os.makedirs("logs", exist_ok=True)
 
-    log_security_event("invalid_token", {"token": "abc123", "reason": "expired"}, "10.0.0.1")
+    log_security_event("invalid_token", "10.0.0.1", {"token": "abc123", "reason": "expired"})
 
     # Verify logged
     assert os.path.exists("logs/audit.log")
