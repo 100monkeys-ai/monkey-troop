@@ -36,6 +36,7 @@ def test_submit_proof_success(client, db_session, redis_client):
     # Setup node in DB
     db_node = db_models.Node(
         node_id="node_1",
+        owner_id=1,
         owner_public_key="owner_1",
         tailscale_ip="100.64.0.1",
         status="active",
