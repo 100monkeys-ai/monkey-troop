@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Column,
     DateTime,
@@ -12,7 +13,6 @@ from sqlalchemy import (
     Integer,
     String,
     create_engine,
-    JSON,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
