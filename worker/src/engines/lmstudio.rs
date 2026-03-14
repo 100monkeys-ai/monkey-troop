@@ -25,7 +25,7 @@ impl LMStudioDriver {
     }
 
     #[cfg(test)]
-    pub fn with_base_url(base_url: String) -> Self {
+    fn with_base_url(base_url: String) -> Self {
         Self { base_url }
     }
 }
@@ -91,6 +91,16 @@ mod tests {
     }
 
     #[test]
+    fn test_lmstudio_detect_network_error() {
+        // Use an invalid/unreachable URL to trigger a network-level error
+        let driver = LMStudioDriver::with_base_url("http://127.0.0.1:0".to_string());
+
+        let result = driver.detect();
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
     fn test_lmstudio_detect_failure() {
         let server = MockServer::start();
 
@@ -142,6 +152,25 @@ mod tests {
         assert_eq!(models.len(), 2);
         assert_eq!(models[0], "model-1");
         assert_eq!(models[1], "model-2");
+
+        mock.assert();
+    }
+
+    #[test]
+    fn test_lmstudio_get_models_invalid_json() {
+        let server = MockServer::start();
+
+        let mock = server.mock(|when, then| {
+            when.method("GET").path("/v1/models");
+            then.status(200)
+                .header("content-type", "application/json")
+                .body("not valid json");
+        });
+
+        let driver = LMStudioDriver::with_base_url(server.base_url());
+
+        let result = driver.get_models();
+        assert!(result.is_err());
 
         mock.assert();
     }

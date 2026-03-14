@@ -41,7 +41,10 @@ impl EngineDriver for OllamaDriver {
             .timeout(std::time::Duration::from_secs(2))
             .send();
 
-        Ok(response.is_ok())
+        match response {
+            Ok(res) => Ok(res.status().is_success()),
+            Err(_) => Ok(false),
+        }
     }
 
     fn get_info(&self) -> Result<EngineInfo> {
