@@ -51,6 +51,7 @@ def test_sqlalchemy_benchmark_repository_save_and_get(db_session):
     # Pre-create node in DB
     db_node = db_models.Node(
         node_id="node_1",
+        owner_id=1,
         owner_public_key="owner_1",
         tailscale_ip="100.64.0.1",
         status="active",
@@ -89,7 +90,7 @@ def test_sqlalchemy_benchmark_repository_save_nonexistent_node(db_session):
         multiplier=2.5,
         timestamp=datetime.utcnow(),
     )
-    # Should not raise exception, just pass as per implementation
+    # Should not raise exception, but logs a warning instead of silently doing nothing
     repo.save_result(result)
     assert repo.get_last_result("nonexistent") is None
 
@@ -99,6 +100,7 @@ def test_sqlalchemy_benchmark_repository_get_last_result_none(db_session):
     # Node exists but no multiplier (e.g. initial state)
     db_node = db_models.Node(
         node_id="node_empty",
+        owner_id=1,
         owner_public_key="owner_empty",
         tailscale_ip="1.1.1.1",
         multiplier=None,
