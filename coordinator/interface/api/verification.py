@@ -1,8 +1,10 @@
 """FastAPI endpoints for the Verification (PoH) context."""
 
 from fastapi import APIRouter, Depends, HTTPException
+
 from application.verification_services import VerificationService
 from infrastructure.dependencies import get_verification_service
+
 from .schemas import ChallengeResponseSchema, VerifyRequestSchema
 
 router = APIRouter(prefix="/hardware", tags=["Verification"])

@@ -2,7 +2,9 @@
 
 import random
 from typing import List, Optional
+
 from domain.inference.models import Node
+
 from .inference_ports import NodeDiscoveryRepository
 
 

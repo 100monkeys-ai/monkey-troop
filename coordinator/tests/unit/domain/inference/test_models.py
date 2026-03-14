@@ -1,5 +1,6 @@
 import json
-from coordinator.domain.inference.models import Node, HardwareSpec, EngineInfo
+
+from coordinator.domain.inference.models import EngineInfo, HardwareSpec, Node
 
 
 def test_hardware_spec_initialization():

@@ -1,6 +1,8 @@
-import pytest
-from unittest.mock import MagicMock
 from datetime import datetime
+from unittest.mock import MagicMock
+
+import pytest
+
 from coordinator.application.verification_services import VerificationService
 from coordinator.domain.verification.models import Challenge
 

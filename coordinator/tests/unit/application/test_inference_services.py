@@ -1,7 +1,9 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from coordinator.application.inference_services import DiscoveryService
-from coordinator.domain.inference.models import Node, HardwareSpec
+from coordinator.domain.inference.models import HardwareSpec, Node
 
 
 @pytest.fixture

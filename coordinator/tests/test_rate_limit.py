@@ -4,7 +4,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from infrastructure.security.rate_limit import DISCOVERY_LIMIT, INFERENCE_LIMIT, WINDOW_SECONDS, RateLimiter
+from infrastructure.security.rate_limit import (
+    DISCOVERY_LIMIT,
+    INFERENCE_LIMIT,
+    WINDOW_SECONDS,
+    RateLimiter,
+)
 
 
 @pytest.fixture

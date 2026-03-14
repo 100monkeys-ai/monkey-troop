@@ -105,6 +105,9 @@ mod tests {
     use async_trait::async_trait;
     use tokio::sync::Mutex;
 
+    type HeartbeatCall = (String, NodeStatus, Vec<String>, HardwareStatus);
+    type HeartbeatHistory = Arc<Mutex<Vec<HeartbeatCall>>>;
+
     // Fully implemented mocks
     struct MockInferenceEngine {
         models: Vec<Model>,
@@ -144,7 +147,7 @@ mod tests {
     }
 
     struct MockCoordinatorClient {
-        heartbeat_calls: Arc<Mutex<Vec<(String, NodeStatus, Vec<String>, HardwareStatus)>>>,
+        heartbeat_calls: HeartbeatHistory,
     }
 
     #[async_trait]

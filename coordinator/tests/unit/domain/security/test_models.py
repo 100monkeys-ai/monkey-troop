@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from coordinator.domain.security.models import Identity, AuthTicket
+
+from coordinator.domain.security.models import AuthTicket, Identity
 
 
 def test_identity_initialization():

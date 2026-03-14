@@ -1,4 +1,4 @@
-from domain.inference.models import Node, HardwareSpec, EngineInfo
+from domain.inference.models import EngineInfo, HardwareSpec, Node
 from infrastructure.persistence.inference_repositories import RedisNodeDiscoveryRepository
 
 

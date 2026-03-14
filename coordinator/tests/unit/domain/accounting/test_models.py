@@ -1,6 +1,8 @@
-import pytest
 from datetime import datetime
-from coordinator.domain.accounting.models import CreditAmount, User, Transaction
+
+import pytest
+
+from coordinator.domain.accounting.models import CreditAmount, Transaction, User
 
 
 def test_credit_amount_initialization():

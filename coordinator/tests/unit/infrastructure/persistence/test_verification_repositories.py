@@ -1,10 +1,11 @@
 from datetime import datetime
-from domain.verification.models import Challenge, BenchmarkResult
+
+from domain.verification.models import BenchmarkResult, Challenge
+from infrastructure.persistence import database as db_models
 from infrastructure.persistence.verification_repositories import (
     RedisChallengeRepository,
     SqlAlchemyBenchmarkRepository,
 )
-from infrastructure.persistence import database as db_models
 
 
 def test_redis_challenge_repository_save_and_get(redis_client):

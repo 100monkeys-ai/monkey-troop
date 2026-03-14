@@ -1,8 +1,10 @@
 """Application layer use cases for the Security context."""
 
 from typing import Optional
+
 from domain.security.models import AuthTicket
-from .security_ports import TokenService, KeyRepository
+
+from .security_ports import KeyRepository, TokenService
 
 
 class SecurityService:

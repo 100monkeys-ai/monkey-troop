@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from coordinator.domain.verification.models import Challenge, BenchmarkResult
+
+from coordinator.domain.verification.models import BenchmarkResult, Challenge
 
 
 def test_challenge_initialization():

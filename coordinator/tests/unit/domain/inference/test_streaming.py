@@ -1,5 +1,6 @@
 import pytest
-from domain.inference.streaming import stream_chat_completion, is_streaming_request
+
+from domain.inference.streaming import is_streaming_request, stream_chat_completion
 
 
 @pytest.mark.asyncio

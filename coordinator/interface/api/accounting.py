@@ -1,8 +1,10 @@
 """FastAPI endpoints for the Accounting context."""
 
 from fastapi import APIRouter, Depends
+
 from application.accounting_services import AccountingService
 from infrastructure.dependencies import get_accounting_service
+
 from .schemas import BalanceResponseSchema
 
 router = APIRouter(prefix="/users", tags=["Accounting"])

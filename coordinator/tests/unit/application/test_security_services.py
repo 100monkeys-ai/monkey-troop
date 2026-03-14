@@ -1,6 +1,8 @@
-import pytest
-from unittest.mock import MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock
+
+import pytest
+
 from coordinator.application.security_services import SecurityService
 from coordinator.domain.security.models import AuthTicket
 

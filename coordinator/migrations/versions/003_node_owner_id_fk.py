@@ -34,9 +34,7 @@ def upgrade() -> None:
         sa.column("public_key", sa.String),
     )
     conn = op.get_bind()
-    rows = conn.execute(
-        sa.select(users_table.c.id, users_table.c.public_key)
-    ).fetchall()
+    rows = conn.execute(sa.select(users_table.c.id, users_table.c.public_key)).fetchall()
     for user_id, public_key in rows:
         conn.execute(
             sa.update(nodes_table)

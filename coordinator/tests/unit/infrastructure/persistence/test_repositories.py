@@ -1,8 +1,9 @@
 from datetime import datetime
-from domain.accounting.models import User, Transaction, CreditAmount
+
+from domain.accounting.models import CreditAmount, Transaction, User
 from infrastructure.persistence.repositories import (
-    SqlAlchemyUserRepository,
     SqlAlchemyTransactionRepository,
+    SqlAlchemyUserRepository,
 )
 
 

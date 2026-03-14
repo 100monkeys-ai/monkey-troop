@@ -1,6 +1,7 @@
 """Application layer use cases for orchestrated cross-context workflows."""
 
 from dataclasses import dataclass
+
 from .accounting_services import AccountingService
 from .inference_services import DiscoveryService
 from .security_services import SecurityService
@@ -8,16 +9,19 @@ from .security_services import SecurityService
 
 class OrchestrationError(Exception):
     """Base class for orchestration errors."""
+
     pass
 
 
 class InsufficientCreditsError(OrchestrationError):
     """Raised when a user has insufficient credits for a request."""
+
     pass
 
 
 class NoNodesAvailableError(OrchestrationError):
     """Raised when no suitable nodes are found for a request."""
+
     pass
 
 
@@ -41,9 +45,7 @@ class OrchestrationService:
         self.discovery_service = discovery_service
         self.security_service = security_service
 
-    def authorize_inference(
-        self, requester_pk: str, model_name: str
-    ) -> AuthorizationResult:
+    def authorize_inference(self, requester_pk: str, model_name: str) -> AuthorizationResult:
         """
         Orchestrate the authorization of an inference request.
         1. Ensure user has sufficient credits.

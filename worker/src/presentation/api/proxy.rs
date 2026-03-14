@@ -1,12 +1,14 @@
 use crate::application::services::WorkerService;
-use crate::domain::inference::InferenceRequest;
+use crate::domain::inference::{
+    ChatMessage, InferenceChoice, InferenceRequest, InferenceResponse, TokenUsage,
+};
 use axum::{
     extract::{Json, State},
     http::{HeaderMap, StatusCode},
     routing::post,
     Router,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::sync::Arc;
 use tracing::info;
 
@@ -55,25 +57,29 @@ async fn handle_chat_completion(
 
     // 3. Routing: Select engine and forward
     // For MVP, return mock response. In production, this would call engine.chat()
-    Ok(Json(json!({
-        "id": "chatcmpl-123",
-        "object": "chat.completion",
-        "created": 1677652288,
-        "model": payload.model_id,
-        "choices": [{
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": "Hello! I am a Monkey Troop Worker node.",
+    let response = InferenceResponse {
+        id: "chatcmpl-123".to_string(),
+        object: "chat.completion".to_string(),
+        created: 1677652288,
+        model: payload.model_id,
+        choices: vec![InferenceChoice {
+            index: 0,
+            message: ChatMessage {
+                role: "assistant".to_string(),
+                content: "Hello! I am a Monkey Troop Worker node.".to_string(),
             },
-            "finish_reason": "stop"
+            finish_reason: "stop".to_string(),
         }],
-        "usage": {
-            "prompt_tokens": 9,
-            "completion_tokens": 12,
-            "total_tokens": 21
-        }
-    })))
+        usage: TokenUsage {
+            prompt_tokens: 9,
+            completion_tokens: 12,
+            total_tokens: 21,
+        },
+    };
+
+    Ok(Json(
+        serde_json::to_value(response).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    ))
 }
 
 #[cfg(test)]
@@ -85,6 +91,7 @@ mod tests {
     use async_trait::async_trait;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
+    use serde_json::json;
     use tokio::sync::RwLock;
     use tower::ServiceExt;
 

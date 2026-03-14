@@ -2,9 +2,11 @@
 
 import json
 from typing import List, Optional
+
 from redis import Redis
-from domain.inference.models import Node
+
 from application.inference_ports import NodeDiscoveryRepository
+from domain.inference.models import Node
 
 
 class RedisNodeDiscoveryRepository(NodeDiscoveryRepository):
