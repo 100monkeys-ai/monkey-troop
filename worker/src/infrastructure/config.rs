@@ -5,15 +5,35 @@ use std::env;
 pub struct Config {
     pub node_id: String,
     pub coordinator_url: String,
+    // This field is deserialized from environment/config and kept for compatibility with
+    // external components, even if it's not currently read within this crate.
     #[allow(dead_code)]
     pub proxy_port: u16,
+    // This field controls worker heartbeat behavior; it's retained for future/optional use
+    // and may be read by other parts of the system not analyzed here.
     #[allow(dead_code)]
     pub heartbeat_interval: u64, // seconds
+    // This field configures how often models are refreshed; it's intentionally kept for
+    // future/optional use, so we suppress dead_code warnings.
     #[allow(dead_code)]
     pub model_refresh_interval: u64, // seconds
 }
 
 impl Config {
+    fn parse_env_with_default<T>(var_name: &str, default: T) -> Result<T>
+    where
+        T: std::str::FromStr,
+        <T as std::str::FromStr>::Err: std::error::Error + Send + Sync + 'static,
+    {
+        match env::var(var_name) {
+            Ok(s) => s
+                .parse()
+                .with_context(|| format!("Invalid value for {var_name}: {s}")),
+            Err(env::VarError::NotPresent) => Ok(default),
+            Err(e) => Err(e).context(format!("Failed to read {var_name} environment variable")),
+        }
+    }
+
     pub fn from_env() -> Result<Self> {
         Ok(Config {
             node_id: env::var("NODE_ID").unwrap_or_else(|_| {
@@ -24,32 +44,12 @@ impl Config {
             }),
             coordinator_url: env::var("COORDINATOR_URL")
                 .unwrap_or_else(|_| "https://troop.100monkeys.ai".to_string()),
-            proxy_port: match env::var("PROXY_PORT") {
-                Ok(s) => s
-                    .parse()
-                    .with_context(|| format!("Invalid value for PROXY_PORT: {s}"))?,
-                Err(env::VarError::NotPresent) => 8080,
-                Err(e) => return Err(e).context("Failed to read PROXY_PORT environment variable"),
-            },
-            heartbeat_interval: match env::var("HEARTBEAT_INTERVAL") {
-                Ok(s) => s
-                    .parse()
-                    .with_context(|| format!("Invalid value for HEARTBEAT_INTERVAL: {s}"))?,
-                Err(env::VarError::NotPresent) => 10,
-                Err(e) => {
-                    return Err(e).context("Failed to read HEARTBEAT_INTERVAL environment variable")
-                }
-            },
-            model_refresh_interval: match env::var("MODEL_REFRESH_INTERVAL") {
-                Ok(s) => s
-                    .parse()
-                    .with_context(|| format!("Invalid value for MODEL_REFRESH_INTERVAL: {s}"))?,
-                Err(env::VarError::NotPresent) => 180, // 3 minutes default
-                Err(e) => {
-                    return Err(e)
-                        .context("Failed to read MODEL_REFRESH_INTERVAL environment variable")
-                }
-            },
+            proxy_port: Self::parse_env_with_default("PROXY_PORT", 8080u16)?,
+            heartbeat_interval: Self::parse_env_with_default("HEARTBEAT_INTERVAL", 10u64)?,
+            model_refresh_interval: Self::parse_env_with_default(
+                "MODEL_REFRESH_INTERVAL",
+                180u64, // 3 minutes default
+            )?,
         })
     }
 }

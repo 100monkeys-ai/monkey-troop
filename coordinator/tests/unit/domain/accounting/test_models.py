@@ -43,6 +43,8 @@ def test_user_create_new():
     assert user.public_key == public_key
     assert user.balance.seconds == 1000
     assert isinstance(user.created_at, datetime)
+    assert user.created_at.tzinfo is not None
+    assert user.created_at.tzinfo == timezone.utc
 
 
 def test_user_reserve_credits():
@@ -64,13 +66,14 @@ def test_user_add_credits():
 
 
 def test_transaction_creation():
+    now = datetime.now(timezone.utc)
     txn = Transaction(
         id=1,
         job_id="job_123",
         from_user="alice",
         to_user="bob",
         amount=CreditAmount(100),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=now,
         type=TransactionType.JOB_COMPLETION,
     )
     assert txn.id == 1
@@ -79,3 +82,6 @@ def test_transaction_creation():
     assert txn.to_user == "bob"
     assert txn.amount.seconds == 100
     assert txn.type == TransactionType.JOB_COMPLETION
+    assert txn.timestamp == now
+    assert txn.timestamp.tzinfo is not None
+    assert txn.timestamp.utcoffset() is not None

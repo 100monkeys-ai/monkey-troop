@@ -4,6 +4,8 @@ use std::time::Duration;
 use tokio::process::Command;
 use tracing::{error, info, warn};
 
+const BENCHMARK_TIMEOUT_SECS: u64 = 300;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BenchmarkResult {
     pub proof_hash: String,
@@ -18,7 +20,14 @@ struct BenchmarkOutput {
     device: String,
 }
 
-/// Run hardware benchmark using Python subprocess
+/// Run hardware benchmark using a Python subprocess.
+///
+/// The `seed` parameter is passed through to the Python benchmark code, which
+/// first attempts to interpret it as a hexadecimal string (`int(seed, 16)`).
+/// If the string is not valid hexadecimal, the Python code falls back to
+/// deriving a deterministic 32‑bit integer from the seed bytes instead.
+/// Callers may therefore use either a hex string or an arbitrary UTF‑8 string
+/// as the seed, but should be aware that hex seeds receive special handling.
 pub async fn run_benchmark(seed: &str, matrix_size: usize) -> Result<BenchmarkResult> {
     info!(
         "🔬 Starting hardware benchmark (seed: {}, size: {})",
@@ -28,7 +37,7 @@ pub async fn run_benchmark(seed: &str, matrix_size: usize) -> Result<BenchmarkRe
     // Spawn Python subprocess
     // The benchmark.py is at the root of the worker directory
     let output = tokio::time::timeout(
-        Duration::from_secs(300), // 5 minute timeout
+        Duration::from_secs(BENCHMARK_TIMEOUT_SECS), // 5 minute timeout
         Command::new("python3")
             .arg("benchmark.py")
             .arg(seed)
@@ -86,6 +95,7 @@ matrix_size = int(sys.argv[2])
 
 # Set seed for reproducibility
 try:
+    # Prefer hexadecimal seeds (documented in the Rust `run_benchmark` API).
     seed_int = int(seed, 16) % (2**32)
 except ValueError:
     # Fallback: derive a deterministic 32-bit integer from the seed string
@@ -118,7 +128,7 @@ print(json.dumps(output))
 "#;
 
     let output = tokio::time::timeout(
-        Duration::from_secs(300),
+        Duration::from_secs(BENCHMARK_TIMEOUT_SECS),
         Command::new("python3")
             .arg("-c")
             .arg(python_code)

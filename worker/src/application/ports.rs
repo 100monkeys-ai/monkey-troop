@@ -22,6 +22,7 @@ pub trait CoordinatorClient: Send + Sync {
         status: NodeStatus,
         models: Vec<String>,
         hardware: HardwareStatus,
+        engines: Vec<String>,
     ) -> Result<()>;
 }
 
