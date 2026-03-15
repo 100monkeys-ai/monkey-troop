@@ -56,7 +56,10 @@ async fn list_models_handler(
 
     let client = reqwest::Client::new();
     let url = config.coordinator_url.join("v1/models").map_err(|e| {
-        error!("Failed to construct models URL: {}", e);
+        error!(
+            "Failed to construct models URL from base '{}' and path 'v1/models': {}",
+            config.coordinator_url, e
+        );
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
@@ -65,10 +68,10 @@ async fn list_models_handler(
         StatusCode::BAD_GATEWAY
     })?;
 
-    let models: ModelsResponse = response
-        .json()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let models: ModelsResponse = response.json().await.map_err(|e| {
+        error!("Failed to deserialize models response: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(models))
 }
@@ -116,20 +119,26 @@ async fn chat_completions_handler(
             .header("cache-control", "no-cache")
             .header("connection", "keep-alive")
             .body(axum::body::Body::from_stream(response.bytes_stream()))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+            .map_err(|e| {
+                error!("Failed to build streaming response: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?)
     } else {
         // Buffer complete response for non-streaming
-        let body = response
-            .bytes()
-            .await
-            .map_err(|_| StatusCode::BAD_GATEWAY)?;
+        let body = response.bytes().await.map_err(|e| {
+            error!("Failed to read response body: {}", e);
+            StatusCode::BAD_GATEWAY
+        })?;
 
         info!("✓ Response received, forwarding to client");
 
         Ok(Response::builder()
             .status(status_u16)
             .body(axum::body::Body::from(body))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+            .map_err(|e| {
+                error!("Failed to build response: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?)
     }
 }
 
