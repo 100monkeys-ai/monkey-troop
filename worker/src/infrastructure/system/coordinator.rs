@@ -4,6 +4,11 @@ use anyhow::Result;
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::json;
+use std::env;
+
+fn resolve_tailscale_ip() -> Option<String> {
+    env::var("TAILSCALE_IP").ok()
+}
 
 pub struct HttpCoordinatorClient {
     base_url: String,
@@ -27,6 +32,7 @@ impl CoordinatorClient for HttpCoordinatorClient {
         status: NodeStatus,
         models: Vec<String>,
         hardware: HardwareStatus,
+        engines: Vec<String>,
     ) -> Result<()> {
         let endpoint = format!("{}/heartbeat", self.base_url);
 
@@ -38,8 +44,8 @@ impl CoordinatorClient for HttpCoordinatorClient {
                 "gpu": hardware.gpu_name,
                 "vram_free": hardware.vram_free_mb
             },
-            "tailscale_ip": "100.64.0.1", // Placeholder, should be resolved from system
-            "engines": [] // To be populated
+            "tailscale_ip": resolve_tailscale_ip(),
+            "engines": engines
         });
 
         let response = self.client.post(endpoint).json(&payload).send().await?;
@@ -78,6 +84,7 @@ mod tests {
                 NodeStatus::Idle,
                 vec!["llama3".to_string()],
                 hardware,
+                Vec::new(),
             )
             .await;
 
@@ -105,6 +112,7 @@ mod tests {
                 NodeStatus::Idle,
                 vec!["llama3".to_string()],
                 hardware,
+                Vec::new(),
             )
             .await;
 

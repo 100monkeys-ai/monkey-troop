@@ -87,7 +87,7 @@ impl WorkerService {
         let models = self.registry.read().await.get_model_ids();
 
         self.coordinator
-            .send_heartbeat(&self.node_id, status, models, hardware)
+            .send_heartbeat(&self.node_id, status, models, hardware, Vec::new())
             .await?;
 
         Ok(())
@@ -158,6 +158,7 @@ mod tests {
             status: NodeStatus,
             models: Vec<String>,
             hardware: HardwareStatus,
+            _engines: Vec<String>,
         ) -> Result<()> {
             let mut calls = self.heartbeat_calls.lock().await;
             calls.push((node_id.to_string(), status, models, hardware));

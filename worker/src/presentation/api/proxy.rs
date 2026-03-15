@@ -120,6 +120,7 @@ mod tests {
             _: crate::domain::models::NodeStatus,
             _: Vec<String>,
             _: HardwareStatus,
+            _: Vec<String>,
         ) -> Result<()> {
             Ok(())
         }
