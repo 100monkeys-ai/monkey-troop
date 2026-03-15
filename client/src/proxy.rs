@@ -1,5 +1,7 @@
 use crate::config::Config;
 use anyhow::Result;
+
+const WORKER_PORT: u16 = 8080;
 use axum::{
     extract::State,
     http::StatusCode,
@@ -143,12 +145,9 @@ async fn chat_completions_handler(
 }
 
 async fn get_authorization(config: &Config, model: &str) -> TroopResult<AuthorizeResponse> {
-    let config = config.clone();
-    let model = model.to_string();
-
     retry_with_backoff("Authorization", || {
         let config = config.clone();
-        let model = model.clone();
+        let model = model.to_string();
         async move {
             let client = reqwest::Client::new();
             let auth_url = config
@@ -181,15 +180,15 @@ async fn send_to_worker(
     auth: &AuthorizeResponse,
     payload: &ChatCompletionRequest,
 ) -> TroopResult<reqwest::Response> {
-    let auth = auth.clone();
-    let payload = payload.clone();
-
     retry_with_backoff("Worker request", || {
         let auth = auth.clone();
         let payload = payload.clone();
         async move {
             let client = reqwest::Client::new();
-            let worker_url_str = format!("http://{}:8080/v1/chat/completions", auth.target_ip);
+            let worker_url_str = format!(
+                "http://{}:{}/v1/chat/completions",
+                auth.target_ip, WORKER_PORT
+            );
             let worker_url = Url::parse(&worker_url_str).map_err(anyhow::Error::from)?;
 
             info!("🔌 Connecting P2P to worker: {}", worker_url);
