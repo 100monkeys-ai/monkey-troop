@@ -13,6 +13,7 @@ use monkey_troop_shared::{
 };
 use std::sync::Arc;
 use tracing::{error, info};
+use url::Url;
 
 pub async fn run_proxy_server(config: Config) -> Result<()> {
     let addr = format!("127.0.0.1:{}", config.proxy_port);
@@ -54,9 +55,12 @@ async fn list_models_handler(
     info!("📋 Fetching available models from coordinator");
 
     let client = reqwest::Client::new();
-    let url = format!("{}/v1/models", config.coordinator_url);
+    let url = config.coordinator_url.join("v1/models").map_err(|e| {
+        error!("Failed to construct models URL: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-    let response = client.get(&url).send().await.map_err(|e| {
+    let response = client.get(url).send().await.map_err(|e| {
         error!("Failed to fetch models: {}", e);
         StatusCode::BAD_GATEWAY
     })?;
@@ -138,7 +142,10 @@ async fn get_authorization(config: &Config, model: &str) -> TroopResult<Authoriz
         let model = model.clone();
         async move {
             let client = reqwest::Client::new();
-            let auth_url = format!("{}/authorize", config.coordinator_url);
+            let auth_url = config
+                .coordinator_url
+                .join("authorize")
+                .map_err(anyhow::Error::from)?;
 
             let auth_request = AuthorizeRequest {
                 model: model.clone(),
@@ -148,7 +155,7 @@ async fn get_authorization(config: &Config, model: &str) -> TroopResult<Authoriz
             info!("🎫 Requesting authorization ticket...");
 
             let response = client
-                .post(&auth_url)
+                .post(auth_url)
                 .json(&auth_request)
                 .timeout(AUTH_TIMEOUT)
                 .send()
@@ -173,12 +180,13 @@ async fn send_to_worker(
         let payload = payload.clone();
         async move {
             let client = reqwest::Client::new();
-            let worker_url = format!("http://{}:8080/v1/chat/completions", auth.target_ip);
+            let worker_url_str = format!("http://{}:8080/v1/chat/completions", auth.target_ip);
+            let worker_url = Url::parse(&worker_url_str).map_err(anyhow::Error::from)?;
 
             info!("🔌 Connecting P2P to worker: {}", worker_url);
 
             let response = client
-                .post(&worker_url)
+                .post(worker_url)
                 .header("Authorization", format!("Bearer {}", auth.token))
                 .json(&payload)
                 .timeout(INFERENCE_TIMEOUT)

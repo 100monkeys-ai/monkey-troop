@@ -1,19 +1,30 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::env;
+use url::Url;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    pub coordinator_url: String,
+    pub coordinator_url: Url,
     pub proxy_port: u16,
     pub requester_id: String,
 }
 
 impl Config {
     pub fn from_env() -> Result<Self> {
+        let url_str = env::var("COORDINATOR_URL")
+            .unwrap_or_else(|_| "https://troop.100monkeys.ai".to_string());
+
+        let coordinator_url =
+            Url::parse(&url_str).with_context(|| format!("Invalid COORDINATOR_URL: {url_str}"))?;
+
+        // Basic SSRF protection: Ensure the URL uses a permitted scheme (http or https)
+        if coordinator_url.scheme() != "http" && coordinator_url.scheme() != "https" {
+            anyhow::bail!("COORDINATOR_URL must use http or https scheme");
+        }
+
         Ok(Config {
-            coordinator_url: env::var("COORDINATOR_URL")
-                .unwrap_or_else(|_| "https://troop.100monkeys.ai".to_string()),
+            coordinator_url,
             proxy_port: env::var("PROXY_PORT")
                 .and_then(|s| s.parse().map_err(|_| env::VarError::NotPresent))
                 .unwrap_or(9000),
@@ -60,7 +71,7 @@ mod tests {
         env::set_var("REQUESTER_ID", "test-requester");
 
         let config = Config::from_env().unwrap();
-        assert_eq!(config.coordinator_url, "http://localhost:8000");
+        assert_eq!(config.coordinator_url.as_str(), "http://localhost:8000/");
         assert_eq!(config.proxy_port, 1234);
         assert_eq!(config.requester_id, "test-requester");
 
@@ -70,7 +81,10 @@ mod tests {
         env::remove_var("REQUESTER_ID");
 
         let config = Config::from_env().unwrap();
-        assert_eq!(config.coordinator_url, "https://troop.100monkeys.ai");
+        assert_eq!(
+            config.coordinator_url.as_str(),
+            "https://troop.100monkeys.ai/"
+        );
         assert_eq!(config.proxy_port, 9000);
         assert!(
             config.requester_id == "unknown"
