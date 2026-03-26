@@ -1,7 +1,6 @@
 use crate::config::Config;
 use anyhow::Result;
 
-const WORKER_PORT: u16 = 8080;
 use axum::{
     extract::State,
     http::StatusCode,
@@ -65,8 +64,9 @@ async fn list_models_handler(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    let url_str = url.to_string();
     let response = client.get(url).send().await.map_err(|e| {
-        error!("Failed to fetch models: {}", e);
+        error!("Failed to fetch models from '{}': {}", url_str, e);
         StatusCode::BAD_GATEWAY
     })?;
 
@@ -100,7 +100,7 @@ async fn chat_completions_handler(
 
     // Step 2: P2P Connection to worker (with retry)
     let is_stream = payload.stream;
-    let response = match send_to_worker(&auth_response, &payload).await {
+    let response = match send_to_worker(&auth_response, &payload, config.worker_port).await {
         Ok(resp) => resp,
         Err(e) => {
             error!("Worker request failed: {}", e);
@@ -113,20 +113,33 @@ async fn chat_completions_handler(
 
     // Handle streaming vs non-streaming responses
     if is_stream {
-        // Pass through the stream directly to the client
+        // For successful streaming responses, set SSE-specific headers.
+        // For error responses, avoid forcing `content-type: text/event-stream`
+        // so that the worker's original content type can be respected.
         info!("✓ Streaming response back to client");
-        Ok(Response::builder()
-            .status(status_u16)
-            .header("content-type", "text/event-stream")
-            .header("cache-control", "no-cache")
-            .header("connection", "keep-alive")
-            .body(axum::body::Body::from_stream(response.bytes_stream()))
-            .map_err(|e| {
-                error!("Failed to build streaming response: {}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?)
+        if status_code.is_success() {
+            Ok(Response::builder()
+                .status(status_u16)
+                .header("content-type", "text/event-stream")
+                .header("cache-control", "no-cache")
+                .header("connection", "keep-alive")
+                .body(axum::body::Body::from_stream(response.bytes_stream()))
+                .map_err(|e| {
+                    error!("Failed to build streaming response: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?)
+        } else {
+            Ok(Response::builder()
+                .status(status_u16)
+                .body(axum::body::Body::from_stream(response.bytes_stream()))
+                .map_err(|e| {
+                    error!("Failed to build streaming error response: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?)
+        }
     } else {
         // Buffer complete response for non-streaming
+        let headers = response.headers().clone();
         let body = response.bytes().await.map_err(|e| {
             error!("Failed to read response body: {}", e);
             StatusCode::BAD_GATEWAY
@@ -134,13 +147,15 @@ async fn chat_completions_handler(
 
         info!("✓ Response received, forwarding to client");
 
-        Ok(Response::builder()
-            .status(status_u16)
-            .body(axum::body::Body::from(body))
-            .map_err(|e| {
-                error!("Failed to build response: {}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?)
+        let mut builder = Response::builder().status(status_u16);
+        if let Some(builder_headers) = builder.headers_mut() {
+            *builder_headers = headers;
+        }
+
+        Ok(builder.body(axum::body::Body::from(body)).map_err(|e| {
+            error!("Failed to build response: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?)
     }
 }
 
@@ -156,7 +171,7 @@ async fn get_authorization(config: &Config, model: &str) -> TroopResult<Authoriz
                 .map_err(anyhow::Error::from)?;
 
             let auth_request = AuthorizeRequest {
-                model: model.clone(),
+                model,
                 requester: config.requester_id.clone(),
             };
 
@@ -179,6 +194,7 @@ async fn get_authorization(config: &Config, model: &str) -> TroopResult<Authoriz
 async fn send_to_worker(
     auth: &AuthorizeResponse,
     payload: &ChatCompletionRequest,
+    worker_port: u16,
 ) -> TroopResult<reqwest::Response> {
     retry_with_backoff("Worker request", || {
         let auth = auth.clone();
@@ -187,7 +203,7 @@ async fn send_to_worker(
             let client = reqwest::Client::new();
             let worker_url_str = format!(
                 "http://{}:{}/v1/chat/completions",
-                auth.target_ip, WORKER_PORT
+                auth.target_ip, worker_port
             );
             let worker_url = Url::parse(&worker_url_str).map_err(anyhow::Error::from)?;
 
