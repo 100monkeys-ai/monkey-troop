@@ -44,6 +44,7 @@ cd monkey-troop
 ```
 
 **Expected Output:**
+
 - ✅ Prerequisites validated
 - ✅ Headscale installed and running
 - ✅ Coordinator stack deployed
@@ -51,9 +52,10 @@ cd monkey-troop
 - ✅ Backups scheduled
 - 🔑 Admin password displayed
 - 🔑 Pre-auth key generated
-- 📍 URLs shown: https://troop.example.com/api, /vpn
+- 📍 URLs shown: <https://troop.example.com/api>, /vpn
 
 **Verification:**
+
 ```bash
 # Check services
 systemctl status headscale
@@ -93,10 +95,12 @@ cd monkey-troop
 ```
 
 **Expected Output:**
+
 - Same as Test Case 1 but non-interactive
-- URLs: https://api.example.com, https://vpn.example.com
+- URLs: <https://api.example.com>, <https://vpn.example.com>
 
 **Verification:**
+
 ```bash
 # Test subdomain endpoints
 curl https://api.example.com/health
@@ -146,12 +150,14 @@ headscale nodes list
 ## Manual Testing Checklist
 
 ### Before Installation
+
 - [ ] VPS has sufficient resources (2GB RAM, 20GB disk)
 - [ ] DNS records are configured and propagated
 - [ ] Ports 80, 443 are accessible
 - [ ] Root/sudo access available
 
 ### During Installation
+
 - [ ] Script prompts for all required values
 - [ ] Validation passes (or skip flag works)
 - [ ] No errors during Headscale installation
@@ -161,6 +167,7 @@ headscale nodes list
 - [ ] Instructions printed clearly
 
 ### After Installation
+
 - [ ] Coordinator API responds: `curl https://DOMAIN/api/health`
 - [ ] Headscale endpoint accessible: `curl https://DOMAIN/vpn/`
 - [ ] Services are running: `systemctl status headscale coordinator-stack caddy`
@@ -171,6 +178,7 @@ headscale nodes list
 - [ ] Workers can connect using pre-auth key
 
 ### Backup Testing
+
 - [ ] Run manual backup: `sudo /usr/local/bin/backup-troop-db.sh`
 - [ ] Backup file created: `ls /var/backups/troop/`
 - [ ] Backup is compressed: `.sql.gz` extension
@@ -179,6 +187,7 @@ headscale nodes list
 - [ ] Old backups deleted after retention period
 
 ### Error Recovery Testing
+
 - [ ] Stop coordinator: `systemctl stop coordinator-stack`
 - [ ] Verify auto-restart: `systemctl status coordinator-stack` (should restart)
 - [ ] Stop Headscale: `systemctl stop headscale`
@@ -189,21 +198,27 @@ headscale nodes list
 ## Common Issues & Solutions
 
 ### Issue: DNS not resolving
+
 **Solution:** Wait for DNS propagation (up to 48 hours). Use `dig DOMAIN` to check.
 
 ### Issue: Port already in use
+
 **Solution:** Run prerequisite validation to identify conflicting services.
 
 ### Issue: Let's Encrypt rate limit
+
 **Solution:** Use Caddy's staging environment or wait 1 hour. Check: `journalctl -u caddy`
 
 ### Issue: Docker not found
+
 **Solution:** The script auto-installs Docker. If it fails, install manually first.
 
 ### Issue: Headscale service won't start
+
 **Solution:** Check logs: `journalctl -u headscale -n 100` and verify config: `headscale serve` manually.
 
 ### Issue: Coordinator containers not healthy
+
 **Solution:** Check logs: `docker logs troop-coordinator troop-postgres troop-redis`
 
 ## Cleanup (Reset Test Environment)
@@ -272,6 +287,7 @@ rm -rf ~/monkey-troop
 ---
 
 **Questions or Issues?**
+
 - Check logs first: `journalctl -u SERVICE_NAME -n 100`
 - Review DEPLOYMENT.md for detailed documentation
 - Open an issue on GitHub with logs and error messages

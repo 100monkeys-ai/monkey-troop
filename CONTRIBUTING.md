@@ -73,6 +73,7 @@ alembic current
 ```
 
 **Migration Best Practices:**
+
 - Always test migrations in a dev environment first
 - Include both `upgrade()` and `downgrade()` functions
 - Use descriptive migration messages
@@ -82,11 +83,13 @@ alembic current
 ### Code Style
 
 **Rust:**
+
 - Follow standard Rust formatting: `cargo fmt`
 - Run clippy: `cargo clippy --all-targets`
 - Fix warnings before committing
 
 **Python:**
+
 - Format with Black: `black .`
 - Sort imports with isort: `isort .`
 - Lint with flake8: `flake8 --max-line-length=120 .`
@@ -106,6 +109,7 @@ The system supports streaming for chat completions:
 ```
 
 **Implementation Notes:**
+
 - Client: Passes through SSE stream from worker
 - Worker: Passes through SSE stream from Ollama
 - No buffering in the pipeline for streaming responses
@@ -135,6 +139,7 @@ refactor: simplify heartbeat logic
 ## 🐛 Reporting Issues
 
 When reporting issues, include:
+
 - Clear description of the problem
 - Steps to reproduce
 - Expected vs actual behavior
@@ -144,6 +149,7 @@ When reporting issues, include:
 ## 💡 Feature Requests
 
 We welcome feature requests! Please:
+
 - Check existing issues first
 - Describe the use case
 - Explain how it aligns with the project goals

@@ -1,6 +1,7 @@
 # Quick Start: Testing Features
 
 ## Prerequisites
+
 ```bash
 # Install Python dependencies
 cd coordinator
@@ -14,6 +15,7 @@ cargo check --workspace
 ## 1. Credit Accounting
 
 ### Start Coordinator
+
 ```bash
 cd coordinator
 export DATABASE_URL="postgresql://troop:password@localhost/troop_coordinator"
@@ -23,6 +25,7 @@ python3 -m uvicorn main:app --reload
 ```
 
 ### Test Starter Credits
+
 ```bash
 # New user gets 1 hour (3600s) automatically
 curl http://localhost:8000/users/alice_public_key/balance
@@ -31,6 +34,7 @@ curl http://localhost:8000/users/alice_public_key/balance
 ```
 
 ### Test Authorization with Balance Check
+
 ```bash
 # Register a fake worker with multi-engine support
 redis-cli SET "node:test_worker" '{"node_id":"test_worker","tailscale_ip":"100.64.0.1","status":"IDLE","models":["llama2:7b"],"hardware":{"gpu":"Test","vram_free":8192},"engines":[{"type":"ollama","version":"0.1","port":11434}]}' EX 60
@@ -45,6 +49,7 @@ curl http://localhost:8000/users/alice_public_key/balance
 ```
 
 ### Test Insufficient Credits
+
 ```bash
 # Create user with low balance (need to manually set in DB or deplete)
 curl -X POST http://localhost:8000/authorize \
@@ -55,6 +60,7 @@ curl -X POST http://localhost:8000/authorize \
 ```
 
 ### Test Job Completion
+
 ```bash
 # Generate HMAC signature (in Python)
 python3 << 'EOF'
@@ -83,6 +89,7 @@ curl -X POST http://localhost:8000/transactions/submit \
 ## 2. Rate Limiting
 
 ### Test Discovery Rate Limit (100/hour)
+
 ```bash
 # Spam requests
 for i in {1..110}; do
@@ -94,6 +101,7 @@ done
 ```
 
 ### Check Audit Logs
+
 ```bash
 tail -f coordinator/logs/audit.log | jq .
 ```
@@ -101,12 +109,14 @@ tail -f coordinator/logs/audit.log | jq .
 ## 3. RSA JWT Verification
 
 ### Get Public Key
+
 ```bash
 curl http://localhost:8000/public-key
 # Should return PEM-formatted RSA public key
 ```
 
 ### Test Worker Verification
+
 ```bash
 cd worker
 cargo run
@@ -117,6 +127,7 @@ cargo run
 ```
 
 ### Test Invalid Token Rejection
+
 ```bash
 # Try to call worker with fake token
 curl -X POST http://localhost:8080/v1/chat/completions \
@@ -130,6 +141,7 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 ## 4. Proof-of-Hardware Benchmark
 
 ### Run Benchmark Manually
+
 ```bash
 cd worker
 python3 benchmark.py test_seed_123 4096
@@ -137,6 +149,7 @@ python3 benchmark.py test_seed_123 4096
 ```
 
 ### Test Worker Startup Benchmark
+
 ```bash
 export RUN_INITIAL_BENCHMARK=true
 cargo run
@@ -147,6 +160,7 @@ cargo run
 ```
 
 ### Test CPU Fallback
+
 ```bash
 # Rename torch to simulate missing PyTorch
 mv ~/.local/lib/python3.9/site-packages/torch ~/.local/lib/python3.9/site-packages/torch.bak
@@ -161,6 +175,7 @@ mv ~/.local/lib/python3.9/site-packages/torch.bak ~/.local/lib/python3.9/site-pa
 ## 5. Circuit Breaker
 
 ### Test Heartbeat Circuit Breaker
+
 ```bash
 # Start worker
 cd worker
@@ -184,6 +199,7 @@ cargo run
 ## 6. Error Handling & Retry
 
 ### Test Client Retry Logic
+
 ```bash
 cd client
 cargo run -- up
@@ -202,6 +218,7 @@ cargo run -- up
 ## 7. Integration Tests
 
 ### Run Python Tests
+
 ```bash
 cd coordinator
 
@@ -219,6 +236,7 @@ pytest tests/test_integration.py -v
 ## 8. Transaction History
 
 ### View User Transactions
+
 ```bash
 curl http://localhost:8000/users/alice_public_key/transactions?limit=10 | jq .
 
@@ -252,6 +270,7 @@ curl http://localhost:8000/users/alice_public_key/transactions?limit=10 | jq .
 ## Troubleshooting
 
 ### Database Connection Errors
+
 ```bash
 # Check PostgreSQL is running
 docker-compose ps
@@ -261,6 +280,7 @@ psql $DATABASE_URL -c "SELECT 1;"
 ```
 
 ### Redis Connection Errors
+
 ```bash
 # Check Redis is running
 redis-cli ping
@@ -268,6 +288,7 @@ redis-cli ping
 ```
 
 ### RSA Key Not Found
+
 ```bash
 # Check keys directory exists
 ls -la coordinator/keys/
@@ -279,6 +300,7 @@ python3 -c "from crypto import ensure_keys_exist; ensure_keys_exist()"
 ```
 
 ### Worker Can't Verify JWT
+
 ```bash
 # Check coordinator is accessible
 curl http://coordinator_url:8000/public-key
@@ -290,11 +312,13 @@ curl http://coordinator_url:8000/public-key
 ## Monitoring
 
 ### Watch Audit Logs in Real-Time
+
 ```bash
 tail -f coordinator/logs/audit.log | jq 'select(.message.event == "authorization")'
 ```
 
 ### Monitor Redis Keys
+
 ```bash
 redis-cli KEYS "*"
 redis-cli GET "node:test_worker"
@@ -302,6 +326,7 @@ redis-cli GET "ratelimit:discovery:127.0.0.1"
 ```
 
 ### Check Database State
+
 ```bash
 psql $DATABASE_URL << 'EOF'
 SELECT public_key, balance_seconds, created_at FROM users LIMIT 5;

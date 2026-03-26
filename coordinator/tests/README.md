@@ -1,17 +1,20 @@
 # Coordinator Tests
 
 Run all tests:
+
 ```bash
 cd coordinator
 pytest tests/ -v
 ```
 
 Run specific test file:
+
 ```bash
 pytest tests/test_transactions.py -v
 ```
 
 Run integration tests (requires coordinator running):
+
 ```bash
 # Terminal 1: Start services
 docker-compose up

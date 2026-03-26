@@ -15,6 +15,7 @@ We need a way to document the important architectural decisions we make during t
 We will use Architecture Decision Records (ADRs) to document our architectural decisions. Each ADR will follow a standard template and will be stored in the `docs/adrs` directory.
 
 The template will include the following sections:
+
 * **Title**: A short, descriptive title for the decision.
 * **Date**: The date the decision was made.
 * **Status**: The current status of the decision (e.g., proposed, accepted, deprecated, superseded).

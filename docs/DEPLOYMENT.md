@@ -67,6 +67,7 @@ Deploy your own coordinator for a private cluster. **Two audiences:**
 The easiest way to deploy a coordinator hub with Headscale VPN.
 
 **Prerequisites:**
+
 - VPS with at least 2GB RAM, 20GB disk, 2 vCPUs
 - Domain with DNS A records configured
 - Root or sudo access
@@ -95,6 +96,7 @@ cd monkey-troop
 ```
 
 **What it installs:**
+
 - Headscale VPN server (for node discovery)
 - Coordinator API (FastAPI + PostgreSQL + Redis)
 - Caddy reverse proxy (automatic HTTPS)
@@ -111,6 +113,7 @@ cd monkey-troop
 **After Installation:**
 
 The script outputs:
+
 - Admin credentials
 - Pre-auth key for workers
 - Connection URLs

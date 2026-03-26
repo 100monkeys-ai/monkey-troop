@@ -67,12 +67,14 @@ monkey-troop/
 ## Key Files
 
 ### Coordinator (Python)
+
 - **main.py**: FastAPI endpoints for heartbeat, discovery, PoH, authorization
 - **database.py**: Users, Nodes, Transactions tables with credit ledger
 - **auth.py**: JWT ticket generation and verification
 - **benchmark.py**: PyTorch matrix multiplication for hardware verification
 
 ### Worker (Rust)
+
 - **main.rs**: Detects engines, initializes model registry, launches heartbeat and proxy
 - **heartbeat.rs**: Broadcasts node status with periodic model refresh (default 3min)
 - **proxy.rs**: Axum server that verifies JWT, parses model name, routes to correct engine
@@ -80,10 +82,12 @@ monkey-troop/
 - **engines/**: Multi-engine drivers (Ollama, vLLM, LM Studio) with priority-based routing
 
 ### Client (Rust)
+
 - **main.rs**: CLI with `up`, `balance`, `nodes` commands
 - **proxy.rs**: Local server on :9000 that mimics OpenAI API, discovers nodes, obtains JWT, connects P2P
 
 ### Shared (Rust)
+
 - **models.rs**: Serde types for NodeHeartbeat, ChallengeRequest, JWTClaims, etc.
 
 ## Architecture Flow
