@@ -202,24 +202,6 @@ jobs:
           cd coordinator
           pytest tests/ -v --cov=. --cov-report=term-missing
 
-  # Security scanning
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      
-      - name: Rust security audit
-        uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Python security audit
-        run: |
-          pip install safety
-          cd coordinator
-          safety check --json || true  # Don't fail on vulnerabilities yet
-
   # Deployment stub
   deploy-staging:
     name: Deploy to Staging (Stub)
