@@ -20,7 +20,7 @@ We have adopted **Domain-Driven Design (DDD)** as the primary architectural patt
     * **Verification (PoH)**: Manages benchmark challenges, proof-of-hardware submissions, and multiplier calculations.
     * **Security & Identity**: Manages JWT ticket issuance, public/private key pairs, and secure P2P identity.
 
-2. **Layered "Onion" Architecture**: Each context follows a strict four-layer structure:
+2. **Layered Onion Architecture**: Each context follows a strict four-layer structure:
     * **Domain Layer**: Pure entities, value objects, and domain services. Zero dependencies on external libraries or other layers.
     * **Application Layer**: Use cases and command/query handlers. Defines interfaces (Ports) for infrastructure.
     * **Infrastructure Layer**: Implementations of ports (Repositories, Clients, Adapters).
@@ -28,7 +28,7 @@ We have adopted **Domain-Driven Design (DDD)** as the primary architectural patt
 
 3. **Ubiquitous Language**: Terminology (e.g., Node, Multiplier, Credit, Heartbeat) is consistently used across code, ADRs, and documentation.
 
-4. **Dependency Inversion**: High-level domain and application logic must not depend on low-level infrastructure. Infrastructure depends on domain/application interfaces.
+4. **Dependency Inversion**: High-level domain and application logic must not depend on low-level infrastructure. Infrastructure depends on domain/application interfaces. See AGENTS.md §5, rule 1 for the corresponding implementation mandate.
 
 ## Consequences
 

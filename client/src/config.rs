@@ -7,6 +7,7 @@ use url::Url;
 pub struct Config {
     pub coordinator_url: Url,
     pub proxy_port: u16,
+    pub worker_port: u16,
     pub requester_id: String,
 }
 
@@ -28,6 +29,9 @@ impl Config {
             proxy_port: env::var("PROXY_PORT")
                 .and_then(|s| s.parse().map_err(|_| env::VarError::NotPresent))
                 .unwrap_or(9000),
+            worker_port: env::var("WORKER_PORT")
+                .and_then(|s| s.parse().map_err(|_| env::VarError::NotPresent))
+                .unwrap_or(8080),
             requester_id: env::var("REQUESTER_ID")
                 .unwrap_or_else(|_| get_tailscale_ip().unwrap_or_else(|_| "unknown".to_string())),
         })
@@ -63,21 +67,25 @@ mod tests {
         // Save original values to restore them later
         let orig_url = env::var("COORDINATOR_URL").ok();
         let orig_port = env::var("PROXY_PORT").ok();
+        let orig_worker_port = env::var("WORKER_PORT").ok();
         let orig_id = env::var("REQUESTER_ID").ok();
 
         // Scenario 1: Custom values
         env::set_var("COORDINATOR_URL", "http://localhost:8000");
         env::set_var("PROXY_PORT", "1234");
+        env::set_var("WORKER_PORT", "9090");
         env::set_var("REQUESTER_ID", "test-requester");
 
         let config = Config::from_env().unwrap();
         assert_eq!(config.coordinator_url.as_str(), "http://localhost:8000/");
         assert_eq!(config.proxy_port, 1234);
+        assert_eq!(config.worker_port, 9090);
         assert_eq!(config.requester_id, "test-requester");
 
         // Scenario 2: Defaults
         env::remove_var("COORDINATOR_URL");
         env::remove_var("PROXY_PORT");
+        env::remove_var("WORKER_PORT");
         env::remove_var("REQUESTER_ID");
 
         let config = Config::from_env().unwrap();
@@ -86,6 +94,7 @@ mod tests {
             "https://troop.100monkeys.ai/"
         );
         assert_eq!(config.proxy_port, 9000);
+        assert_eq!(config.worker_port, 8080);
         assert!(
             config.requester_id == "unknown"
                 || config.requester_id.parse::<std::net::IpAddr>().is_ok()
@@ -96,8 +105,10 @@ mod tests {
         env::remove_var("COORDINATOR_URL");
         env::remove_var("REQUESTER_ID");
         env::set_var("PROXY_PORT", "not-a-number");
+        env::set_var("WORKER_PORT", "not-a-number");
         let config = Config::from_env().unwrap();
         assert_eq!(config.proxy_port, 9000);
+        assert_eq!(config.worker_port, 8080);
 
         // Restore original values
         if let Some(val) = orig_url {
@@ -109,6 +120,11 @@ mod tests {
             env::set_var("PROXY_PORT", val);
         } else {
             env::remove_var("PROXY_PORT");
+        }
+        if let Some(val) = orig_worker_port {
+            env::set_var("WORKER_PORT", val);
+        } else {
+            env::remove_var("WORKER_PORT");
         }
         if let Some(val) = orig_id {
             env::set_var("REQUESTER_ID", val);
