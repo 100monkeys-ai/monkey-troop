@@ -1,44 +1,103 @@
 version: 2
+
 updates:
-  - package-ecosystem: "cargo"
-    directory: "/"
+  # ─── Rust / Cargo workspace ───────────────────────────────────────────────
+  - package-ecosystem: cargo
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
     open-pull-requests-limit: 10
     labels:
-      - "dependencies"
-      - "rust"
+      - dependencies
+      - rust
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      production-dependencies:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      development-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
 
-  - package-ecosystem: "pip"
-    directory: "/coordinator"
+  # ─── Python / pip (coordinator) ───────────────────────────────────────────
+  - package-ecosystem: pip
+    directory: /coordinator
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
     open-pull-requests-limit: 10
     labels:
-      - "dependencies"
-      - "python"
+      - dependencies
+      - python
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      production-dependencies:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      development-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  # ─── GitHub Actions ───────────────────────────────────────────────────────
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "monthly"
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
     open-pull-requests-limit: 5
     labels:
-      - "dependencies"
-      - "ci"
+      - dependencies
+      - ci
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
-  - package-ecosystem: "docker"
-    directory: "/coordinator"
+  # ─── Docker (coordinator) ─────────────────────────────────────────────────
+  - package-ecosystem: docker
+    directory: /coordinator
     schedule:
-      interval: "monthly"
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
     labels:
-      - "dependencies"
-      - "docker"
+      - dependencies
+      - docker
+    commit-message:
+      prefix: "chore(docker)"
 
-  - package-ecosystem: "docker"
-    directory: "/worker"
+  # ─── Docker (worker) ──────────────────────────────────────────────────────
+  - package-ecosystem: docker
+    directory: /worker
     schedule:
-      interval: "monthly"
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
     labels:
-      - "dependencies"
-      - "docker"
+      - dependencies
+      - docker
+    commit-message:
+      prefix: "chore(docker)"
