@@ -1,12 +1,21 @@
+use crate::domain::inference::{ChatMessage, InferenceResponse, StreamingChunk};
 use crate::domain::models::{HardwareStatus, Model, NodeStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use futures::Stream;
 use monkey_troop_shared::ModelIdentity;
+use std::pin::Pin;
 
 #[async_trait]
 pub trait InferenceEngine: Send + Sync {
     async fn get_models(&self) -> Result<Vec<Model>>;
     async fn is_healthy(&self) -> bool;
+    async fn chat(&self, model: &str, messages: Vec<ChatMessage>) -> Result<InferenceResponse>;
+    async fn chat_stream(
+        &self,
+        model: &str,
+        messages: Vec<ChatMessage>,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<StreamingChunk>> + Send>>>;
 }
 
 #[async_trait]

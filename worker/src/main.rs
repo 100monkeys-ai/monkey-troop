@@ -29,8 +29,14 @@ async fn main() -> Result<()> {
     let registry = Arc::new(RwLock::new(ModelRegistry::new()));
 
     // Dependencies (Infrastructure)
-    let engines: Vec<Box<dyn crate::application::ports::InferenceEngine>> =
-        vec![Box::new(OllamaEngine::new())];
+    let mut engines: std::collections::HashMap<
+        crate::domain::models::EngineType,
+        Box<dyn crate::application::ports::InferenceEngine>,
+    > = std::collections::HashMap::new();
+    engines.insert(
+        crate::domain::models::EngineType::Ollama,
+        Box::new(OllamaEngine::new()),
+    );
     let monitor = Arc::new(NvidiaGpuMonitor);
     let coordinator = Arc::new(HttpCoordinatorClient::new(config.coordinator_url.clone()));
 
