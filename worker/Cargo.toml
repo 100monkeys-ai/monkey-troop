@@ -28,6 +28,15 @@ config = { workspace = true }
 sysinfo = "0.38"  # For system monitoring
 hostname = "0.4"  # For getting hostname
 
+# Crypto
+x25519-dalek = { workspace = true }
+
+# Streaming / HTTP body
+bytes = "1"
+futures-util = "0.3"
+http-body = "1"
+http-body-util = "0.1"
+
 # Shared types
 monkey-troop-shared = { path = "../shared" }
 

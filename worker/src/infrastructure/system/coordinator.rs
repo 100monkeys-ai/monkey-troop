@@ -33,10 +33,11 @@ impl CoordinatorClient for HttpCoordinatorClient {
         models: Vec<String>,
         hardware: HardwareStatus,
         engines: Vec<String>,
+        encryption_public_key: Option<String>,
     ) -> Result<()> {
         let endpoint = format!("{}/heartbeat", self.base_url);
 
-        let payload = json!({
+        let mut payload = json!({
             "node_id": node_id,
             "status": format!("{status:?}").to_uppercase(),
             "models": models,
@@ -47,6 +48,13 @@ impl CoordinatorClient for HttpCoordinatorClient {
             "tailscale_ip": resolve_tailscale_ip(),
             "engines": engines
         });
+
+        if let Some(key) = encryption_public_key {
+            payload.as_object_mut().unwrap().insert(
+                "encryption_public_key".to_string(),
+                serde_json::Value::String(key),
+            );
+        }
 
         let response = self.client.post(endpoint).json(&payload).send().await?;
 
@@ -85,6 +93,36 @@ mod tests {
                 vec!["llama3".to_string()],
                 hardware,
                 Vec::new(),
+                None,
+            )
+            .await;
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_send_heartbeat_with_encryption_key() {
+        let server = MockServer::start();
+        let coordinator = HttpCoordinatorClient::new(server.base_url());
+
+        let _mock = server.mock(|when, then| {
+            when.method(POST).path("/heartbeat");
+            then.status(200);
+        });
+
+        let hardware = HardwareStatus {
+            gpu_name: "RTX 4090".to_string(),
+            vram_free_mb: 24576,
+        };
+
+        let result = coordinator
+            .send_heartbeat(
+                "node-1",
+                NodeStatus::Idle,
+                vec!["llama3".to_string()],
+                hardware,
+                Vec::new(),
+                Some("test-public-key-b64".to_string()),
             )
             .await;
 
@@ -113,6 +151,7 @@ mod tests {
                 vec!["llama3".to_string()],
                 hardware,
                 Vec::new(),
+                None,
             )
             .await;
 
