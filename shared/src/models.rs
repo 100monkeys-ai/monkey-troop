@@ -136,3 +136,24 @@ pub struct ModelsResponse {
     pub object: String,
     pub data: Vec<ModelInfo>,
 }
+
+/// Node reputation information returned by coordinator
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeReputationInfo {
+    pub node_id: String,
+    pub score: f64,
+    pub tier: String,
+    pub components: ReputationComponents,
+    pub total_jobs: u64,
+    pub successful_jobs: u64,
+    pub failed_jobs: u64,
+    pub updated_at: String,
+}
+
+/// Individual reputation score components
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReputationComponents {
+    pub availability: f64,
+    pub reliability: f64,
+    pub performance: f64,
+}

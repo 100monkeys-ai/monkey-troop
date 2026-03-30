@@ -19,6 +19,7 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyTransactionRepository,
     SqlAlchemyUserRepository,
 )
+from infrastructure.persistence.reputation_repository import SqlAlchemyNodeReputationRepository
 from infrastructure.persistence.verification_repositories import (
     RedisChallengeRepository,
     SqlAlchemyBenchmarkRepository,
@@ -43,8 +44,13 @@ def get_accounting_service(db: Session = Depends(get_db)) -> AccountingService:
     return AccountingService(SqlAlchemyUserRepository(db), SqlAlchemyTransactionRepository(db))
 
 
-def get_discovery_service(redis: Redis = Depends(get_redis_client)) -> DiscoveryService:
-    return DiscoveryService(RedisNodeDiscoveryRepository(redis))
+def get_discovery_service(
+    redis: Redis = Depends(get_redis_client), db: Session = Depends(get_db)
+) -> DiscoveryService:
+    return DiscoveryService(
+        RedisNodeDiscoveryRepository(redis),
+        SqlAlchemyNodeReputationRepository(db),
+    )
 
 
 def get_verification_service(

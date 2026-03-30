@@ -64,3 +64,20 @@ class TransactionSchema(BaseModel):
     duration: Optional[int]
     timestamp: str
     type: str
+
+
+class ReputationComponentsSchema(BaseModel):
+    availability: float
+    reliability: float
+    performance: float
+
+
+class NodeReputationSchema(BaseModel):
+    node_id: str
+    score: float
+    tier: str
+    components: ReputationComponentsSchema
+    total_jobs: int
+    successful_jobs: int
+    failed_jobs: int
+    updated_at: str

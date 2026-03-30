@@ -73,3 +73,31 @@ class OrchestrationService:
             token=ticket.token,
             estimated_cost=300,
         )
+
+    def complete_job(
+        self,
+        job_id: str,
+        requester_pk: str,
+        worker_node_id: str,
+        worker_owner_pk: str,
+        duration_seconds: int,
+        multiplier: float,
+        success: bool,
+    ) -> dict:
+        """Orchestrate job completion across accounting and reputation."""
+        result = {"status": "failed"}
+
+        if success:
+            result = self.accounting_service.process_job_completion(
+                job_id,
+                requester_pk,
+                worker_node_id,
+                worker_owner_pk,
+                duration_seconds,
+                multiplier,
+            )
+
+        self.discovery_service.record_job_outcome(worker_node_id, success)
+        self.discovery_service.recalculate_reputation(worker_node_id)
+
+        return result

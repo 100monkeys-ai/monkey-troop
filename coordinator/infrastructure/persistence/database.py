@@ -135,6 +135,27 @@ class Transaction(Base):
     )
 
 
+class NodeReputationModel(Base):
+    """Node reputation tracking data."""
+
+    __tablename__ = "node_reputations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    node_id = Column(
+        String(50), ForeignKey("nodes.node_id"), unique=True, nullable=False, index=True
+    )
+    score = Column(Float, default=0.5, nullable=False)
+    availability = Column(Float, default=1.0, nullable=False)
+    reliability = Column(Float, default=1.0, nullable=False)
+    performance = Column(Float, default=1.0, nullable=False)
+    total_jobs = Column(Integer, default=0, nullable=False)
+    successful_jobs = Column(Integer, default=0, nullable=False)
+    failed_jobs = Column(Integer, default=0, nullable=False)
+    total_heartbeats_expected = Column(Integer, default=0, nullable=False)
+    total_heartbeats_received = Column(Integer, default=0, nullable=False)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 def init_db():
     """Initialize database tables."""
     Base.metadata.create_all(bind=engine)
