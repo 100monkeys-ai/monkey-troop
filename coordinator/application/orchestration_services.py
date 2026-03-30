@@ -1,6 +1,7 @@
 """Application layer use cases for orchestrated cross-context workflows."""
 
 from dataclasses import dataclass
+from typing import Optional
 
 from .accounting_services import AccountingService
 from .inference_services import DiscoveryService
@@ -30,6 +31,7 @@ class AuthorizationResult:
     target_ip: str
     token: str
     estimated_cost: int
+    encryption_public_key: Optional[str] = None
 
 
 class OrchestrationService:
@@ -72,6 +74,7 @@ class OrchestrationService:
             target_ip=selected_node.tailscale_ip,
             token=ticket.token,
             estimated_cost=300,
+            encryption_public_key=selected_node.encryption_public_key,
         )
 
     def complete_job(

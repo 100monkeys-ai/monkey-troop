@@ -29,6 +29,7 @@ class NodeHeartbeatSchema(BaseModel):
     models: List[ModelIdentitySchema]
     hardware: HardwareInfoSchema
     engines: List[EngineInfoSchema]
+    encryption_public_key: Optional[str] = None
 
 
 class ChallengeResponseSchema(BaseModel):
@@ -54,6 +55,7 @@ class AuthorizeResponseSchema(BaseModel):
     target_ip: str
     token: str
     estimated_cost: int
+    encryption_public_key: Optional[str] = None
 
 
 class BalanceResponseSchema(BaseModel):
