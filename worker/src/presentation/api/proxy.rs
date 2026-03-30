@@ -1,8 +1,5 @@
 use crate::application::services::WorkerService;
-use crate::domain::inference::{
-    ChatMessage, ChatMessageDelta, InferenceChoice, InferenceRequest, InferenceResponse,
-    StreamingChoice, StreamingChunk, TokenUsage,
-};
+use crate::domain::inference::InferenceRequest;
 use axum::{
     extract::{Json, State},
     http::{HeaderMap, StatusCode},
@@ -11,9 +8,11 @@ use axum::{
     Router,
 };
 use bytes::Bytes;
+use futures::StreamExt;
 use http_body::Frame;
 use http_body_util::StreamBody;
 use serde_json::Value;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use tracing::info;
 
@@ -97,30 +96,112 @@ async fn handle_chat_completion(
     drop(registry);
 
     // 4. Routing: Select engine and forward
-    // For MVP, return mock response. In production, this would call engine.chat()
     if payload.stream {
-        return Ok(build_streaming_response(resolved_model_id, session_key));
+        let chunk_stream = state
+            .service
+            .chat_stream(&resolved_model_id, payload.messages)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let response_body = if let Some(key) = session_key {
+            let base_nonce = monkey_troop_shared::generate_base_nonce();
+            let seq_counter = Arc::new(AtomicU32::new(0));
+            let seq_for_done = seq_counter.clone();
+            let key_for_done = key;
+            let base_nonce_for_done = base_nonce;
+
+            let sse_stream = chunk_stream.map(
+                move |result| -> Result<Frame<Bytes>, std::convert::Infallible> {
+                    let seq = seq_counter.fetch_add(1, Ordering::Relaxed);
+                    match result {
+                        Ok(chunk) => {
+                            let json_str = serde_json::to_string(&chunk).unwrap_or_default();
+                            let encrypted = monkey_troop_shared::encrypt_chunk(
+                                &key,
+                                &base_nonce,
+                                seq,
+                                json_str.as_bytes(),
+                            )
+                            .expect("Chunk encryption should not fail");
+                            let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
+                            let envelope_json =
+                                serde_json::to_string(&envelope).unwrap_or_default();
+                            Ok(Frame::data(Bytes::from(format!(
+                                "data: {envelope_json}\n\n"
+                            ))))
+                        }
+                        Err(_) => {
+                            let encrypted = monkey_troop_shared::encrypt_chunk(
+                                &key,
+                                &base_nonce,
+                                seq,
+                                b"[DONE]",
+                            )
+                            .expect("Chunk encryption should not fail");
+                            let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
+                            let envelope_json =
+                                serde_json::to_string(&envelope).unwrap_or_default();
+                            Ok(Frame::data(Bytes::from(format!(
+                                "data: {envelope_json}\n\n"
+                            ))))
+                        }
+                    }
+                },
+            );
+
+            let done_frame = futures::stream::once(async move {
+                let seq = seq_for_done.load(Ordering::Relaxed);
+                let encrypted = monkey_troop_shared::encrypt_chunk(
+                    &key_for_done,
+                    &base_nonce_for_done,
+                    seq,
+                    b"[DONE]",
+                )
+                .expect("Chunk encryption should not fail");
+                let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
+                let envelope_json = serde_json::to_string(&envelope).unwrap_or_default();
+                Ok::<Frame<Bytes>, std::convert::Infallible>(Frame::data(Bytes::from(format!(
+                    "data: {envelope_json}\n\n"
+                ))))
+            });
+
+            let full_stream = sse_stream.chain(done_frame);
+            axum::body::Body::new(StreamBody::new(full_stream))
+        } else {
+            let sse_stream =
+                chunk_stream.map(|result| -> Result<Frame<Bytes>, std::convert::Infallible> {
+                    match result {
+                        Ok(chunk) => {
+                            let json_str = serde_json::to_string(&chunk).unwrap_or_default();
+                            Ok(Frame::data(Bytes::from(format!("data: {json_str}\n\n"))))
+                        }
+                        Err(_) => Ok(Frame::data(Bytes::from("data: [DONE]\n\n"))),
+                    }
+                });
+
+            let done_frame = futures::stream::once(async {
+                Ok::<Frame<Bytes>, std::convert::Infallible>(Frame::data(Bytes::from(
+                    "data: [DONE]\n\n",
+                )))
+            });
+
+            let full_stream = sse_stream.chain(done_frame);
+            axum::body::Body::new(StreamBody::new(full_stream))
+        };
+
+        return Ok(Response::builder()
+            .header("Content-Type", "text/event-stream")
+            .header("Cache-Control", "no-cache")
+            .header("Connection", "keep-alive")
+            .body(response_body)
+            .unwrap());
     }
 
-    let response = InferenceResponse {
-        id: "chatcmpl-123".to_string(),
-        object: "chat.completion".to_string(),
-        created: 1677652288,
-        model: resolved_model_id,
-        choices: vec![InferenceChoice {
-            index: 0,
-            message: ChatMessage {
-                role: "assistant".to_string(),
-                content: "Hello! I am a Monkey Troop Worker node.".to_string(),
-            },
-            finish_reason: "stop".to_string(),
-        }],
-        usage: TokenUsage {
-            prompt_tokens: 9,
-            completion_tokens: 12,
-            total_tokens: 21,
-        },
-    };
+    let response = state
+        .service
+        .chat(&resolved_model_id, payload.messages)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let response_json =
         serde_json::to_vec(&response).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -139,115 +220,85 @@ async fn handle_chat_completion(
     }
 }
 
-fn build_streaming_response(model_id: String, session_key: Option<[u8; 32]>) -> Response {
-    let chunks = vec![
-        StreamingChunk {
-            id: "chatcmpl-123".to_string(),
-            object: "chat.completion.chunk".to_string(),
-            created: 1_677_652_288,
-            model: model_id.clone(),
-            choices: vec![StreamingChoice {
-                index: 0,
-                delta: ChatMessageDelta {
-                    role: Some("assistant".to_string()),
-                    content: Some("Hello".to_string()),
-                },
-                finish_reason: None,
-            }],
-        },
-        StreamingChunk {
-            id: "chatcmpl-123".to_string(),
-            object: "chat.completion.chunk".to_string(),
-            created: 1_677_652_288,
-            model: model_id,
-            choices: vec![StreamingChoice {
-                index: 0,
-                delta: ChatMessageDelta {
-                    role: None,
-                    content: Some("!".to_string()),
-                },
-                finish_reason: Some("stop".to_string()),
-            }],
-        },
-    ];
-
-    let chunks_len = chunks.len();
-
-    let sse_events: Vec<Result<Frame<Bytes>, std::convert::Infallible>> =
-        if let Some(key) = session_key {
-            let base_nonce = monkey_troop_shared::generate_base_nonce();
-            chunks
-                .into_iter()
-                .enumerate()
-                .map(|(seq, chunk)| {
-                    let json_str = serde_json::to_string(&chunk).unwrap_or_default();
-                    let encrypted = monkey_troop_shared::encrypt_chunk(
-                        &key,
-                        &base_nonce,
-                        seq as u32,
-                        json_str.as_bytes(),
-                    )
-                    .expect("Chunk encryption should not fail");
-                    let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
-                    let envelope_json = serde_json::to_string(&envelope).unwrap_or_default();
-                    Ok(Frame::data(Bytes::from(format!(
-                        "data: {envelope_json}\n\n"
-                    ))))
-                })
-                .chain(std::iter::once({
-                    let done_encrypted = monkey_troop_shared::encrypt_chunk(
-                        &key,
-                        &base_nonce,
-                        chunks_len as u32,
-                        b"[DONE]",
-                    )
-                    .expect("Chunk encryption should not fail");
-                    let done_envelope = monkey_troop_shared::E2EChunkEnvelope {
-                        e2e: done_encrypted,
-                    };
-                    let done_json = serde_json::to_string(&done_envelope).unwrap_or_default();
-                    Ok(Frame::data(Bytes::from(format!("data: {done_json}\n\n"))))
-                }))
-                .collect()
-        } else {
-            chunks
-                .into_iter()
-                .map(|chunk| {
-                    let json_str = serde_json::to_string(&chunk).unwrap_or_default();
-                    Ok(Frame::data(Bytes::from(format!("data: {json_str}\n\n"))))
-                })
-                .chain(std::iter::once(Ok(Frame::data(Bytes::from(
-                    "data: [DONE]\n\n",
-                )))))
-                .collect()
-        };
-
-    let stream = futures_util::stream::iter(sse_events);
-    let body = StreamBody::new(stream);
-
-    Response::builder()
-        .header("Content-Type", "text/event-stream")
-        .header("Cache-Control", "no-cache")
-        .header("Connection", "keep-alive")
-        .body(axum::body::Body::new(body))
-        .unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::application::ports::{
-        AuthTokenVerifier, CoordinatorClient, E2EDecryptor, HardwareMonitor,
+        AuthTokenVerifier, CoordinatorClient, E2EDecryptor, HardwareMonitor, InferenceEngine,
+    };
+    use crate::domain::inference::{
+        ChatMessage, ChatMessageDelta, InferenceChoice, InferenceResponse, StreamingChoice,
+        StreamingChunk, TokenUsage,
     };
     use crate::domain::models::{EngineType, HardwareStatus, Model, ModelRegistry};
     use anyhow::Result;
     use async_trait::async_trait;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
+    use futures::Stream;
     use monkey_troop_shared::ModelIdentity;
     use serde_json::json;
+    use std::collections::HashMap;
+    use std::pin::Pin;
     use tokio::sync::RwLock;
     use tower::ServiceExt;
+
+    struct MockEngine;
+    #[async_trait]
+    impl InferenceEngine for MockEngine {
+        async fn get_models(&self) -> Result<Vec<Model>> {
+            Ok(vec![])
+        }
+        async fn is_healthy(&self) -> bool {
+            true
+        }
+        async fn chat(
+            &self,
+            model: &str,
+            _messages: Vec<ChatMessage>,
+        ) -> Result<InferenceResponse> {
+            Ok(InferenceResponse {
+                id: "chatcmpl-123".to_string(),
+                object: "chat.completion".to_string(),
+                created: 1677652288,
+                model: model.to_string(),
+                choices: vec![InferenceChoice {
+                    index: 0,
+                    message: ChatMessage {
+                        role: "assistant".to_string(),
+                        content: "Hello from engine!".to_string(),
+                    },
+                    finish_reason: "stop".to_string(),
+                }],
+                usage: TokenUsage {
+                    prompt_tokens: 9,
+                    completion_tokens: 12,
+                    total_tokens: 21,
+                },
+            })
+        }
+        async fn chat_stream(
+            &self,
+            model: &str,
+            _messages: Vec<ChatMessage>,
+        ) -> Result<Pin<Box<dyn Stream<Item = Result<StreamingChunk>> + Send>>> {
+            let chunk = StreamingChunk {
+                id: "chatcmpl-123".to_string(),
+                object: "chat.completion.chunk".to_string(),
+                created: 1677652288,
+                model: model.to_string(),
+                choices: vec![StreamingChoice {
+                    index: 0,
+                    delta: ChatMessageDelta {
+                        role: Some("assistant".to_string()),
+                        content: Some("Hello".to_string()),
+                    },
+                    finish_reason: Some("stop".to_string()),
+                }],
+            };
+            Ok(Box::pin(futures::stream::iter(vec![Ok(chunk)])))
+        }
+    }
 
     struct MockMonitor;
     #[async_trait]
@@ -301,17 +352,19 @@ mod tests {
 
     fn make_service(valid_auth: bool, models: Vec<Model>) -> Arc<WorkerService> {
         let registry = Arc::new(RwLock::new(ModelRegistry::new()));
-        // We need to add models synchronously for tests, so use try_write
         let mut reg = registry.try_write().unwrap();
         for m in models {
             reg.add_model(m);
         }
         drop(reg);
 
+        let mut engines: HashMap<EngineType, Box<dyn InferenceEngine>> = HashMap::new();
+        engines.insert(EngineType::Ollama, Box::new(MockEngine));
+
         Arc::new(WorkerService::new(
             "node-1".to_string(),
             registry,
-            vec![],
+            engines,
             Arc::new(MockMonitor),
             Arc::new(MockCoordinator),
             Arc::new(MockVerifier { valid: valid_auth }),
@@ -414,7 +467,6 @@ mod tests {
 
         let app = create_proxy_router(Arc::new(ProxyState { service }));
 
-        // The MockE2EDecryptor returns [0u8; 32] as session key
         let key = [0u8; 32];
         let plaintext =
             serde_json::to_vec(&json!({"model_id": "llama3", "messages": [], "stream": false}))
@@ -441,14 +493,12 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        // Response should be E2E encrypted (contains "e2e" field)
         let body = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .unwrap();
         let body_json: Value = serde_json::from_slice(&body).unwrap();
         assert!(body_json.get("e2e").is_some());
 
-        // Decrypt and verify
         let response_envelope: monkey_troop_shared::E2EEnvelope =
             serde_json::from_value(body_json).unwrap();
         let decrypted = monkey_troop_shared::decrypt_payload(&key, &response_envelope.e2e).unwrap();
@@ -470,13 +520,11 @@ mod tests {
 
         let app = create_proxy_router(Arc::new(ProxyState { service }));
 
-        // E2E envelope without client_public_key
         let key = [0u8; 32];
         let plaintext =
             serde_json::to_vec(&json!({"model_id": "llama3", "messages": [], "stream": false}))
                 .unwrap();
         let encrypted = monkey_troop_shared::encrypt_payload(&key, &plaintext).unwrap();
-        // client_public_key is None by default from encrypt_payload
         let envelope = json!({ "e2e": encrypted });
 
         let response = app

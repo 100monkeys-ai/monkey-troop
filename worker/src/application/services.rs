@@ -1,8 +1,12 @@
 use crate::application::ports::{
     AuthTokenVerifier, CoordinatorClient, E2EDecryptor, HardwareMonitor, InferenceEngine,
 };
-use crate::domain::models::{ModelRegistry, NodeStatus};
+use crate::domain::inference::{ChatMessage, InferenceResponse, StreamingChunk};
+use crate::domain::models::{EngineType, ModelRegistry, NodeStatus};
 use anyhow::Result;
+use futures::Stream;
+use std::collections::HashMap;
+use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{error, info};
@@ -10,7 +14,7 @@ use tracing::{error, info};
 pub struct WorkerService {
     pub node_id: String,
     pub registry: Arc<RwLock<ModelRegistry>>,
-    engines: Vec<Box<dyn InferenceEngine>>,
+    engines: HashMap<EngineType, Box<dyn InferenceEngine>>,
     monitor: Arc<dyn HardwareMonitor>,
     coordinator: Arc<dyn CoordinatorClient>,
     verifier: Arc<dyn AuthTokenVerifier>,
@@ -21,7 +25,7 @@ impl WorkerService {
     pub fn new(
         node_id: String,
         registry: Arc<RwLock<ModelRegistry>>,
-        engines: Vec<Box<dyn InferenceEngine>>,
+        engines: HashMap<EngineType, Box<dyn InferenceEngine>>,
         monitor: Arc<dyn HardwareMonitor>,
         coordinator: Arc<dyn CoordinatorClient>,
         verifier: Arc<dyn AuthTokenVerifier>,
@@ -50,10 +54,43 @@ impl WorkerService {
         self.e2e.derive_session_key(client_public_key_b64)
     }
 
+    pub async fn chat(
+        &self,
+        model_id: &str,
+        messages: Vec<ChatMessage>,
+    ) -> Result<InferenceResponse> {
+        let engine = self.engine_for_model(model_id).await?;
+        engine.chat(model_id, messages).await
+    }
+
+    pub async fn chat_stream(
+        &self,
+        model_id: &str,
+        messages: Vec<ChatMessage>,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<StreamingChunk>> + Send>>> {
+        let engine = self.engine_for_model(model_id).await?;
+        engine.chat_stream(model_id, messages).await
+    }
+
+    async fn engine_for_model(&self, model_id: &str) -> Result<&dyn InferenceEngine> {
+        let registry = self.registry.read().await;
+        let model = registry
+            .find_by_name(model_id)
+            .or_else(|| registry.find_by_hash(model_id))
+            .ok_or_else(|| anyhow::anyhow!("Model not found: {model_id}"))?;
+        let engine_type = model.engine_type;
+        drop(registry);
+
+        self.engines
+            .get(&engine_type)
+            .map(|e| e.as_ref())
+            .ok_or_else(|| anyhow::anyhow!("No engine registered for type {engine_type:?}"))
+    }
+
     pub async fn refresh_model_registry(&self) -> Result<()> {
         let mut new_registry = ModelRegistry::new();
 
-        for engine in &self.engines {
+        for engine in self.engines.values() {
             if engine.is_healthy().await {
                 match engine.get_models().await {
                     Ok(models) => {
@@ -77,7 +114,6 @@ impl WorkerService {
 
     pub async fn run_initial_benchmark(&self) -> Result<()> {
         info!("Running initial hardware benchmark...");
-        // Use a small matrix size for quick startup verification
         let result =
             crate::infrastructure::system::benchmark::run_benchmark("startup", 512).await?;
         info!(
@@ -118,16 +154,21 @@ mod tests {
     use crate::application::ports::{
         AuthTokenVerifier, CoordinatorClient, E2EDecryptor, HardwareMonitor, InferenceEngine,
     };
+    use crate::domain::inference::{
+        ChatMessage, ChatMessageDelta, InferenceChoice, InferenceResponse, StreamingChoice,
+        StreamingChunk, TokenUsage,
+    };
     use crate::domain::models::{EngineType, HardwareStatus, Model, NodeStatus};
     use anyhow::Result;
     use async_trait::async_trait;
+    use futures::Stream;
     use monkey_troop_shared::ModelIdentity;
+    use std::pin::Pin;
     use tokio::sync::Mutex;
 
     type HeartbeatCall = (String, NodeStatus, Vec<ModelIdentity>, HardwareStatus);
     type HeartbeatHistory = Arc<Mutex<Vec<HeartbeatCall>>>;
 
-    // Fully implemented mocks
     struct MockInferenceEngine {
         models: Vec<Model>,
         healthy: bool,
@@ -147,6 +188,52 @@ mod tests {
         }
         async fn is_healthy(&self) -> bool {
             self.healthy
+        }
+        async fn chat(
+            &self,
+            model: &str,
+            _messages: Vec<ChatMessage>,
+        ) -> Result<InferenceResponse> {
+            Ok(InferenceResponse {
+                id: "mock-id".to_string(),
+                object: "chat.completion".to_string(),
+                created: 0,
+                model: model.to_string(),
+                choices: vec![InferenceChoice {
+                    index: 0,
+                    message: ChatMessage {
+                        role: "assistant".to_string(),
+                        content: "mock response".to_string(),
+                    },
+                    finish_reason: "stop".to_string(),
+                }],
+                usage: TokenUsage {
+                    prompt_tokens: 0,
+                    completion_tokens: 0,
+                    total_tokens: 0,
+                },
+            })
+        }
+        async fn chat_stream(
+            &self,
+            model: &str,
+            _messages: Vec<ChatMessage>,
+        ) -> Result<Pin<Box<dyn Stream<Item = Result<StreamingChunk>> + Send>>> {
+            let chunk = StreamingChunk {
+                id: "mock-id".to_string(),
+                object: "chat.completion.chunk".to_string(),
+                created: 0,
+                model: model.to_string(),
+                choices: vec![StreamingChoice {
+                    index: 0,
+                    delta: ChatMessageDelta {
+                        role: Some("assistant".to_string()),
+                        content: Some("mock".to_string()),
+                    },
+                    finish_reason: Some("stop".to_string()),
+                }],
+            };
+            Ok(Box::pin(futures::stream::iter(vec![Ok(chunk)])))
         }
     }
 
@@ -207,6 +294,16 @@ mod tests {
         }
     }
 
+    fn make_engines(
+        items: Vec<(EngineType, Box<dyn InferenceEngine>)>,
+    ) -> HashMap<EngineType, Box<dyn InferenceEngine>> {
+        items.into_iter().collect()
+    }
+
+    fn empty_engines() -> HashMap<EngineType, Box<dyn InferenceEngine>> {
+        HashMap::new()
+    }
+
     #[tokio::test]
     async fn test_refresh_model_registry() {
         let node_id = "node-1".to_string();
@@ -264,7 +361,11 @@ mod tests {
         let service = WorkerService::new(
             node_id,
             registry.clone(),
-            vec![engine1, engine2, engine3],
+            make_engines(vec![
+                (EngineType::Ollama, engine1),
+                (EngineType::Vllm, engine2),
+                (EngineType::LmStudio, engine3),
+            ]),
             monitor,
             coordinator,
             verifier,
@@ -312,7 +413,7 @@ mod tests {
         let service = WorkerService::new(
             node_id.clone(),
             registry,
-            vec![],
+            empty_engines(),
             monitor,
             coordinator,
             verifier,
@@ -355,7 +456,7 @@ mod tests {
         let service = WorkerService::new(
             node_id,
             registry,
-            vec![],
+            empty_engines(),
             monitor,
             coordinator,
             verifier,
@@ -387,16 +488,13 @@ mod tests {
         let service = WorkerService::new(
             node_id,
             registry,
-            vec![],
+            empty_engines(),
             monitor,
             coordinator,
             verifier,
             Arc::new(MockE2EDecryptor),
         );
 
-        // This might fail if benchmark.py is missing or python/numpy missing,
-        // but we just want to cover the call path in the application service
-        // and ensure that the function returns a Result rather than panicking.
         let result = service.run_initial_benchmark().await;
         assert!(
             result.is_ok() || result.is_err(),
@@ -425,7 +523,7 @@ mod tests {
         let service = WorkerService::new(
             node_id,
             registry,
-            vec![],
+            empty_engines(),
             monitor,
             coordinator,
             verifier,
@@ -436,5 +534,199 @@ mod tests {
             service.encryption_public_key(),
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
         );
+    }
+
+    #[tokio::test]
+    async fn test_chat_delegates_to_engine() {
+        let node_id = "node-1".to_string();
+        let registry = Arc::new(RwLock::new(ModelRegistry::new()));
+        {
+            let mut reg = registry.write().await;
+            reg.add_model(Model {
+                id: "llama3".to_string(),
+                content_hash: "sha256:aaa".to_string(),
+                size_bytes: 100,
+                engine_type: EngineType::Ollama,
+            });
+        }
+
+        let engine = Box::new(MockInferenceEngine {
+            models: vec![],
+            healthy: true,
+            fail_get_models: false,
+        });
+
+        let monitor = Arc::new(MockHardwareMonitor {
+            status: HardwareStatus {
+                gpu_name: "GPU1".to_string(),
+                vram_free_mb: 0,
+            },
+            is_idle: true,
+        });
+        let coordinator = Arc::new(MockCoordinatorClient {
+            heartbeat_calls: Arc::new(Mutex::new(Vec::new())),
+        });
+        let verifier = Arc::new(MockAuthTokenVerifier {
+            valid_token: "secret".to_string(),
+        });
+
+        let service = WorkerService::new(
+            node_id,
+            registry,
+            make_engines(vec![(EngineType::Ollama, engine)]),
+            monitor,
+            coordinator,
+            verifier,
+            Arc::new(MockE2EDecryptor),
+        );
+
+        let messages = vec![ChatMessage {
+            role: "user".to_string(),
+            content: "hi".to_string(),
+        }];
+        let resp = service.chat("llama3", messages).await.unwrap();
+        assert_eq!(resp.choices[0].message.content, "mock response");
+    }
+
+    #[tokio::test]
+    async fn test_chat_stream_delegates_to_engine() {
+        use futures::StreamExt;
+
+        let node_id = "node-1".to_string();
+        let registry = Arc::new(RwLock::new(ModelRegistry::new()));
+        {
+            let mut reg = registry.write().await;
+            reg.add_model(Model {
+                id: "llama3".to_string(),
+                content_hash: "sha256:aaa".to_string(),
+                size_bytes: 100,
+                engine_type: EngineType::Ollama,
+            });
+        }
+
+        let engine = Box::new(MockInferenceEngine {
+            models: vec![],
+            healthy: true,
+            fail_get_models: false,
+        });
+
+        let monitor = Arc::new(MockHardwareMonitor {
+            status: HardwareStatus {
+                gpu_name: "GPU1".to_string(),
+                vram_free_mb: 0,
+            },
+            is_idle: true,
+        });
+        let coordinator = Arc::new(MockCoordinatorClient {
+            heartbeat_calls: Arc::new(Mutex::new(Vec::new())),
+        });
+        let verifier = Arc::new(MockAuthTokenVerifier {
+            valid_token: "secret".to_string(),
+        });
+
+        let service = WorkerService::new(
+            node_id,
+            registry,
+            make_engines(vec![(EngineType::Ollama, engine)]),
+            monitor,
+            coordinator,
+            verifier,
+            Arc::new(MockE2EDecryptor),
+        );
+
+        let messages = vec![ChatMessage {
+            role: "user".to_string(),
+            content: "hi".to_string(),
+        }];
+        let mut stream = service.chat_stream("llama3", messages).await.unwrap();
+        let chunk = stream.next().await.unwrap().unwrap();
+        assert_eq!(chunk.choices[0].delta.content, Some("mock".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_chat_model_not_found() {
+        let node_id = "node-1".to_string();
+        let registry = Arc::new(RwLock::new(ModelRegistry::new()));
+        let monitor = Arc::new(MockHardwareMonitor {
+            status: HardwareStatus {
+                gpu_name: "GPU1".to_string(),
+                vram_free_mb: 0,
+            },
+            is_idle: true,
+        });
+        let coordinator = Arc::new(MockCoordinatorClient {
+            heartbeat_calls: Arc::new(Mutex::new(Vec::new())),
+        });
+        let verifier = Arc::new(MockAuthTokenVerifier {
+            valid_token: "secret".to_string(),
+        });
+
+        let service = WorkerService::new(
+            node_id,
+            registry,
+            empty_engines(),
+            monitor,
+            coordinator,
+            verifier,
+            Arc::new(MockE2EDecryptor),
+        );
+
+        let messages = vec![ChatMessage {
+            role: "user".to_string(),
+            content: "hi".to_string(),
+        }];
+        let result = service.chat("nonexistent", messages).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Model not found"));
+    }
+
+    #[tokio::test]
+    async fn test_chat_no_engine_for_type() {
+        let node_id = "node-1".to_string();
+        let registry = Arc::new(RwLock::new(ModelRegistry::new()));
+        {
+            let mut reg = registry.write().await;
+            reg.add_model(Model {
+                id: "llama3".to_string(),
+                content_hash: "sha256:aaa".to_string(),
+                size_bytes: 100,
+                engine_type: EngineType::Vllm,
+            });
+        }
+
+        let monitor = Arc::new(MockHardwareMonitor {
+            status: HardwareStatus {
+                gpu_name: "GPU1".to_string(),
+                vram_free_mb: 0,
+            },
+            is_idle: true,
+        });
+        let coordinator = Arc::new(MockCoordinatorClient {
+            heartbeat_calls: Arc::new(Mutex::new(Vec::new())),
+        });
+        let verifier = Arc::new(MockAuthTokenVerifier {
+            valid_token: "secret".to_string(),
+        });
+
+        let service = WorkerService::new(
+            node_id,
+            registry,
+            empty_engines(),
+            monitor,
+            coordinator,
+            verifier,
+            Arc::new(MockE2EDecryptor),
+        );
+
+        let messages = vec![ChatMessage {
+            role: "user".to_string(),
+            content: "hi".to_string(),
+        }];
+        let result = service.chat("llama3", messages).await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No engine registered"));
     }
 }
