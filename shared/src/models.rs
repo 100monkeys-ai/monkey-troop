@@ -25,6 +25,8 @@ pub struct NodeHeartbeat {
     pub models: Vec<String>,
     pub hardware: HardwareInfo,
     pub engines: Vec<EngineInfo>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub encryption_public_key: Option<String>,
 }
 
 /// Current operational status of a node
@@ -90,6 +92,8 @@ pub struct AuthorizeRequest {
 pub struct AuthorizeResponse {
     pub target_ip: String,
     pub token: String, // Signed JWT
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub encryption_public_key: Option<String>,
 }
 
 /// OpenAI-compatible chat message
