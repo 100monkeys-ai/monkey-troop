@@ -2,6 +2,7 @@ use crate::application::ports::CoordinatorClient;
 use crate::domain::models::{HardwareStatus, NodeStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use monkey_troop_shared::ModelIdentity;
 use reqwest::Client;
 use serde_json::json;
 use std::env;
@@ -30,7 +31,7 @@ impl CoordinatorClient for HttpCoordinatorClient {
         &self,
         node_id: &str,
         status: NodeStatus,
-        models: Vec<String>,
+        models: Vec<ModelIdentity>,
         hardware: HardwareStatus,
         engines: Vec<String>,
     ) -> Result<()> {
@@ -63,6 +64,14 @@ mod tests {
     use super::*;
     use httpmock::prelude::*;
 
+    fn test_model_identities() -> Vec<ModelIdentity> {
+        vec![ModelIdentity {
+            name: "llama3".to_string(),
+            content_hash: "sha256:abc123".to_string(),
+            size_bytes: 4_000_000_000,
+        }]
+    }
+
     #[tokio::test]
     async fn test_send_heartbeat_success() {
         let server = MockServer::start();
@@ -82,7 +91,7 @@ mod tests {
             .send_heartbeat(
                 "node-1",
                 NodeStatus::Idle,
-                vec!["llama3".to_string()],
+                test_model_identities(),
                 hardware,
                 Vec::new(),
             )
@@ -110,7 +119,7 @@ mod tests {
             .send_heartbeat(
                 "node-1",
                 NodeStatus::Idle,
-                vec!["llama3".to_string()],
+                test_model_identities(),
                 hardware,
                 Vec::new(),
             )

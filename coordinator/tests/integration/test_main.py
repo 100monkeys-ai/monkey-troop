@@ -32,6 +32,10 @@ def client(db_session, redis_client):
     app.dependency_overrides.clear()
 
 
+def _model_dict(name: str, content_hash: str = "sha256:aaa", size_bytes: int = 1000) -> dict:
+    return {"name": name, "content_hash": content_hash, "size_bytes": size_bytes}
+
+
 def test_authorize_request_success(client, redis_client):
     """Test successful authorization flow."""
     # 1. Setup an idle node in Redis
@@ -41,7 +45,7 @@ def test_authorize_request_success(client, redis_client):
         "node_id": node_id,
         "tailscale_ip": "100.64.0.5",
         "status": "IDLE",
-        "models": [model_name],
+        "models": [_model_dict(model_name)],
         "hardware": {"gpu": "RTX 4090", "vram_free": 24576},
         "engines": [{"type": "ollama", "version": "0.1.0", "port": 11434}],
     }
@@ -81,7 +85,7 @@ def test_authorize_request_insufficient_credits(client, db_session, redis_client
         "node_id": node_id,
         "tailscale_ip": "100.64.0.5",
         "status": "IDLE",
-        "models": [model_name],
+        "models": [_model_dict(model_name)],
         "hardware": {"gpu": "RTX 4090", "vram_free": 24576},
         "engines": [],
     }

@@ -14,12 +14,16 @@ def client(redis_client):
     return TestClient(app)
 
 
+def _model_payload(name: str, content_hash: str = "sha256:aaa", size_bytes: int = 1000) -> dict:
+    return {"name": name, "content_hash": content_hash, "size_bytes": size_bytes}
+
+
 def test_receive_heartbeat(client, redis_client):
     payload = {
         "node_id": "node_1",
         "tailscale_ip": "100.64.0.1",
         "status": "active",
-        "models": ["llama2"],
+        "models": [_model_payload("llama2")],
         "hardware": {"gpu": "RTX 4090", "vram_free": 24000},
         "engines": [{"type": "ollama", "version": "0.1.0", "port": 11434}],
     }
@@ -37,7 +41,7 @@ def test_list_peers(client, redis_client):
         "node_id": "node_1",
         "tailscale_ip": "100.64.0.1",
         "status": "active",
-        "models": ["llama2"],
+        "models": [_model_payload("llama2")],
         "hardware": {"gpu": "RTX 4090", "vram_free": 24000},
         "engines": [],
     }
@@ -49,7 +53,7 @@ def test_list_peers(client, redis_client):
     assert data["count"] == 1
     assert data["nodes"][0]["node_id"] == "node_1"
 
-    # Filter by model
+    # Filter by model name
     response = client.get("/peers?model=llama2")
     assert response.status_code == 200
     assert response.json()["count"] == 1
@@ -65,7 +69,10 @@ def test_list_models_openai(client, redis_client):
         "node_id": "node_1",
         "tailscale_ip": "100.64.0.1",
         "status": "active",
-        "models": ["llama2", "mistral"],
+        "models": [
+            _model_payload("llama2", "sha256:aaa", 1000),
+            _model_payload("mistral", "sha256:bbb", 2000),
+        ],
         "hardware": {"gpu": "RTX 4090", "vram_free": 24000},
         "engines": [],
     }
@@ -78,3 +85,7 @@ def test_list_models_openai(client, redis_client):
     model_ids = [m["id"] for m in data["data"]]
     assert "llama2" in model_ids
     assert "mistral" in model_ids
+    # Verify content_hash and size_bytes are included
+    for m in data["data"]:
+        assert "content_hash" in m
+        assert "size_bytes" in m

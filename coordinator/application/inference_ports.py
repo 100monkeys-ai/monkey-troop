@@ -18,7 +18,7 @@ class NodeDiscoveryRepository(ABC):
         pass
 
     @abstractmethod
-    def find_nodes_by_model(self, model_name: str) -> List[Node]:
+    def find_nodes_by_model(self, identifier: str) -> List[Node]:
         pass
 
     @abstractmethod

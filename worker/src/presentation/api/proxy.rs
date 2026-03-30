@@ -49,11 +49,17 @@ async fn handle_chat_completion(
         payload.model_id, state.service.node_id
     );
 
-    // Verify model exists in registry
+    // Verify model exists in registry (supports lookup by name or content hash)
     let registry = state.service.registry.read().await;
-    if !registry.get_model_ids().contains(&payload.model_id) {
-        return Err(StatusCode::NOT_FOUND);
-    }
+    let resolved_model = if payload.model_id.starts_with("sha256:") {
+        registry.find_by_hash(&payload.model_id)
+    } else {
+        registry.find_by_name(&payload.model_id)
+    };
+    let resolved_model_id = match resolved_model {
+        Some(m) => m.id.clone(),
+        None => return Err(StatusCode::NOT_FOUND),
+    };
     // Explicitly drop the read lock before proceeding to response construction.
     drop(registry);
 
@@ -63,7 +69,7 @@ async fn handle_chat_completion(
         id: "chatcmpl-123".to_string(),
         object: "chat.completion".to_string(),
         created: 1677652288,
-        model: payload.model_id,
+        model: resolved_model_id,
         choices: vec![InferenceChoice {
             index: 0,
             message: ChatMessage {
@@ -93,6 +99,7 @@ mod tests {
     use async_trait::async_trait;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
+    use monkey_troop_shared::ModelIdentity;
     use serde_json::json;
     use tokio::sync::RwLock;
     use tower::ServiceExt;
@@ -118,7 +125,7 @@ mod tests {
             &self,
             _: &str,
             _: crate::domain::models::NodeStatus,
-            _: Vec<String>,
+            _: Vec<ModelIdentity>,
             _: HardwareStatus,
             _: Vec<String>,
         ) -> Result<()> {
@@ -141,6 +148,8 @@ mod tests {
         let registry = Arc::new(RwLock::new(ModelRegistry::new()));
         registry.write().await.add_model(Model {
             id: "llama3".to_string(),
+            content_hash: "sha256:abc123".to_string(),
+            size_bytes: 4_000_000_000,
             engine_type: EngineType::Ollama,
         });
 

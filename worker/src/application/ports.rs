@@ -1,6 +1,7 @@
 use crate::domain::models::{HardwareStatus, Model, NodeStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use monkey_troop_shared::ModelIdentity;
 
 #[async_trait]
 pub trait InferenceEngine: Send + Sync {
@@ -20,7 +21,7 @@ pub trait CoordinatorClient: Send + Sync {
         &self,
         node_id: &str,
         status: NodeStatus,
-        models: Vec<String>,
+        models: Vec<ModelIdentity>,
         hardware: HardwareStatus,
         engines: Vec<String>,
     ) -> Result<()>;

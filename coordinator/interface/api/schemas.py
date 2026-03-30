@@ -16,11 +16,17 @@ class HardwareInfoSchema(BaseModel):
     vram_free: int
 
 
+class ModelIdentitySchema(BaseModel):
+    name: str
+    content_hash: str
+    size_bytes: int
+
+
 class NodeHeartbeatSchema(BaseModel):
     node_id: str
     tailscale_ip: str
     status: str
-    models: List[str]
+    models: List[ModelIdentitySchema]
     hardware: HardwareInfoSchema
     engines: List[EngineInfoSchema]
 

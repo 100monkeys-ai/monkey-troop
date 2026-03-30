@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 
 from application.inference_services import DiscoveryService
 from application.orchestration_services import OrchestrationService
-from domain.inference.models import EngineInfo, HardwareSpec, Node
+from domain.inference.models import EngineInfo, HardwareSpec, ModelIdentity, Node
 from infrastructure.dependencies import get_discovery_service, get_orchestration_service
 
 from .schemas import AuthorizeRequestSchema, AuthorizeResponseSchema, NodeHeartbeatSchema
@@ -48,7 +48,10 @@ async def receive_heartbeat(
         node_id=data.node_id,
         tailscale_ip=data.tailscale_ip,
         status=data.status,
-        models=data.models,
+        models=[
+            ModelIdentity(name=m.name, content_hash=m.content_hash, size_bytes=m.size_bytes)
+            for m in data.models
+        ],
         hardware=HardwareSpec(gpu=data.hardware.gpu, vram_free_mb=data.hardware.vram_free),
         engines=[EngineInfo(e.type, e.version, e.port) for e in data.engines],
     )
@@ -73,5 +76,14 @@ async def list_models_openai(discovery_service: DiscoveryService = Depends(get_d
     models = discovery_service.get_aggregated_models()
     return {
         "object": "list",
-        "data": [{"id": m, "object": "model", "owned_by": "monkey-troop"} for m in models],
+        "data": [
+            {
+                "id": m.name,
+                "object": "model",
+                "owned_by": "monkey-troop",
+                "content_hash": m.content_hash,
+                "size_bytes": m.size_bytes,
+            }
+            for m in models
+        ],
     }
