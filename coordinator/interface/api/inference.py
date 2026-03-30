@@ -3,21 +3,14 @@
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
 from application.inference_services import DiscoveryService
 from application.orchestration_services import OrchestrationService
-from domain.inference.models import EngineInfo, HardwareSpec, Node
-from domain.inference.reputation import ReputationTier
+from domain.inference.models import EngineInfo, HardwareSpec, ModelIdentity, Node
 from infrastructure.dependencies import get_discovery_service, get_orchestration_service
 
-from .schemas import (
-    AuthorizeRequestSchema,
-    AuthorizeResponseSchema,
-    NodeHeartbeatSchema,
-    NodeReputationSchema,
-    ReputationComponentsSchema,
-)
+from .schemas import AuthorizeRequestSchema, AuthorizeResponseSchema, NodeHeartbeatSchema
 
 router = APIRouter(tags=["Inference"])
 
@@ -28,6 +21,8 @@ async def authorize_request(
     orchestration_service: OrchestrationService = Depends(get_orchestration_service),
 ):
     """Orchestrated endpoint: Authorize a request across multiple contexts."""
+    from fastapi import HTTPException
+
     from application.orchestration_services import InsufficientCreditsError, NoNodesAvailableError
 
     try:
@@ -53,7 +48,10 @@ async def receive_heartbeat(
         node_id=data.node_id,
         tailscale_ip=data.tailscale_ip,
         status=data.status,
-        models=data.models,
+        models=[
+            ModelIdentity(name=m.name, content_hash=m.content_hash, size_bytes=m.size_bytes)
+            for m in data.models
+        ],
         hardware=HardwareSpec(gpu=data.hardware.gpu, vram_free_mb=data.hardware.vram_free),
         engines=[EngineInfo(e.type, e.version, e.port) for e in data.engines],
     )
@@ -67,41 +65,9 @@ async def list_peers(
     model: Optional[str] = Query(None),
     discovery_service: DiscoveryService = Depends(get_discovery_service),
 ):
-    """List available nodes sorted by reputation, optionally filtered by model."""
+    """List available nodes, optionally filtered by model."""
     nodes = discovery_service.list_peers(model)
-    nodes_data = []
-    for n in nodes:
-        node_dict = json.loads(n.to_json())
-        node_dict["reputation_score"] = n.reputation_score
-        nodes_data.append(node_dict)
-    return {"count": len(nodes), "nodes": nodes_data}
-
-
-@router.get("/nodes/{node_id}/reputation", response_model=NodeReputationSchema)
-async def get_node_reputation(
-    node_id: str,
-    discovery_service: DiscoveryService = Depends(get_discovery_service),
-):
-    """Get detailed reputation breakdown for a specific node."""
-    rep = discovery_service.reputation_repo.get_reputation(node_id)
-    if not rep:
-        raise HTTPException(status_code=404, detail="Node reputation not found")
-
-    tier = ReputationTier.from_score(rep.score)
-    return NodeReputationSchema(
-        node_id=rep.node_id,
-        score=rep.score.value,
-        tier=tier.value,
-        components=ReputationComponentsSchema(
-            availability=rep.components.availability,
-            reliability=rep.components.reliability,
-            performance=rep.components.performance,
-        ),
-        total_jobs=rep.total_jobs,
-        successful_jobs=rep.successful_jobs,
-        failed_jobs=rep.failed_jobs,
-        updated_at=rep.updated_at.isoformat(),
-    )
+    return {"count": len(nodes), "nodes": [json.loads(n.to_json()) for n in nodes]}
 
 
 @router.get("/v1/models")
@@ -110,5 +76,14 @@ async def list_models_openai(discovery_service: DiscoveryService = Depends(get_d
     models = discovery_service.get_aggregated_models()
     return {
         "object": "list",
-        "data": [{"id": m, "object": "model", "owned_by": "monkey-troop"} for m in models],
+        "data": [
+            {
+                "id": m.name,
+                "object": "model",
+                "owned_by": "monkey-troop",
+                "content_hash": m.content_hash,
+                "size_bytes": m.size_bytes,
+            }
+            for m in models
+        ],
     }

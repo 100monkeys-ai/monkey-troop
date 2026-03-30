@@ -1,5 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+/// Content-addressed model identity ensuring integrity via cryptographic hash
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct ModelIdentity {
+    pub name: String,
+    pub content_hash: String,
+    pub size_bytes: u64,
+}
+
 /// Information about the inference engine running on a node
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EngineInfo {
@@ -22,7 +30,7 @@ pub struct NodeHeartbeat {
     pub node_id: String,
     pub tailscale_ip: String,
     pub status: NodeStatus,
-    pub models: Vec<String>,
+    pub models: Vec<ModelIdentity>,
     pub hardware: HardwareInfo,
     pub engines: Vec<EngineInfo>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -133,6 +141,8 @@ pub struct ModelInfo {
     pub id: String,
     pub object: String,
     pub owned_by: String,
+    pub content_hash: String,
+    pub size_bytes: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -16,6 +16,10 @@ TEST_USER_KEY = "test_user_12345"
 TEST_MODEL = "llama2:7b"
 
 
+def _model_dict(name: str, content_hash: str = "sha256:aaa", size_bytes: int = 1000) -> dict:
+    return {"name": name, "content_hash": content_hash, "size_bytes": size_bytes}
+
+
 @pytest.fixture
 async def coordinator_client(db_session, redis_client):
     """HTTP client for coordinator with overridden database and redis."""
@@ -117,7 +121,7 @@ async def test_jwt_structure(coordinator_client, redis_client):
         "node_id": node_id,
         "tailscale_ip": "100.64.0.1",
         "status": "IDLE",
-        "models": [TEST_MODEL],
+        "models": [_model_dict(TEST_MODEL)],
         "hardware": {"gpu": "Test GPU", "vram_free": 8192},
         "engines": [{"type": "ollama", "version": "0.1.0", "port": 11434}],
     }

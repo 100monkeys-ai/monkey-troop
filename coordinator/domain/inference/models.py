@@ -18,6 +18,15 @@ class EngineInfo:
     port: int
 
 
+@dataclass(frozen=True)
+class ModelIdentity:
+    """Content-addressed model identity ensuring integrity via cryptographic hash."""
+
+    name: str
+    content_hash: str
+    size_bytes: int
+
+
 @dataclass
 class Node:
     """A provider node in the inference network."""
@@ -25,7 +34,7 @@ class Node:
     node_id: str
     tailscale_ip: str
     status: str  # "IDLE", "BUSY", "OFFLINE"
-    models: List[str]
+    models: List[ModelIdentity]
     hardware: HardwareSpec
     engines: List[EngineInfo]
     reputation_score: float = 0.5
@@ -37,7 +46,14 @@ class Node:
                 "node_id": self.node_id,
                 "tailscale_ip": self.tailscale_ip,
                 "status": self.status,
-                "models": self.models,
+                "models": [
+                    {
+                        "name": m.name,
+                        "content_hash": m.content_hash,
+                        "size_bytes": m.size_bytes,
+                    }
+                    for m in self.models
+                ],
                 "hardware": {"gpu": self.hardware.gpu, "vram_free": self.hardware.vram_free_mb},
                 "engines": [
                     {"type": e.type, "version": e.version, "port": e.port} for e in self.engines
@@ -52,7 +68,14 @@ class Node:
             node_id=data["node_id"],
             tailscale_ip=data["tailscale_ip"],
             status=data["status"],
-            models=data["models"],
+            models=[
+                ModelIdentity(
+                    name=m["name"],
+                    content_hash=m["content_hash"],
+                    size_bytes=m["size_bytes"],
+                )
+                for m in data["models"]
+            ],
             hardware=HardwareSpec(
                 gpu=data["hardware"]["gpu"], vram_free_mb=data["hardware"]["vram_free"]
             ),

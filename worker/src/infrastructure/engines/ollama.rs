@@ -13,6 +13,8 @@ struct OllamaModels {
 #[derive(Deserialize)]
 struct OllamaModel {
     name: String,
+    digest: String,
+    size: u64,
 }
 
 pub struct OllamaEngine {
@@ -47,6 +49,8 @@ impl InferenceEngine for OllamaEngine {
             .into_iter()
             .map(|m| Model {
                 id: m.name,
+                content_hash: m.digest,
+                size_bytes: m.size,
                 engine_type: EngineType::Ollama,
             })
             .collect())
@@ -87,8 +91,8 @@ mod tests {
                 .header("content-type", "application/json")
                 .json_body(json!({
                     "models": [
-                        { "name": "llama3:8b" },
-                        { "name": "mistral:latest" }
+                        { "name": "llama3:8b", "digest": "sha256:aaa111", "size": 4_000_000_000_u64 },
+                        { "name": "mistral:latest", "digest": "sha256:bbb222", "size": 7_000_000_000_u64 }
                     ]
                 }));
         });
@@ -96,7 +100,11 @@ mod tests {
         let models = engine.get_models().await.unwrap();
         assert_eq!(models.len(), 2);
         assert_eq!(models[0].id, "llama3:8b");
+        assert_eq!(models[0].content_hash, "sha256:aaa111");
+        assert_eq!(models[0].size_bytes, 4_000_000_000);
         assert_eq!(models[1].id, "mistral:latest");
+        assert_eq!(models[1].content_hash, "sha256:bbb222");
+        assert_eq!(models[1].size_bytes, 7_000_000_000);
     }
 
     #[tokio::test]

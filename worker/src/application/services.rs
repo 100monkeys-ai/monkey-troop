@@ -84,7 +84,7 @@ impl WorkerService {
             NodeStatus::Busy
         };
         let hardware = self.monitor.get_status().await?;
-        let models = self.registry.read().await.get_model_ids();
+        let models = self.registry.read().await.to_model_identities();
 
         self.coordinator
             .send_heartbeat(&self.node_id, status, models, hardware, Vec::new())
@@ -103,9 +103,10 @@ mod tests {
     use crate::domain::models::{EngineType, HardwareStatus, Model, NodeStatus};
     use anyhow::Result;
     use async_trait::async_trait;
+    use monkey_troop_shared::ModelIdentity;
     use tokio::sync::Mutex;
 
-    type HeartbeatCall = (String, NodeStatus, Vec<String>, HardwareStatus);
+    type HeartbeatCall = (String, NodeStatus, Vec<ModelIdentity>, HardwareStatus);
     type HeartbeatHistory = Arc<Mutex<Vec<HeartbeatCall>>>;
 
     // Fully implemented mocks
@@ -156,7 +157,7 @@ mod tests {
             &self,
             node_id: &str,
             status: NodeStatus,
-            models: Vec<String>,
+            models: Vec<ModelIdentity>,
             hardware: HardwareStatus,
             _engines: Vec<String>,
         ) -> Result<()> {
@@ -185,6 +186,8 @@ mod tests {
         let engine1 = Box::new(MockInferenceEngine {
             models: vec![Model {
                 id: "model1".to_string(),
+                content_hash: "sha256:aaa".to_string(),
+                size_bytes: 100,
                 engine_type: EngineType::Ollama,
             }],
             healthy: true,
@@ -194,6 +197,8 @@ mod tests {
         let engine2 = Box::new(MockInferenceEngine {
             models: vec![Model {
                 id: "model2".to_string(),
+                content_hash: "sha256:bbb".to_string(),
+                size_bytes: 200,
                 engine_type: EngineType::Vllm,
             }],
             healthy: false,
@@ -203,6 +208,8 @@ mod tests {
         let engine3 = Box::new(MockInferenceEngine {
             models: vec![Model {
                 id: "model3".to_string(),
+                content_hash: "sha256:ccc".to_string(),
+                size_bytes: 300,
                 engine_type: EngineType::LmStudio,
             }],
             healthy: true,
@@ -249,6 +256,8 @@ mod tests {
             let mut reg = registry.write().await;
             reg.add_model(Model {
                 id: "model1".to_string(),
+                content_hash: "sha256:aaa".to_string(),
+                size_bytes: 100,
                 engine_type: EngineType::Ollama,
             });
         }
@@ -287,7 +296,9 @@ mod tests {
         assert_eq!(sent_node_id, &node_id);
         assert!(matches!(status, NodeStatus::Idle));
         assert_eq!(models.len(), 1);
-        assert_eq!(models[0], "model1");
+        assert_eq!(models[0].name, "model1");
+        assert_eq!(models[0].content_hash, "sha256:aaa");
+        assert_eq!(models[0].size_bytes, 100);
         assert_eq!(hardware.gpu_name, "GPU1");
         assert_eq!(hardware.vram_free_mb, 8192);
     }
