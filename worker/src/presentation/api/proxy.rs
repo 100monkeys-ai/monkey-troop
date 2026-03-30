@@ -1,14 +1,17 @@
 use crate::application::services::WorkerService;
 use crate::domain::inference::{
-    ChatMessage, InferenceChoice, InferenceRequest, InferenceResponse, TokenUsage,
+    ChatMessage, ChatMessageDelta, InferenceChoice, InferenceRequest, InferenceResponse,
+    StreamingChoice, StreamingChunk, TokenUsage,
 };
 use axum::{
     extract::{Json, State},
     http::{HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
     routing::post,
     Router,
 };
-use serde_json::Value;
+use bytes::Bytes;
+use futures::stream;
 use std::sync::Arc;
 use tracing::info;
 
@@ -26,7 +29,7 @@ async fn handle_chat_completion(
     State(state): State<Arc<ProxyState>>,
     headers: HeaderMap,
     Json(payload): Json<InferenceRequest>,
-) -> Result<Json<Value>, StatusCode> {
+) -> Result<Response, StatusCode> {
     // 1. Authentication (JWT verification via Header)
     let auth_header = headers
         .get("Authorization")
@@ -51,19 +54,24 @@ async fn handle_chat_completion(
 
     // Verify model exists in registry
     let registry = state.service.registry.read().await;
-    if !registry.get_model_ids().contains(&payload.model_id) {
-        return Err(StatusCode::NOT_FOUND);
-    }
+    let model = registry
+        .find_model(&payload.model_id)
+        .ok_or(StatusCode::NOT_FOUND)?;
+    let model_id = model.id.clone();
     // Explicitly drop the read lock before proceeding to response construction.
     drop(registry);
 
     // 3. Routing: Select engine and forward
+    if payload.stream {
+        return Ok(build_streaming_response(model_id));
+    }
+
     // For MVP, return mock response. In production, this would call engine.chat()
     let response = InferenceResponse {
         id: "chatcmpl-123".to_string(),
         object: "chat.completion".to_string(),
         created: 1677652288,
-        model: payload.model_id,
+        model: model_id,
         choices: vec![InferenceChoice {
             index: 0,
             message: ChatMessage {
@@ -79,9 +87,74 @@ async fn handle_chat_completion(
         },
     };
 
-    Ok(Json(
-        serde_json::to_value(response).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    let value = serde_json::to_value(response).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(value).into_response())
+}
+
+fn build_streaming_response(model_id: String) -> Response {
+    let chunks = vec![
+        StreamingChunk {
+            id: "chatcmpl-123".to_string(),
+            object: "chat.completion.chunk".to_string(),
+            created: 1677652288,
+            model: model_id.clone(),
+            choices: vec![StreamingChoice {
+                index: 0,
+                delta: ChatMessageDelta {
+                    role: Some("assistant".to_string()),
+                    content: None,
+                },
+                finish_reason: None,
+            }],
+        },
+        StreamingChunk {
+            id: "chatcmpl-123".to_string(),
+            object: "chat.completion.chunk".to_string(),
+            created: 1677652288,
+            model: model_id.clone(),
+            choices: vec![StreamingChoice {
+                index: 0,
+                delta: ChatMessageDelta {
+                    role: None,
+                    content: Some("Hello! I am a Monkey Troop Worker node.".to_string()),
+                },
+                finish_reason: None,
+            }],
+        },
+        StreamingChunk {
+            id: "chatcmpl-123".to_string(),
+            object: "chat.completion.chunk".to_string(),
+            created: 1677652288,
+            model: model_id,
+            choices: vec![StreamingChoice {
+                index: 0,
+                delta: ChatMessageDelta {
+                    role: None,
+                    content: None,
+                },
+                finish_reason: Some("stop".to_string()),
+            }],
+        },
+    ];
+
+    let sse_events: Vec<Result<Bytes, std::convert::Infallible>> = chunks
+        .into_iter()
+        .map(|chunk| {
+            let json = serde_json::to_string(&chunk).unwrap_or_default();
+            Ok(Bytes::from(format!("data: {json}\n\n")))
+        })
+        .chain(std::iter::once(Ok(Bytes::from("data: [DONE]\n\n"))))
+        .collect();
+
+    let body = axum::body::Body::from_stream(stream::iter(sse_events));
+
+    Response::builder()
+        .header("Content-Type", "text/event-stream")
+        .header("Cache-Control", "no-cache")
+        .header("Connection", "keep-alive")
+        .body(body)
+        .unwrap()
+        .into_response()
 }
 
 #[cfg(test)]

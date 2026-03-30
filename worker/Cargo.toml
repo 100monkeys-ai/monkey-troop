@@ -31,6 +31,11 @@ hostname = "0.4"  # For getting hostname
 # Shared types
 monkey-troop-shared = { path = "../shared" }
 
+# Streaming support
+futures = { workspace = true }
+bytes = { workspace = true }
+uuid = { workspace = true }
+
 [dev-dependencies]
 httpmock = "0.8.3"
 serial_test = "3.2.0"
