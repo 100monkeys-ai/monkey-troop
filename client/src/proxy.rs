@@ -1,7 +1,6 @@
 use crate::config::Config;
 use anyhow::Result;
 
-const WORKER_PORT: u16 = 8080;
 use axum::{
     extract::State,
     http::StatusCode,
@@ -17,6 +16,53 @@ use monkey_troop_shared::{
 use std::sync::Arc;
 use tracing::{error, info};
 use url::Url;
+
+// Standard HTTP hop-by-hop headers that must not be forwarded by a proxy (RFC 7230).
+const HOP_BY_HOP: &[&str] = &[
+    "connection",
+    "keep-alive",
+    "transfer-encoding",
+    "te",
+    "trailer",
+    "upgrade",
+    "proxy-authorization",
+    "proxy-authenticate",
+];
+
+/// Copies end-to-end headers from `src` into `dst`, skipping hop-by-hop headers and any
+/// headers nominated by the `Connection` header value (RFC 7230 §6.1). Uses `append` to
+/// preserve multi-valued headers such as `set-cookie`.
+fn copy_end_to_end_headers(src: &axum::http::HeaderMap, dst: &mut axum::http::HeaderMap) {
+    let connection_nominated: Vec<String> = src
+        .get(axum::http::header::CONNECTION)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| {
+            s.split(',')
+                .filter_map(|t| {
+                    let t = t.trim();
+                    if t.is_empty() {
+                        None
+                    } else {
+                        Some(t.to_ascii_lowercase())
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    for (name, value) in src {
+        if HOP_BY_HOP.contains(&name.as_str()) {
+            continue;
+        }
+        if connection_nominated
+            .iter()
+            .any(|n| n.eq_ignore_ascii_case(name.as_str()))
+        {
+            continue;
+        }
+        dst.append(name, value.clone());
+    }
+}
 
 pub async fn run_proxy_server(config: Config) -> Result<()> {
     let addr = format!("127.0.0.1:{}", config.proxy_port);
@@ -66,8 +112,9 @@ async fn list_models_handler(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    let url_str = url.to_string();
     let response = client.get(url).send().await.map_err(|e| {
-        error!("Failed to fetch models: {}", e);
+        error!("Failed to fetch models from '{}': {}", url_str, e);
         StatusCode::BAD_GATEWAY
     })?;
 
@@ -117,7 +164,14 @@ async fn chat_completions_handler(
 
     // Step 3: Send to worker (encrypted or plaintext)
     let is_stream = payload.stream;
-    let response = match send_to_worker(&auth_response, &payload, e2e_session.as_ref()).await {
+    let response = match send_to_worker(
+        &auth_response,
+        &payload,
+        config.worker_port,
+        e2e_session.as_ref(),
+    )
+    .await
+    {
         Ok(resp) => resp,
         Err(e) => {
             error!("Worker request failed: {}", e);
@@ -130,6 +184,21 @@ async fn chat_completions_handler(
 
     // Step 4: Handle response (decrypt if E2E)
     if is_stream {
+        if !status_code.is_success() {
+            // For error responses, forward worker headers without forcing SSE content-type.
+            let worker_headers = response.headers().clone();
+            let mut builder = Response::builder().status(status_u16);
+            if let Some(builder_headers) = builder.headers_mut() {
+                copy_end_to_end_headers(&worker_headers, builder_headers);
+            }
+            return builder
+                .body(axum::body::Body::from_stream(response.bytes_stream()))
+                .map_err(|e| {
+                    error!("Failed to build streaming error response: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                });
+        }
+
         if let Some(ref session) = e2e_session {
             // Decrypt each SSE chunk and re-emit as plaintext
             info!("Decrypting streaming response");
@@ -169,20 +238,18 @@ async fn chat_completions_handler(
                 .status(status_u16)
                 .header("content-type", "text/event-stream")
                 .header("cache-control", "no-cache")
-                .header("connection", "keep-alive")
                 .body(axum::body::Body::from_stream(decrypted_stream))
                 .map_err(|e| {
                     error!("Failed to build streaming response: {}", e);
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?)
         } else {
-            // Plaintext streaming passthrough (existing behavior)
+            // Plaintext streaming passthrough
             info!("Streaming response back to client");
             Ok(Response::builder()
                 .status(status_u16)
                 .header("content-type", "text/event-stream")
                 .header("cache-control", "no-cache")
-                .header("connection", "keep-alive")
                 .body(axum::body::Body::from_stream(response.bytes_stream()))
                 .map_err(|e| {
                     error!("Failed to build streaming response: {}", e);
@@ -190,36 +257,51 @@ async fn chat_completions_handler(
                 })?)
         }
     } else {
+        let worker_headers = response.headers().clone();
         let body = response.bytes().await.map_err(|e| {
             error!("Failed to read response body: {}", e);
             StatusCode::BAD_GATEWAY
         })?;
 
-        if let Some(ref session) = e2e_session {
-            // Decrypt the response
-            let decrypted = crate::e2e_crypto::decrypt_response(&session.session_key, &body)
-                .map_err(|e| {
-                    error!("Failed to decrypt response: {}", e);
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
-            info!("Response decrypted, forwarding to client");
-            Ok(Response::builder()
-                .status(status_u16)
-                .header("content-type", "application/json")
-                .body(axum::body::Body::from(decrypted))
-                .map_err(|e| {
+        if status_code.is_success() {
+            if let Some(ref session) = e2e_session {
+                // Decrypt the response
+                let decrypted = crate::e2e_crypto::decrypt_response(&session.session_key, &body)
+                    .map_err(|e| {
+                        error!("Failed to decrypt response: {}", e);
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })?;
+                info!("Response decrypted, forwarding to client");
+                Ok(Response::builder()
+                    .status(status_u16)
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(decrypted))
+                    .map_err(|e| {
+                        error!("Failed to build response: {}", e);
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })?)
+            } else {
+                // Forward with worker headers (minus hop-by-hop)
+                info!("Response received, forwarding to client");
+                let mut builder = Response::builder().status(status_u16);
+                if let Some(builder_headers) = builder.headers_mut() {
+                    copy_end_to_end_headers(&worker_headers, builder_headers);
+                }
+                Ok(builder.body(axum::body::Body::from(body)).map_err(|e| {
                     error!("Failed to build response: {}", e);
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?)
+            }
         } else {
-            info!("Response received, forwarding to client");
-            Ok(Response::builder()
-                .status(status_u16)
-                .body(axum::body::Body::from(body))
-                .map_err(|e| {
-                    error!("Failed to build response: {}", e);
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?)
+            // Error response: forward worker headers (minus hop-by-hop) without modification
+            let mut builder = Response::builder().status(status_u16);
+            if let Some(builder_headers) = builder.headers_mut() {
+                copy_end_to_end_headers(&worker_headers, builder_headers);
+            }
+            Ok(builder.body(axum::body::Body::from(body)).map_err(|e| {
+                error!("Failed to build response: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?)
         }
     }
 }
@@ -236,7 +318,7 @@ async fn get_authorization(config: &Config, model: &str) -> TroopResult<Authoriz
                 .map_err(anyhow::Error::from)?;
 
             let auth_request = AuthorizeRequest {
-                model: model.clone(),
+                model,
                 requester: config.requester_id.clone(),
             };
 
@@ -259,6 +341,7 @@ async fn get_authorization(config: &Config, model: &str) -> TroopResult<Authoriz
 async fn send_to_worker(
     auth: &AuthorizeResponse,
     payload: &ChatCompletionRequest,
+    worker_port: u16,
     e2e_session: Option<&crate::e2e_crypto::E2ESession>,
 ) -> TroopResult<reqwest::Response> {
     // Pre-compute request body (encrypted or plaintext) before the retry loop
@@ -279,7 +362,7 @@ async fn send_to_worker(
             let client = reqwest::Client::new();
             let worker_url_str = format!(
                 "http://{}:{}/v1/chat/completions",
-                auth.target_ip, WORKER_PORT
+                auth.target_ip, worker_port
             );
             let worker_url = Url::parse(&worker_url_str).map_err(anyhow::Error::from)?;
 
@@ -292,13 +375,6 @@ async fn send_to_worker(
                 .timeout(INFERENCE_TIMEOUT)
                 .send()
                 .await?;
-
-            if !response.status().is_success() {
-                return Err(TroopError::WorkerUnavailable(format!(
-                    "Worker returned status {}",
-                    response.status()
-                )));
-            }
 
             Ok(response)
         }
