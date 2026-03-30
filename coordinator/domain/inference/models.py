@@ -2,7 +2,7 @@
 
 import json
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,7 @@ class Node:
     models: List[str]
     hardware: HardwareSpec
     engines: List[EngineInfo]
+    encryption_public_key: Optional[str] = None
 
     def to_json(self) -> str:
         # Pydantic is already used for DTOs; this is for Domain -> JSON conversion
@@ -41,6 +42,7 @@ class Node:
                 "engines": [
                     {"type": e.type, "version": e.version, "port": e.port} for e in self.engines
                 ],
+                "encryption_public_key": self.encryption_public_key,
             }
         )
 
@@ -55,4 +57,5 @@ class Node:
                 gpu=data["hardware"]["gpu"], vram_free_mb=data["hardware"]["vram_free"]
             ),
             engines=[EngineInfo(e["type"], e["version"], e["port"]) for e in data["engines"]],
+            encryption_public_key=data.get("encryption_public_key"),
         )

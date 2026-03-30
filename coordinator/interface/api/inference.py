@@ -36,6 +36,7 @@ async def authorize_request(
         "target_ip": result.target_ip,
         "token": result.token,
         "estimated_cost": result.estimated_cost,
+        "encryption_public_key": result.encryption_public_key,
     }
 
 
@@ -51,6 +52,7 @@ async def receive_heartbeat(
         models=data.models,
         hardware=HardwareSpec(gpu=data.hardware.gpu, vram_free_mb=data.hardware.vram_free),
         engines=[EngineInfo(e.type, e.version, e.port) for e in data.engines],
+        encryption_public_key=data.encryption_public_key,
     )
 
     discovery_service.register_heartbeat(node)
