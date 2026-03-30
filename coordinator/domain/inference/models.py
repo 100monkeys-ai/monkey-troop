@@ -2,7 +2,7 @@
 
 import json
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -18,6 +18,15 @@ class EngineInfo:
     port: int
 
 
+@dataclass(frozen=True)
+class ModelIdentity:
+    """Content-addressed model identity ensuring integrity via cryptographic hash."""
+
+    name: str
+    content_hash: str
+    size_bytes: int
+
+
 @dataclass
 class Node:
     """A provider node in the inference network."""
@@ -25,9 +34,11 @@ class Node:
     node_id: str
     tailscale_ip: str
     status: str  # "IDLE", "BUSY", "OFFLINE"
-    models: List[str]
+    models: List[ModelIdentity]
     hardware: HardwareSpec
     engines: List[EngineInfo]
+    reputation_score: float = 0.5
+    encryption_public_key: Optional[str] = None
 
     def to_json(self) -> str:
         # Pydantic is already used for DTOs; this is for Domain -> JSON conversion
@@ -36,11 +47,20 @@ class Node:
                 "node_id": self.node_id,
                 "tailscale_ip": self.tailscale_ip,
                 "status": self.status,
-                "models": self.models,
+                "models": [
+                    {
+                        "name": m.name,
+                        "content_hash": m.content_hash,
+                        "size_bytes": m.size_bytes,
+                    }
+                    for m in self.models
+                ],
                 "hardware": {"gpu": self.hardware.gpu, "vram_free": self.hardware.vram_free_mb},
                 "engines": [
                     {"type": e.type, "version": e.version, "port": e.port} for e in self.engines
                 ],
+                "reputation_score": self.reputation_score,
+                "encryption_public_key": self.encryption_public_key,
             }
         )
 
@@ -50,9 +70,18 @@ class Node:
             node_id=data["node_id"],
             tailscale_ip=data["tailscale_ip"],
             status=data["status"],
-            models=data["models"],
+            models=[
+                ModelIdentity(
+                    name=m["name"],
+                    content_hash=m["content_hash"],
+                    size_bytes=m["size_bytes"],
+                )
+                for m in data["models"]
+            ],
             hardware=HardwareSpec(
                 gpu=data["hardware"]["gpu"], vram_free_mb=data["hardware"]["vram_free"]
             ),
             engines=[EngineInfo(e["type"], e["version"], e["port"]) for e in data["engines"]],
+            reputation_score=data.get("reputation_score", 0.5),
+            encryption_public_key=data.get("encryption_public_key"),
         )

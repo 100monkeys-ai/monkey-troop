@@ -27,9 +27,11 @@ class RedisNodeDiscoveryRepository(NodeDiscoveryRepository):
             return None
         return Node.from_dict(json.loads(raw_data))
 
-    def find_nodes_by_model(self, model_name: str) -> List[Node]:
+    def find_nodes_by_model(self, identifier: str) -> List[Node]:
         nodes = self.list_all_active_nodes()
-        return [n for n in nodes if model_name in n.models]
+        if identifier.startswith("sha256:"):
+            return [n for n in nodes if any(m.content_hash == identifier for m in n.models)]
+        return [n for n in nodes if any(m.name == identifier for m in n.models)]
 
     def list_all_active_nodes(self) -> List[Node]:
         keys = list(self.redis.scan_iter("node:*"))

@@ -1,5 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+/// Content-addressed model identity ensuring integrity via cryptographic hash
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct ModelIdentity {
+    pub name: String,
+    pub content_hash: String,
+    pub size_bytes: u64,
+}
+
 /// Information about the inference engine running on a node
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EngineInfo {
@@ -22,9 +30,11 @@ pub struct NodeHeartbeat {
     pub node_id: String,
     pub tailscale_ip: String,
     pub status: NodeStatus,
-    pub models: Vec<String>,
+    pub models: Vec<ModelIdentity>,
     pub hardware: HardwareInfo,
     pub engines: Vec<EngineInfo>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub encryption_public_key: Option<String>,
 }
 
 /// Current operational status of a node
@@ -90,6 +100,8 @@ pub struct AuthorizeRequest {
 pub struct AuthorizeResponse {
     pub target_ip: String,
     pub token: String, // Signed JWT
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub encryption_public_key: Option<String>,
 }
 
 /// OpenAI-compatible chat message
@@ -129,10 +141,33 @@ pub struct ModelInfo {
     pub id: String,
     pub object: String,
     pub owned_by: String,
+    pub content_hash: String,
+    pub size_bytes: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelsResponse {
     pub object: String,
     pub data: Vec<ModelInfo>,
+}
+
+/// Node reputation information returned by coordinator
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeReputationInfo {
+    pub node_id: String,
+    pub score: f64,
+    pub tier: String,
+    pub components: ReputationComponents,
+    pub total_jobs: u64,
+    pub successful_jobs: u64,
+    pub failed_jobs: u64,
+    pub updated_at: String,
+}
+
+/// Individual reputation score components
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReputationComponents {
+    pub availability: f64,
+    pub reliability: f64,
+    pub performance: f64,
 }

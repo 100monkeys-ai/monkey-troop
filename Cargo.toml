@@ -43,3 +43,16 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Config
 config = "0.15"
+
+# Streaming support
+futures = "0.3"
+bytes = "1"
+uuid = { version = "1", features = ["v4"] }
+
+# Crypto (E2E encryption)
+x25519-dalek = { version = "2.0", features = ["static_secrets"] }
+chacha20poly1305 = "0.10"
+hkdf = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"

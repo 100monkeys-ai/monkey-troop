@@ -1,5 +1,5 @@
 use crate::application::ports::{
-    AuthTokenVerifier, CoordinatorClient, HardwareMonitor, InferenceEngine,
+    AuthTokenVerifier, CoordinatorClient, E2EDecryptor, HardwareMonitor, InferenceEngine,
 };
 use crate::domain::models::{ModelRegistry, NodeStatus};
 use anyhow::Result;
@@ -14,6 +14,7 @@ pub struct WorkerService {
     monitor: Arc<dyn HardwareMonitor>,
     coordinator: Arc<dyn CoordinatorClient>,
     verifier: Arc<dyn AuthTokenVerifier>,
+    e2e: Arc<dyn E2EDecryptor>,
 }
 
 impl WorkerService {
@@ -24,6 +25,7 @@ impl WorkerService {
         monitor: Arc<dyn HardwareMonitor>,
         coordinator: Arc<dyn CoordinatorClient>,
         verifier: Arc<dyn AuthTokenVerifier>,
+        e2e: Arc<dyn E2EDecryptor>,
     ) -> Self {
         Self {
             node_id,
@@ -32,11 +34,20 @@ impl WorkerService {
             monitor,
             coordinator,
             verifier,
+            e2e,
         }
     }
 
     pub async fn verify_ticket(&self, token: &str) -> Result<bool> {
         self.verifier.verify_ticket(token, &self.node_id).await
+    }
+
+    pub fn encryption_public_key(&self) -> &str {
+        self.e2e.public_key_b64()
+    }
+
+    pub fn derive_e2e_session_key(&self, client_public_key_b64: &str) -> anyhow::Result<[u8; 32]> {
+        self.e2e.derive_session_key(client_public_key_b64)
     }
 
     pub async fn refresh_model_registry(&self) -> Result<()> {
@@ -84,10 +95,17 @@ impl WorkerService {
             NodeStatus::Busy
         };
         let hardware = self.monitor.get_status().await?;
-        let models = self.registry.read().await.get_model_ids();
+        let models = self.registry.read().await.to_model_identities();
 
         self.coordinator
-            .send_heartbeat(&self.node_id, status, models, hardware, Vec::new())
+            .send_heartbeat(
+                &self.node_id,
+                status,
+                models,
+                hardware,
+                Vec::new(),
+                Some(self.encryption_public_key().to_string()),
+            )
             .await?;
 
         Ok(())
@@ -98,14 +116,15 @@ impl WorkerService {
 mod tests {
     use super::*;
     use crate::application::ports::{
-        AuthTokenVerifier, CoordinatorClient, HardwareMonitor, InferenceEngine,
+        AuthTokenVerifier, CoordinatorClient, E2EDecryptor, HardwareMonitor, InferenceEngine,
     };
     use crate::domain::models::{EngineType, HardwareStatus, Model, NodeStatus};
     use anyhow::Result;
     use async_trait::async_trait;
+    use monkey_troop_shared::ModelIdentity;
     use tokio::sync::Mutex;
 
-    type HeartbeatCall = (String, NodeStatus, Vec<String>, HardwareStatus);
+    type HeartbeatCall = (String, NodeStatus, Vec<ModelIdentity>, HardwareStatus);
     type HeartbeatHistory = Arc<Mutex<Vec<HeartbeatCall>>>;
 
     // Fully implemented mocks
@@ -156,9 +175,10 @@ mod tests {
             &self,
             node_id: &str,
             status: NodeStatus,
-            models: Vec<String>,
+            models: Vec<ModelIdentity>,
             hardware: HardwareStatus,
             _engines: Vec<String>,
+            _encryption_public_key: Option<String>,
         ) -> Result<()> {
             let mut calls = self.heartbeat_calls.lock().await;
             calls.push((node_id.to_string(), status, models, hardware));
@@ -177,6 +197,16 @@ mod tests {
         }
     }
 
+    struct MockE2EDecryptor;
+    impl E2EDecryptor for MockE2EDecryptor {
+        fn public_key_b64(&self) -> &str {
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+        fn derive_session_key(&self, _client_public_key_b64: &str) -> anyhow::Result<[u8; 32]> {
+            Ok([0u8; 32])
+        }
+    }
+
     #[tokio::test]
     async fn test_refresh_model_registry() {
         let node_id = "node-1".to_string();
@@ -185,6 +215,8 @@ mod tests {
         let engine1 = Box::new(MockInferenceEngine {
             models: vec![Model {
                 id: "model1".to_string(),
+                content_hash: "sha256:aaa".to_string(),
+                size_bytes: 100,
                 engine_type: EngineType::Ollama,
             }],
             healthy: true,
@@ -194,6 +226,8 @@ mod tests {
         let engine2 = Box::new(MockInferenceEngine {
             models: vec![Model {
                 id: "model2".to_string(),
+                content_hash: "sha256:bbb".to_string(),
+                size_bytes: 200,
                 engine_type: EngineType::Vllm,
             }],
             healthy: false,
@@ -203,6 +237,8 @@ mod tests {
         let engine3 = Box::new(MockInferenceEngine {
             models: vec![Model {
                 id: "model3".to_string(),
+                content_hash: "sha256:ccc".to_string(),
+                size_bytes: 300,
                 engine_type: EngineType::LmStudio,
             }],
             healthy: true,
@@ -232,6 +268,7 @@ mod tests {
             monitor,
             coordinator,
             verifier,
+            Arc::new(MockE2EDecryptor),
         );
 
         service.refresh_model_registry().await.unwrap();
@@ -249,6 +286,8 @@ mod tests {
             let mut reg = registry.write().await;
             reg.add_model(Model {
                 id: "model1".to_string(),
+                content_hash: "sha256:aaa".to_string(),
+                size_bytes: 100,
                 engine_type: EngineType::Ollama,
             });
         }
@@ -277,6 +316,7 @@ mod tests {
             monitor,
             coordinator,
             verifier,
+            Arc::new(MockE2EDecryptor),
         );
 
         service.send_heartbeat().await.unwrap();
@@ -287,7 +327,9 @@ mod tests {
         assert_eq!(sent_node_id, &node_id);
         assert!(matches!(status, NodeStatus::Idle));
         assert_eq!(models.len(), 1);
-        assert_eq!(models[0], "model1");
+        assert_eq!(models[0].name, "model1");
+        assert_eq!(models[0].content_hash, "sha256:aaa");
+        assert_eq!(models[0].size_bytes, 100);
         assert_eq!(hardware.gpu_name, "GPU1");
         assert_eq!(hardware.vram_free_mb, 8192);
     }
@@ -310,7 +352,15 @@ mod tests {
             valid_token: "secret".to_string(),
         });
 
-        let service = WorkerService::new(node_id, registry, vec![], monitor, coordinator, verifier);
+        let service = WorkerService::new(
+            node_id,
+            registry,
+            vec![],
+            monitor,
+            coordinator,
+            verifier,
+            Arc::new(MockE2EDecryptor),
+        );
 
         assert!(service.verify_ticket("secret").await.unwrap());
         assert!(!service.verify_ticket("wrong").await.unwrap());
@@ -334,7 +384,15 @@ mod tests {
             valid_token: "secret".to_string(),
         });
 
-        let service = WorkerService::new(node_id, registry, vec![], monitor, coordinator, verifier);
+        let service = WorkerService::new(
+            node_id,
+            registry,
+            vec![],
+            monitor,
+            coordinator,
+            verifier,
+            Arc::new(MockE2EDecryptor),
+        );
 
         // This might fail if benchmark.py is missing or python/numpy missing,
         // but we just want to cover the call path in the application service
@@ -343,6 +401,40 @@ mod tests {
         assert!(
             result.is_ok() || result.is_err(),
             "run_initial_benchmark should return a Result"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_encryption_public_key() {
+        let node_id = "node-1".to_string();
+        let registry = Arc::new(RwLock::new(ModelRegistry::new()));
+        let monitor = Arc::new(MockHardwareMonitor {
+            status: HardwareStatus {
+                gpu_name: "GPU1".to_string(),
+                vram_free_mb: 0,
+            },
+            is_idle: true,
+        });
+        let coordinator = Arc::new(MockCoordinatorClient {
+            heartbeat_calls: Arc::new(Mutex::new(Vec::new())),
+        });
+        let verifier = Arc::new(MockAuthTokenVerifier {
+            valid_token: "secret".to_string(),
+        });
+
+        let service = WorkerService::new(
+            node_id,
+            registry,
+            vec![],
+            monitor,
+            coordinator,
+            verifier,
+            Arc::new(MockE2EDecryptor),
+        );
+
+        assert_eq!(
+            service.encryption_public_key(),
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
         );
     }
 }

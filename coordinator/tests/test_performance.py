@@ -17,8 +17,9 @@ import time
 import httpx
 from fastapi import FastAPI
 
-# Simulated synchronous DB delay (seconds), matches the PR description.
-SIMULATED_DB_DELAY_S = 0.02  # 20 ms
+# Simulated synchronous DB delay (seconds).  The delay must be long enough that
+# thread-pool startup overhead is negligible relative to total execution time.
+SIMULATED_DB_DELAY_S = 0.10  # 100 ms
 CONCURRENT_REQUESTS = 10
 
 

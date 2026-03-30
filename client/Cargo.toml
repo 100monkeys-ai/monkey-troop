@@ -23,6 +23,13 @@ tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 config = { workspace = true }
 
+# Streaming & bytes
+futures = { workspace = true }
+bytes = { workspace = true }
+
+# E2E encryption (client-side ECDH)
+x25519-dalek = { workspace = true }
+
 # Client-specific dependencies
 clap = { version = "4.4", features = ["derive"] }  # CLI interface
 

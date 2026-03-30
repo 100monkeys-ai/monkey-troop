@@ -14,13 +14,14 @@ use crate::infrastructure::config::Config;
 use crate::infrastructure::engines::ollama::OllamaEngine;
 use crate::infrastructure::system::auth::JwtVerifier;
 use crate::infrastructure::system::coordinator::HttpCoordinatorClient;
+use crate::infrastructure::system::e2e_crypto::X25519Decryptor;
 use crate::infrastructure::system::gpu::NvidiaGpuMonitor;
 use crate::presentation::api::proxy::{create_proxy_router, ProxyState};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-    info!("🐒 Monkey Troop Worker (DDD Aligned) starting...");
+    info!("Monkey Troop Worker (DDD Aligned) starting...");
 
     let config = Config::from_env()?;
 
@@ -37,6 +38,10 @@ async fn main() -> Result<()> {
     let public_key = "---PUBLIC KEY---".to_string();
     let verifier = Arc::new(JwtVerifier::new(public_key));
 
+    // E2E encryption keypair
+    let e2e_decryptor = Arc::new(X25519Decryptor::new());
+    info!("E2E encryption keypair generated");
+
     // Application Service
     let service = Arc::new(WorkerService::new(
         config.node_id.clone(),
@@ -45,6 +50,7 @@ async fn main() -> Result<()> {
         monitor,
         coordinator,
         verifier,
+        e2e_decryptor,
     ));
     // 1. Initial registry refresh
     service.refresh_model_registry().await?;
@@ -72,7 +78,7 @@ async fn main() -> Result<()> {
     });
     let app = create_proxy_router(proxy_state);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8001").await?;
-    info!("✓ Proxy API listening on :8001");
+    info!("Proxy API listening on :8001");
 
     let proxy_handle = tokio::spawn(async move {
         axum::serve(listener, app).await.unwrap();

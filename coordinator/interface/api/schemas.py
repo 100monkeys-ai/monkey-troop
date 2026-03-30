@@ -16,13 +16,20 @@ class HardwareInfoSchema(BaseModel):
     vram_free: int
 
 
+class ModelIdentitySchema(BaseModel):
+    name: str
+    content_hash: str
+    size_bytes: int
+
+
 class NodeHeartbeatSchema(BaseModel):
     node_id: str
     tailscale_ip: str
     status: str
-    models: List[str]
+    models: List[ModelIdentitySchema]
     hardware: HardwareInfoSchema
     engines: List[EngineInfoSchema]
+    encryption_public_key: Optional[str] = None
 
 
 class ChallengeResponseSchema(BaseModel):
@@ -48,6 +55,7 @@ class AuthorizeResponseSchema(BaseModel):
     target_ip: str
     token: str
     estimated_cost: int
+    encryption_public_key: Optional[str] = None
 
 
 class BalanceResponseSchema(BaseModel):
@@ -64,3 +72,20 @@ class TransactionSchema(BaseModel):
     duration: Optional[int]
     timestamp: str
     type: str
+
+
+class ReputationComponentsSchema(BaseModel):
+    availability: float
+    reliability: float
+    performance: float
+
+
+class NodeReputationSchema(BaseModel):
+    node_id: str
+    score: float
+    tier: str
+    components: ReputationComponentsSchema
+    total_jobs: int
+    successful_jobs: int
+    failed_jobs: int
+    updated_at: str

@@ -19,7 +19,7 @@ def test_dependency_providers():
     accounting = get_accounting_service(db)
     assert accounting is not None
 
-    discovery = get_discovery_service(redis)
+    discovery = get_discovery_service(redis, db)
     assert discovery is not None
 
     verification = get_verification_service(db, redis)

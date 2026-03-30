@@ -1,4 +1,5 @@
 mod config;
+mod e2e_crypto;
 mod proxy;
 
 use anyhow::Result;

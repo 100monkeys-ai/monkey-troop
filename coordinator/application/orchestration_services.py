@@ -1,6 +1,7 @@
 """Application layer use cases for orchestrated cross-context workflows."""
 
 from dataclasses import dataclass
+from typing import Optional
 
 from .accounting_services import AccountingService
 from .inference_services import DiscoveryService
@@ -30,6 +31,7 @@ class AuthorizationResult:
     target_ip: str
     token: str
     estimated_cost: int
+    encryption_public_key: Optional[str] = None
 
 
 class OrchestrationService:
@@ -72,4 +74,33 @@ class OrchestrationService:
             target_ip=selected_node.tailscale_ip,
             token=ticket.token,
             estimated_cost=300,
+            encryption_public_key=selected_node.encryption_public_key,
         )
+
+    def complete_job(
+        self,
+        job_id: str,
+        requester_pk: str,
+        worker_node_id: str,
+        worker_owner_pk: str,
+        duration_seconds: int,
+        multiplier: float,
+        success: bool,
+    ) -> dict:
+        """Orchestrate job completion across accounting and reputation."""
+        result = {"status": "failed"}
+
+        if success:
+            result = self.accounting_service.process_job_completion(
+                job_id,
+                requester_pk,
+                worker_node_id,
+                worker_owner_pk,
+                duration_seconds,
+                multiplier,
+            )
+
+        self.discovery_service.record_job_outcome(worker_node_id, success)
+        self.discovery_service.recalculate_reputation(worker_node_id)
+
+        return result
