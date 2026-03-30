@@ -1,6 +1,7 @@
 use crate::application::services::WorkerService;
 use crate::domain::inference::{
-    ChatMessage, InferenceChoice, InferenceRequest, InferenceResponse, TokenUsage,
+    ChatMessage, ChatMessageDelta, InferenceChoice, InferenceRequest, InferenceResponse,
+    StreamingChoice, StreamingChunk, TokenUsage,
 };
 use axum::{
     extract::{Json, State},
@@ -139,31 +140,35 @@ async fn handle_chat_completion(
 }
 
 fn build_streaming_response(model_id: String, session_key: Option<[u8; 32]>) -> Response {
-    use serde_json::json;
-
     let chunks = vec![
-        json!({
-            "id": "chatcmpl-123",
-            "object": "chat.completion.chunk",
-            "created": 1677652288_u64,
-            "model": &model_id,
-            "choices": [{
-                "index": 0,
-                "delta": {"role": "assistant", "content": "Hello"},
-                "finish_reason": serde_json::Value::Null
-            }]
-        }),
-        json!({
-            "id": "chatcmpl-123",
-            "object": "chat.completion.chunk",
-            "created": 1677652288_u64,
-            "model": &model_id,
-            "choices": [{
-                "index": 0,
-                "delta": {"content": "!"},
-                "finish_reason": "stop"
-            }]
-        }),
+        StreamingChunk {
+            id: "chatcmpl-123".to_string(),
+            object: "chat.completion.chunk".to_string(),
+            created: 1677652288,
+            model: model_id.clone(),
+            choices: vec![StreamingChoice {
+                index: 0,
+                delta: ChatMessageDelta {
+                    role: Some("assistant".to_string()),
+                    content: Some("Hello".to_string()),
+                },
+                finish_reason: None,
+            }],
+        },
+        StreamingChunk {
+            id: "chatcmpl-123".to_string(),
+            object: "chat.completion.chunk".to_string(),
+            created: 1677652288,
+            model: model_id,
+            choices: vec![StreamingChoice {
+                index: 0,
+                delta: ChatMessageDelta {
+                    role: None,
+                    content: Some("!".to_string()),
+                },
+                finish_reason: Some("stop".to_string()),
+            }],
+        },
     ];
 
     let chunks_len = chunks.len();
