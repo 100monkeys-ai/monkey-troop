@@ -10,7 +10,7 @@ use axum::{
 };
 use monkey_troop_shared::{
     retry_with_backoff, AuthorizeRequest, AuthorizeResponse, ChatCompletionRequest, ModelsResponse,
-    TroopError, TroopResult, AUTH_TIMEOUT, INFERENCE_TIMEOUT,
+    TroopResult, AUTH_TIMEOUT, INFERENCE_TIMEOUT,
 };
 use std::sync::Arc;
 use tracing::{error, info};
@@ -122,7 +122,6 @@ async fn chat_completions_handler(
                 .status(status_u16)
                 .header("content-type", "text/event-stream")
                 .header("cache-control", "no-cache")
-                .header("connection", "keep-alive")
                 .body(axum::body::Body::from_stream(response.bytes_stream()))
                 .map_err(|e| {
                     error!("Failed to build streaming response: {}", e);
@@ -147,9 +146,25 @@ async fn chat_completions_handler(
 
         info!("✓ Response received, forwarding to client");
 
+        // Hop-by-hop headers must not be forwarded by a proxy.
+        const HOP_BY_HOP: &[&str] = &[
+            "connection",
+            "keep-alive",
+            "transfer-encoding",
+            "te",
+            "trailer",
+            "upgrade",
+            "proxy-authorization",
+            "proxy-authenticate",
+        ];
+
         let mut builder = Response::builder().status(status_u16);
         if let Some(builder_headers) = builder.headers_mut() {
-            *builder_headers = headers;
+            for (name, value) in &headers {
+                if !HOP_BY_HOP.contains(&name.as_str()) {
+                    builder_headers.insert(name, value.clone());
+                }
+            }
         }
 
         Ok(builder.body(axum::body::Body::from(body)).map_err(|e| {
@@ -216,13 +231,6 @@ async fn send_to_worker(
                 .timeout(INFERENCE_TIMEOUT)
                 .send()
                 .await?;
-
-            if !response.status().is_success() {
-                return Err(TroopError::WorkerUnavailable(format!(
-                    "Worker returned status {}",
-                    response.status()
-                )));
-            }
 
             Ok(response)
         }
