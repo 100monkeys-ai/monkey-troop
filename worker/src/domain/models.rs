@@ -66,10 +66,6 @@ impl ModelRegistry {
             })
             .collect()
     }
-
-    pub fn find_model(&self, model_id: &str) -> Option<&Model> {
-        self.models.iter().find(|m| m.id == model_id)
-    }
 }
 
 #[cfg(test)]
@@ -152,28 +148,5 @@ mod tests {
         assert_eq!(identities[1].name, "model2");
         assert_eq!(identities[1].content_hash, "sha256:bbb");
         assert_eq!(identities[1].size_bytes, 200);
-    }
-
-    #[test]
-    fn test_model_registry_find_model_found() {
-        let mut registry = ModelRegistry::new();
-        registry.add_model(Model {
-            id: "llama3:8b".to_string(),
-            engine_type: EngineType::Ollama,
-        });
-        registry.add_model(Model {
-            id: "mistral:latest".to_string(),
-            engine_type: EngineType::Vllm,
-        });
-
-        let found = registry.find_model("llama3:8b");
-        assert!(found.is_some());
-        assert_eq!(found.unwrap().engine_type, EngineType::Ollama);
-    }
-
-    #[test]
-    fn test_model_registry_find_model_not_found() {
-        let registry = ModelRegistry::new();
-        assert!(registry.find_model("nonexistent").is_none());
     }
 }
