@@ -3,14 +3,21 @@
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from application.inference_services import DiscoveryService
 from application.orchestration_services import OrchestrationService
 from domain.inference.models import EngineInfo, HardwareSpec, ModelIdentity, Node
+from domain.inference.reputation import ReputationTier
 from infrastructure.dependencies import get_discovery_service, get_orchestration_service
 
-from .schemas import AuthorizeRequestSchema, AuthorizeResponseSchema, NodeHeartbeatSchema
+from .schemas import (
+    AuthorizeRequestSchema,
+    AuthorizeResponseSchema,
+    NodeHeartbeatSchema,
+    NodeReputationSchema,
+    ReputationComponentsSchema,
+)
 
 router = APIRouter(tags=["Inference"])
 
@@ -21,8 +28,6 @@ async def authorize_request(
     orchestration_service: OrchestrationService = Depends(get_orchestration_service),
 ):
     """Orchestrated endpoint: Authorize a request across multiple contexts."""
-    from fastapi import HTTPException
-
     from application.orchestration_services import InsufficientCreditsError, NoNodesAvailableError
 
     try:
@@ -65,9 +70,41 @@ async def list_peers(
     model: Optional[str] = Query(None),
     discovery_service: DiscoveryService = Depends(get_discovery_service),
 ):
-    """List available nodes, optionally filtered by model."""
+    """List available nodes sorted by reputation, optionally filtered by model."""
     nodes = discovery_service.list_peers(model)
-    return {"count": len(nodes), "nodes": [json.loads(n.to_json()) for n in nodes]}
+    nodes_data = []
+    for n in nodes:
+        node_dict = json.loads(n.to_json())
+        node_dict["reputation_score"] = n.reputation_score
+        nodes_data.append(node_dict)
+    return {"count": len(nodes), "nodes": nodes_data}
+
+
+@router.get("/nodes/{node_id}/reputation", response_model=NodeReputationSchema)
+async def get_node_reputation(
+    node_id: str,
+    discovery_service: DiscoveryService = Depends(get_discovery_service),
+):
+    """Get detailed reputation breakdown for a specific node."""
+    rep = discovery_service.reputation_repo.get_reputation(node_id)
+    if not rep:
+        raise HTTPException(status_code=404, detail="Node reputation not found")
+
+    tier = ReputationTier.from_score(rep.score)
+    return NodeReputationSchema(
+        node_id=rep.node_id,
+        score=rep.score.value,
+        tier=tier.value,
+        components=ReputationComponentsSchema(
+            availability=rep.components.availability,
+            reliability=rep.components.reliability,
+            performance=rep.components.performance,
+        ),
+        total_jobs=rep.total_jobs,
+        successful_jobs=rep.successful_jobs,
+        failed_jobs=rep.failed_jobs,
+        updated_at=rep.updated_at.isoformat(),
+    )
 
 
 @router.get("/v1/models")

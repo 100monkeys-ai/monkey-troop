@@ -63,22 +63,28 @@ def test_register_heartbeat(discovery_service, mock_discovery_repo, mock_reputat
     mock_reputation_repo.record_heartbeat.assert_called_once_with("node1")
 
 
-def test_select_node_for_model_by_name(discovery_service, mock_discovery_repo):
+def test_select_node_for_model_by_name(
+    discovery_service, mock_discovery_repo, mock_reputation_repo
+):
     node1 = Node("n1", "ip1", "IDLE", [_mi("m1")], HardwareSpec("g1", 1), [])
     node2 = Node("n2", "ip2", "BUSY", [_mi("m1")], HardwareSpec("g1", 1), [])
 
     mock_discovery_repo.find_nodes_by_model.return_value = [node1, node2]
+    mock_reputation_repo.get_reputation.return_value = None
 
     selected = discovery_service.select_node_for_model("m1")
     assert selected == node1
     mock_discovery_repo.find_nodes_by_model.assert_called_once_with("m1")
 
 
-def test_select_node_for_model_by_hash(discovery_service, mock_discovery_repo):
+def test_select_node_for_model_by_hash(
+    discovery_service, mock_discovery_repo, mock_reputation_repo
+):
     node1 = Node(
         "n1", "ip1", "IDLE", [_mi("m1", content_hash="sha256:abc")], HardwareSpec("g1", 1), []
     )
     mock_discovery_repo.find_nodes_by_model.return_value = [node1]
+    mock_reputation_repo.get_reputation.return_value = None
 
     selected = discovery_service.select_node_for_model("sha256:abc")
     assert selected == node1
