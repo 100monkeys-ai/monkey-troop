@@ -33,7 +33,7 @@ pub struct NodeHeartbeat {
     pub models: Vec<ModelIdentity>,
     pub hardware: HardwareInfo,
     pub engines: Vec<EngineInfo>,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub encryption_public_key: Option<String>,
 }
 
@@ -100,7 +100,7 @@ pub struct AuthorizeRequest {
 pub struct AuthorizeResponse {
     pub target_ip: String,
     pub token: String, // Signed JWT
-    #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub encryption_public_key: Option<String>,
 }
 

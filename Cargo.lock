@@ -1505,7 +1505,10 @@ dependencies = [
  "chrono",
  "config",
  "futures",
+ "futures-util",
  "hostname",
+ "http-body",
+ "http-body-util",
  "httpmock",
  "jsonwebtoken",
  "monkey-troop-shared",
@@ -1521,6 +1524,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+ "x25519-dalek",
 ]
 
 [[package]]
