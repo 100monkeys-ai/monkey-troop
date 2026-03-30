@@ -12,6 +12,7 @@ use futures::StreamExt;
 use http_body::Frame;
 use http_body_util::StreamBody;
 use serde_json::Value;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use tracing::info;
 
@@ -102,31 +103,97 @@ async fn handle_chat_completion(
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let sse_stream =
-            chunk_stream.map(|result| -> Result<Frame<Bytes>, std::convert::Infallible> {
-                match result {
-                    Ok(chunk) => {
-                        let json_str = serde_json::to_string(&chunk).unwrap_or_default();
-                        Ok(Frame::data(Bytes::from(format!("data: {json_str}\n\n"))))
+        let response_body = if let Some(key) = session_key {
+            let base_nonce = monkey_troop_shared::generate_base_nonce();
+            let seq_counter = Arc::new(AtomicU32::new(0));
+            let seq_for_done = seq_counter.clone();
+            let key_for_done = key;
+            let base_nonce_for_done = base_nonce;
+
+            let sse_stream = chunk_stream.map(
+                move |result| -> Result<Frame<Bytes>, std::convert::Infallible> {
+                    let seq = seq_counter.fetch_add(1, Ordering::Relaxed);
+                    match result {
+                        Ok(chunk) => {
+                            let json_str = serde_json::to_string(&chunk).unwrap_or_default();
+                            let encrypted = monkey_troop_shared::encrypt_chunk(
+                                &key,
+                                &base_nonce,
+                                seq,
+                                json_str.as_bytes(),
+                            )
+                            .expect("Chunk encryption should not fail");
+                            let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
+                            let envelope_json =
+                                serde_json::to_string(&envelope).unwrap_or_default();
+                            Ok(Frame::data(Bytes::from(format!(
+                                "data: {envelope_json}\n\n"
+                            ))))
+                        }
+                        Err(_) => {
+                            let encrypted = monkey_troop_shared::encrypt_chunk(
+                                &key,
+                                &base_nonce,
+                                seq,
+                                b"[DONE]",
+                            )
+                            .expect("Chunk encryption should not fail");
+                            let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
+                            let envelope_json =
+                                serde_json::to_string(&envelope).unwrap_or_default();
+                            Ok(Frame::data(Bytes::from(format!(
+                                "data: {envelope_json}\n\n"
+                            ))))
+                        }
                     }
-                    Err(_) => Ok(Frame::data(Bytes::from("data: [DONE]\n\n"))),
-                }
+                },
+            );
+
+            let done_frame = futures::stream::once(async move {
+                let seq = seq_for_done.load(Ordering::Relaxed);
+                let encrypted = monkey_troop_shared::encrypt_chunk(
+                    &key_for_done,
+                    &base_nonce_for_done,
+                    seq,
+                    b"[DONE]",
+                )
+                .expect("Chunk encryption should not fail");
+                let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
+                let envelope_json = serde_json::to_string(&envelope).unwrap_or_default();
+                Ok::<Frame<Bytes>, std::convert::Infallible>(Frame::data(Bytes::from(format!(
+                    "data: {envelope_json}\n\n"
+                ))))
             });
 
-        let done_frame = futures::stream::once(async {
-            Ok::<Frame<Bytes>, std::convert::Infallible>(Frame::data(Bytes::from(
-                "data: [DONE]\n\n",
-            )))
-        });
+            let full_stream = sse_stream.chain(done_frame);
+            axum::body::Body::new(StreamBody::new(full_stream))
+        } else {
+            let sse_stream =
+                chunk_stream.map(|result| -> Result<Frame<Bytes>, std::convert::Infallible> {
+                    match result {
+                        Ok(chunk) => {
+                            let json_str = serde_json::to_string(&chunk).unwrap_or_default();
+                            Ok(Frame::data(Bytes::from(format!("data: {json_str}\n\n"))))
+                        }
+                        Err(_) => Ok(Frame::data(Bytes::from("data: [DONE]\n\n"))),
+                    }
+                });
 
-        let full_stream = sse_stream.chain(done_frame);
-        let body = StreamBody::new(full_stream);
+            let done_frame = futures::stream::once(async {
+                Ok::<Frame<Bytes>, std::convert::Infallible>(Frame::data(Bytes::from(
+                    "data: [DONE]\n\n",
+                )))
+            });
+
+            let full_stream = sse_stream.chain(done_frame);
+            axum::body::Body::new(StreamBody::new(full_stream))
+        };
 
         return Ok(Response::builder()
             .header("Content-Type", "text/event-stream")
             .header("Cache-Control", "no-cache")
             .header("Connection", "keep-alive")
-            .body(axum::body::Body::new(body))
+            .body(response_body)
             .unwrap());
     }
 
