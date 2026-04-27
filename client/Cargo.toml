@@ -31,7 +31,7 @@ bytes = { workspace = true }
 x25519-dalek = { workspace = true }
 
 # Client-specific dependencies
-clap = { version = "4.4", features = ["derive"] }  # CLI interface
+clap = { version = "4.6", features = ["derive"] }  # CLI interface
 
 # Shared types
 monkey-troop-shared = { path = "../shared" }
