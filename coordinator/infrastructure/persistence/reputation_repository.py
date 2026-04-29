@@ -31,6 +31,14 @@ class SqlAlchemyNodeReputationRepository(NodeReputationRepository):
             return None
         return self._to_domain(db_rep)
 
+    def get_reputations_batch(self, node_ids: List[str]) -> List[NodeReputation]:
+        db_reps = (
+            self.session.query(db_models.NodeReputationModel)
+            .filter(db_models.NodeReputationModel.node_id.in_(node_ids))
+            .all()
+        )
+        return [self._to_domain(r) for r in db_reps]
+
     def save_reputation(self, reputation: NodeReputation) -> None:
         db_rep = (
             self.session.query(db_models.NodeReputationModel)
