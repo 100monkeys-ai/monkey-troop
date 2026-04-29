@@ -10,15 +10,23 @@ def test_main_module_execution():
     # We use a subprocess to run the module and then terminate it.
     # This ensures the if __name__ == "__main__" block is covered and that startup
     # does not immediately crash.
+    env = os.environ.copy()
+    env["RECEIPT_SECRET"] = "test_secret"
+    env["DATABASE_URL"] = "sqlite:////tmp/test_main_module.db"
+
+    # We must ensure the current directory is in PYTHONPATH so main.py can import its modules
+    current_pythonpath = env.get("PYTHONPATH", "")
+    if current_pythonpath:
+        env["PYTHONPATH"] = f"{current_pythonpath}:."
+    else:
+        env["PYTHONPATH"] = "."
+
     process = subprocess.Popen(
         [sys.executable, "main.py"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env={
-            **os.environ,
-            "RECEIPT_SECRET": "test_secret",
-            "DATABASE_URL": "sqlite:////tmp/test_main_module.db",
-        },
+        env=env,
+        cwd=os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) # Set cwd to coordinator root
     )
 
     # Wait a short moment for it to start; it should still be running after this.
