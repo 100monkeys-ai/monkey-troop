@@ -1,6 +1,7 @@
 use crate::config::Config;
 use anyhow::Result;
 
+use axum::http::HeaderName;
 use axum::{
     extract::State,
     http::StatusCode,
@@ -13,7 +14,6 @@ use monkey_troop_shared::{
     retry_with_backoff, AuthorizeRequest, AuthorizeResponse, ChatCompletionRequest, ModelsResponse,
     TroopError, TroopResult, AUTH_TIMEOUT, INFERENCE_TIMEOUT,
 };
-use axum::http::HeaderName;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{error, info};
