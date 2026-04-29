@@ -4,30 +4,37 @@ from coordinator.application.orchestration_services import (
     OrchestrationService,
     InsufficientCreditsError,
     NoNodesAvailableError,
-    AuthorizationResult
+    AuthorizationResult,
 )
+
 
 @pytest.fixture
 def mock_accounting_service():
     return MagicMock()
 
+
 @pytest.fixture
 def mock_discovery_service():
     return MagicMock()
 
+
 @pytest.fixture
 def mock_security_service():
     return MagicMock()
+
 
 @pytest.fixture
 def orchestration_service(mock_accounting_service, mock_discovery_service, mock_security_service):
     return OrchestrationService(
         accounting_service=mock_accounting_service,
         discovery_service=mock_discovery_service,
-        security_service=mock_security_service
+        security_service=mock_security_service,
     )
 
-def test_authorize_inference_success(orchestration_service, mock_accounting_service, mock_discovery_service, mock_security_service):
+
+def test_authorize_inference_success(
+    orchestration_service, mock_accounting_service, mock_discovery_service, mock_security_service
+):
     # Setup mocks
     mock_user = MagicMock()
     mock_user.balance.seconds = 1000
@@ -57,6 +64,7 @@ def test_authorize_inference_success(orchestration_service, mock_accounting_serv
     mock_discovery_service.select_node_for_model.assert_called_once_with("gpt-4")
     mock_security_service.issue_authorization_ticket.assert_called_once_with("user1", "node1")
 
+
 def test_authorize_inference_insufficient_credits(orchestration_service, mock_accounting_service):
     # Setup mock user with less than 300 credits
     mock_user = MagicMock()
@@ -67,7 +75,10 @@ def test_authorize_inference_insufficient_credits(orchestration_service, mock_ac
     with pytest.raises(InsufficientCreditsError):
         orchestration_service.authorize_inference("user1", "gpt-4")
 
-def test_authorize_inference_no_nodes(orchestration_service, mock_accounting_service, mock_discovery_service):
+
+def test_authorize_inference_no_nodes(
+    orchestration_service, mock_accounting_service, mock_discovery_service
+):
     # Setup mock user with enough credits
     mock_user = MagicMock()
     mock_user.balance.seconds = 1000
@@ -80,7 +91,10 @@ def test_authorize_inference_no_nodes(orchestration_service, mock_accounting_ser
     with pytest.raises(NoNodesAvailableError):
         orchestration_service.authorize_inference("user1", "gpt-4")
 
-def test_complete_job_success(orchestration_service, mock_accounting_service, mock_discovery_service):
+
+def test_complete_job_success(
+    orchestration_service, mock_accounting_service, mock_discovery_service
+):
     # Setup mocks
     mock_accounting_service.process_job_completion.return_value = {"status": "success"}
 
@@ -92,7 +106,7 @@ def test_complete_job_success(orchestration_service, mock_accounting_service, mo
         worker_owner_pk="owner1",
         duration_seconds=100,
         multiplier=1.0,
-        success=True
+        success=True,
     )
 
     # Assert
@@ -103,7 +117,10 @@ def test_complete_job_success(orchestration_service, mock_accounting_service, mo
     mock_discovery_service.record_job_outcome.assert_called_once_with("node1", True)
     mock_discovery_service.recalculate_reputation.assert_called_once_with("node1")
 
-def test_complete_job_failure(orchestration_service, mock_accounting_service, mock_discovery_service):
+
+def test_complete_job_failure(
+    orchestration_service, mock_accounting_service, mock_discovery_service
+):
     # Execute with success=False
     result = orchestration_service.complete_job(
         job_id="job123",
@@ -112,7 +129,7 @@ def test_complete_job_failure(orchestration_service, mock_accounting_service, mo
         worker_owner_pk="owner1",
         duration_seconds=100,
         multiplier=1.0,
-        success=False
+        success=False,
     )
 
     # Assert
