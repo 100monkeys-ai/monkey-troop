@@ -88,26 +88,52 @@ def test_check_rate_limit_exceeded(limiter, mock_redis):
     mock_redis.setex.assert_not_called()
 
 
-def test_check_discovery_limit(limiter):
+def test_check_discovery_limit(limiter, mock_redis):
     """Test discovery limit check uses correct key and limit."""
-    limiter.check_rate_limit = MagicMock(return_value=(True, 99))
+    mock_redis.get.return_value = None
 
     allowed, remaining = limiter.check_discovery_limit("1.2.3.4")
 
     assert allowed is True
-    assert remaining == 99
-    limiter.check_rate_limit.assert_called_once_with("ratelimit:discovery:1.2.3.4", DISCOVERY_LIMIT)
+    assert remaining == DISCOVERY_LIMIT - 1
+    mock_redis.get.assert_called_once_with("ratelimit:discovery:1.2.3.4")
+    mock_redis.setex.assert_called_once_with("ratelimit:discovery:1.2.3.4", WINDOW_SECONDS, 1)
 
 
-def test_check_inference_limit(limiter):
+def test_check_discovery_limit_exceeded(limiter, mock_redis):
+    """Test discovery limit check when limit is exceeded."""
+    mock_redis.get.return_value = str(DISCOVERY_LIMIT).encode("utf-8")
+
+    allowed, remaining = limiter.check_discovery_limit("1.2.3.4")
+
+    assert allowed is False
+    assert remaining == 0
+    mock_redis.get.assert_called_once_with("ratelimit:discovery:1.2.3.4")
+    mock_redis.incr.assert_not_called()
+
+
+def test_check_inference_limit(limiter, mock_redis):
     """Test inference limit check uses correct key and limit."""
-    limiter.check_rate_limit = MagicMock(return_value=(True, 19))
+    mock_redis.get.return_value = None
 
     allowed, remaining = limiter.check_inference_limit("user123")
 
     assert allowed is True
-    assert remaining == 19
-    limiter.check_rate_limit.assert_called_once_with("ratelimit:inference:user123", INFERENCE_LIMIT)
+    assert remaining == INFERENCE_LIMIT - 1
+    mock_redis.get.assert_called_once_with("ratelimit:inference:user123")
+    mock_redis.setex.assert_called_once_with("ratelimit:inference:user123", WINDOW_SECONDS, 1)
+
+
+def test_check_inference_limit_exceeded(limiter, mock_redis):
+    """Test inference limit check when limit is exceeded."""
+    mock_redis.get.return_value = str(INFERENCE_LIMIT).encode("utf-8")
+
+    allowed, remaining = limiter.check_inference_limit("user123")
+
+    assert allowed is False
+    assert remaining == 0
+    mock_redis.get.assert_called_once_with("ratelimit:inference:user123")
+    mock_redis.incr.assert_not_called()
 
 
 def test_reset_limit(limiter, mock_redis):
