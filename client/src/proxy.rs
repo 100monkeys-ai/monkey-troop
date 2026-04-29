@@ -13,6 +13,7 @@ use monkey_troop_shared::{
     retry_with_backoff, AuthorizeRequest, AuthorizeResponse, ChatCompletionRequest, ModelsResponse,
     TroopError, TroopResult, AUTH_TIMEOUT, INFERENCE_TIMEOUT,
 };
+use axum::http::HeaderName;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{error, info};
@@ -34,7 +35,7 @@ const HOP_BY_HOP: &[&str] = &[
 /// headers nominated by the `Connection` header value (RFC 7230 §6.1). Uses `append` to
 /// preserve multi-valued headers such as `set-cookie`.
 fn copy_end_to_end_headers(src: &axum::http::HeaderMap, dst: &mut axum::http::HeaderMap) {
-    let connection_nominated: HashSet<String> = src
+    let connection_nominated: HashSet<HeaderName> = src
         .get(axum::http::header::CONNECTION)
         .and_then(|v| v.to_str().ok())
         .map(|s| {
@@ -44,7 +45,7 @@ fn copy_end_to_end_headers(src: &axum::http::HeaderMap, dst: &mut axum::http::He
                     if t.is_empty() {
                         None
                     } else {
-                        Some(t.to_ascii_lowercase())
+                        t.parse::<HeaderName>().ok()
                     }
                 })
                 .collect()
@@ -56,7 +57,7 @@ fn copy_end_to_end_headers(src: &axum::http::HeaderMap, dst: &mut axum::http::He
         if HOP_BY_HOP.contains(&name_str) {
             continue;
         }
-        if connection_nominated.contains(name_str) {
+        if connection_nominated.contains(name) {
             continue;
         }
         dst.append(name, value.clone());
