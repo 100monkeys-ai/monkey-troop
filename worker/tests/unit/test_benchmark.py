@@ -12,6 +12,7 @@ if 'torch' not in sys.modules:
     sys.modules['torch'] = mock_torch
 
 import benchmark
+import importlib
 
 class TestBenchmark(unittest.TestCase):
     @patch('benchmark.torch')
@@ -63,6 +64,16 @@ class TestBenchmark(unittest.TestCase):
             with self.assertRaises(ImportError) as cm:
                 benchmark.run_benchmark("abc", 128)
             self.assertEqual(str(cm.exception), "torch is not installed")
+
+    def test_import_benchmark_without_torch(self):
+        """Test that missing torch dependency correctly falls back to torch = None during import."""
+        with patch.dict('sys.modules', {'torch': None}):
+            importlib.reload(benchmark)
+            self.assertIsNone(benchmark.torch)
+
+        # Reload again to restore the module state for other tests
+        importlib.reload(benchmark)
+        self.assertIsNotNone(benchmark.torch)
 
     def test_main_error_path(self):
         """
