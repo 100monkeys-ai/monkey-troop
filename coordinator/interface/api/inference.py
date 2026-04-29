@@ -76,9 +76,7 @@ async def list_peers(
     nodes = discovery_service.list_peers(model)
     nodes_data = []
     for n in nodes:
-        node_dict = json.loads(n.to_json())
-        node_dict["reputation_score"] = n.reputation_score
-        nodes_data.append(node_dict)
+        nodes_data.append(n.to_dict())
     return {"count": len(nodes), "nodes": nodes_data}
 
 

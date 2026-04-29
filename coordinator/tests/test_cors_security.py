@@ -3,12 +3,14 @@ import importlib
 import pytest
 from fastapi.testclient import TestClient
 
+
 def test_cors_default_secure():
     # Force reload of main to pick up default env
     if "ALLOWED_ORIGINS" in os.environ:
         del os.environ["ALLOWED_ORIGINS"]
 
     import main
+
     importlib.reload(main)
     from main import app
 
@@ -35,11 +37,13 @@ def test_cors_default_secure():
     )
     assert "access-control-allow-origin" not in response.headers
 
+
 def test_cors_wildcard_rejection():
     # Mock ALLOWED_ORIGINS="*"
     os.environ["ALLOWED_ORIGINS"] = "*"
 
     import main
+
     importlib.reload(main)
     from main import app
 
@@ -65,11 +69,13 @@ def test_cors_wildcard_rejection():
     )
     assert response.headers.get("access-control-allow-origin") == "http://localhost:3000"
 
+
 def test_cors_multiple_origins_with_wildcard():
     # Mock ALLOWED_ORIGINS="http://trusted.com,*"
     os.environ["ALLOWED_ORIGINS"] = "http://trusted.com,*"
 
     import main
+
     importlib.reload(main)
     from main import app
 
