@@ -74,16 +74,13 @@ async fn main() -> Result<()> {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8001").await?;
     info!("✓ Proxy API listening on :8001");
 
-    let proxy_handle = tokio::spawn(async move {
-        axum::serve(listener, app).await.unwrap();
-    });
-
     tokio::select! {
         res = heartbeat_handle => {
             error!("Heartbeat task ended: {:?}", res);
         }
-        res = proxy_handle => {
-            error!("Proxy task ended: {:?}", res);
+        res = axum::serve(listener, app) => {
+            error!("Proxy API server ended: {:?}", res);
+            res?;
         }
     }
 
