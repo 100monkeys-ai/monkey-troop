@@ -2,6 +2,7 @@
 
 import os
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import (
     JSON,
@@ -16,7 +17,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from typing import Optional
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:

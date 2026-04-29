@@ -1,6 +1,7 @@
 import time
+
 import sqlalchemy as sa
-from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
+from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
 
 
 def benchmark_migration(num_users=1000, nodes_per_user=2):

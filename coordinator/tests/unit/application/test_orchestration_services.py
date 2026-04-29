@@ -1,10 +1,12 @@
 from unittest.mock import MagicMock
+
 import pytest
+
 from coordinator.application.orchestration_services import (
-    OrchestrationService,
+    AuthorizationResult,
     InsufficientCreditsError,
     NoNodesAvailableError,
-    AuthorizationResult,
+    OrchestrationService,
 )
 from coordinator.domain.accounting.models import JobCompletionParams
 

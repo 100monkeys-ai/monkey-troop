@@ -1,6 +1,7 @@
-import pytest
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Create mocks
 mock_sqlalchemy = MagicMock()
