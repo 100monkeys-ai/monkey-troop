@@ -1,30 +1,34 @@
 import time
 import random
-from typing import List, Optional
+from typing import List
 from unittest.mock import MagicMock
 
 # Mocking the imports as we might be running this from the root or coordinator dir
 import sys
 import os
+
 sys.path.append(os.path.join(os.getcwd(), "coordinator"))
 
 from domain.inference.models import Node, ModelIdentity, HardwareSpec
 from domain.inference.reputation import NodeReputation, ReputationScore, ReputationComponents
 from application.inference_services import DiscoveryService
-from application.inference_ports import NodeDiscoveryRepository, NodeReputationRepository
+from application.inference_ports import NodeDiscoveryRepository
+
 
 def _mi(name: str) -> ModelIdentity:
     return ModelIdentity(name=name, content_hash=f"sha256:{name}", size_bytes=1000)
 
+
 def _make_node(node_id):
     return Node(
         node_id=node_id,
-        tailscale_ip=f"100.1.1.1",
+        tailscale_ip="100.1.1.1",
         status="IDLE",
         models=[_mi("m1")],
         hardware=HardwareSpec("GPU", 1000),
         engines=[],
     )
+
 
 class LatencyMockReputationRepo:
     def __init__(self, latency=0.01):
@@ -40,10 +44,18 @@ class LatencyMockReputationRepo:
         time.sleep(self.latency)
         return [self.reputations.get(nid) for nid in node_ids]
 
-    def record_job_outcome(self, node_id, success): pass
-    def record_heartbeat(self, node_id): pass
-    def save_reputation(self, rep): pass
-    def get_all_reputations(self): return list(self.reputations.values())
+    def record_job_outcome(self, node_id, success):
+        pass
+
+    def record_heartbeat(self, node_id):
+        pass
+
+    def save_reputation(self, rep):
+        pass
+
+    def get_all_reputations(self):
+        return list(self.reputations.values())
+
 
 def run_benchmark(num_nodes=50, latency=0.005):
     print(f"Benchmarking with {num_nodes} nodes and {latency*1000:.1f}ms latency per query")
@@ -61,9 +73,12 @@ def run_benchmark(num_nodes=50, latency=0.005):
             node_id=node_id,
             score=ReputationScore(random.random()),
             components=ReputationComponents(1.0, 1.0, 1.0),
-            total_jobs=10, successful_jobs=10, failed_jobs=0,
-            total_heartbeats_expected=100, total_heartbeats_received=100,
-            updated_at=MagicMock()
+            total_jobs=10,
+            successful_jobs=10,
+            failed_jobs=0,
+            total_heartbeats_expected=100,
+            total_heartbeats_received=100,
+            updated_at=MagicMock(),
         )
 
     service = DiscoveryService(mock_discovery_repo, latency_repo)
@@ -81,6 +96,7 @@ def run_benchmark(num_nodes=50, latency=0.005):
     print(f"select_node_for_model took: {select_node_time:.4f}s")
 
     return list_peers_time, select_node_time
+
 
 if __name__ == "__main__":
     run_benchmark()

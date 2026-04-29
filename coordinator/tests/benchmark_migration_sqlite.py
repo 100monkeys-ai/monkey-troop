@@ -1,12 +1,15 @@
 import sqlite3
 import time
 
+
 def benchmark_migration(num_users=1000, nodes_per_user=5):
     conn = sqlite3.connect(":memory:")
     cursor = conn.cursor()
 
     cursor.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, public_key TEXT UNIQUE)")
-    cursor.execute("CREATE TABLE nodes (id INTEGER PRIMARY KEY, owner_id INTEGER, owner_public_key TEXT)")
+    cursor.execute(
+        "CREATE TABLE nodes (id INTEGER PRIMARY KEY, owner_id INTEGER, owner_public_key TEXT)"
+    )
 
     # Populate data
     users = [(i, f"key_{i}") for i in range(num_users)]
@@ -25,8 +28,7 @@ def benchmark_migration(num_users=1000, nodes_per_user=5):
     user_rows = cursor.fetchall()
     for user_id, public_key in user_rows:
         cursor.execute(
-            "UPDATE nodes SET owner_id = ? WHERE owner_public_key = ?",
-            (user_id, public_key)
+            "UPDATE nodes SET owner_id = ? WHERE owner_public_key = ?", (user_id, public_key)
         )
     conn.commit()
     end_time = time.perf_counter()
@@ -57,6 +59,7 @@ def benchmark_migration(num_users=1000, nodes_per_user=5):
         print("SUCCESS: All nodes updated")
 
     conn.close()
+
 
 if __name__ == "__main__":
     benchmark_migration(2000, 5)

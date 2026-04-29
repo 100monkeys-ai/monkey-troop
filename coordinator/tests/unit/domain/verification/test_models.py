@@ -34,20 +34,18 @@ def test_benchmark_result_initialization():
     assert res.multiplier == 3.5
 
 
-import pytest
-
 @pytest.mark.parametrize(
     "duration,expected_multiplier",
     [
-        (35.0, 1.0),      # Baseline
-        (17.5, 2.0),      # Faster (2x)
-        (70.0, 0.5),      # Slower (0.5x)
-        (1.0, 20.0),      # Cap at 20x
-        (0.5, 20.0),      # Faster than cap
-        (0.0, 1.0),       # Edge case: zero duration
-        (-5.0, 1.0),      # Edge case: negative duration
-        (350.0, 0.1),     # Very slow
-        (3500.0, 0.01),   # Extremely slow
+        (35.0, 1.0),  # Baseline
+        (17.5, 2.0),  # Faster (2x)
+        (70.0, 0.5),  # Slower (0.5x)
+        (1.0, 20.0),  # Cap at 20x
+        (0.5, 20.0),  # Faster than cap
+        (0.0, 1.0),  # Edge case: zero duration
+        (-5.0, 1.0),  # Edge case: negative duration
+        (350.0, 0.1),  # Very slow
+        (3500.0, 0.01),  # Extremely slow
     ],
 )
 def test_calculate_multiplier(duration, expected_multiplier):
