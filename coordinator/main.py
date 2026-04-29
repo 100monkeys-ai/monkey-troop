@@ -38,6 +38,7 @@ from transactions import (
     create_user_if_not_exists,
     get_transaction_history,
 )
+from benchmark_utils import calculate_multiplier
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -188,21 +189,6 @@ def _get_all_nodes() -> list[dict]:
         return []
     raw_nodes = redis_client.mget(keys)
     return [json.loads(raw_data) for raw_data in raw_nodes if raw_data]
-
-
-def calculate_multiplier(duration: float) -> float:
-    """
-    Calculate hardware multiplier based on benchmark duration.
-    Baseline: RTX 3060 takes ~35s -> 1.0x
-    """
-    if duration <= 0:
-        return 0.0
-
-    baseline = 35.0
-    multiplier = baseline / duration
-
-    # Cap at 20x to prevent exploits
-    return round(min(multiplier, 20.0), 2)
 
 
 # ----------------------
