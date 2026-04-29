@@ -70,7 +70,7 @@ class TestBenchmark(unittest.TestCase):
         sys.exit(1) is called and an error message is printed to stderr.
         """
         with patch('benchmark.run_benchmark') as mock_run:
-            mock_run.side_effect = Exception("Simulated benchmark failure")
+            mock_run.side_effect = RuntimeError("Simulated benchmark failure")
 
             # Arguments: script_name, seed, matrix_size
             with patch('sys.argv', ['benchmark.py', 'abc', '128']):
