@@ -19,6 +19,17 @@ class Challenge:
         return delta.total_seconds() > ttl_seconds
 
 
+@dataclass(frozen=True)
+class HardwareProof:
+    """The proof-of-hardware submission from a node."""
+
+    token: str
+    node_id: str
+    duration: float
+    device_name: str
+    proof_hash: str
+
+
 @dataclass
 class BenchmarkResult:
     """The result of a completed hardware benchmark."""

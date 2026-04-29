@@ -41,7 +41,7 @@ pub struct E2EChunkEnvelope {
 
 /// Generate a new X25519 keypair, returning (secret, base64-encoded public key)
 pub fn generate_keypair() -> (StaticSecret, String) {
-    let secret = StaticSecret::random_from_rng(rand::thread_rng());
+    let secret = StaticSecret::random_from_rng(rand::rng());
     let public = PublicKey::from(&secret);
     let public_b64 = BASE64.encode(public.as_bytes());
     (secret, public_b64)
@@ -70,7 +70,7 @@ pub fn derive_session_key(shared_secret: &[u8; 32]) -> [u8; 32] {
 /// Generate a random 12-byte nonce
 pub fn generate_base_nonce() -> [u8; 12] {
     let mut nonce = [0u8; 12];
-    rand::thread_rng().fill_bytes(&mut nonce);
+    rand::rng().fill_bytes(&mut nonce);
     nonce
 }
 
