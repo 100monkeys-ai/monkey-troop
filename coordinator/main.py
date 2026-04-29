@@ -46,19 +46,23 @@ app = FastAPI(
 )
 
 # CORS configuration
-allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
-if allowed_origins_raw == "*":
-    allowed_origins = ["*"]
-    allow_credentials = False
-elif allowed_origins_raw:
+allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+if allowed_origins_raw and allowed_origins_raw != "*":
+    # Filter out wildcards for security
     allowed_origins = [
-        origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()
+        origin.strip()
+        for origin in allowed_origins_raw.split(",")
+        if origin.strip() and origin.strip() != "*"
     ]
     allow_credentials = True
 else:
-    # Default to local development if not specified
+    # Default to local development if not specified or overly permissive
     allowed_origins = ["http://localhost:3000"]
     allow_credentials = True
+
+# If after filtering we have no valid origins, fallback to default
+if not allowed_origins:
+    allowed_origins = ["http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
