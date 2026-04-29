@@ -107,3 +107,35 @@ class TestSqlAlchemyNodeReputationRepository:
         assert len(all_reps) == 2
         node_ids = {r.node_id for r in all_reps}
         assert node_ids == {"nodeA", "nodeB"}
+
+    def test_get_or_create_new(self, repo, setup_node):
+        # When fetching a reputation for a node that doesn't exist yet,
+        # _get_or_create should initialize it with defaults
+        db_rep = repo._get_or_create("node_1")
+        assert db_rep is not None
+        assert db_rep.node_id == "node_1"
+        assert db_rep.score == 0.5
+        assert db_rep.availability == 1.0
+        assert db_rep.reliability == 1.0
+        assert db_rep.performance == 1.0
+        assert db_rep.total_jobs == 0
+        assert db_rep.successful_jobs == 0
+        assert db_rep.failed_jobs == 0
+        assert db_rep.total_heartbeats_expected == 0
+        assert db_rep.total_heartbeats_received == 0
+        assert db_rep.updated_at is not None
+
+    def test_get_or_create_existing(self, repo, setup_node):
+        # Create it first
+        rep1 = repo._get_or_create("node_1")
+
+        # Modify some values to verify we get the same one back
+        rep1.total_jobs = 10
+        repo.session.commit()
+
+        # Call _get_or_create again
+        rep2 = repo._get_or_create("node_1")
+
+        assert rep2.node_id == "node_1"
+        assert rep2.total_jobs == 10
+        assert rep1.id == rep2.id
