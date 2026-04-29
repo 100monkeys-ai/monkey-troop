@@ -1,7 +1,8 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::RwLock;
+use tokio::time::Instant;
 
 /// Circuit breaker state
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -75,5 +76,83 @@ impl CircuitBreaker {
     /// Get current state
     pub async fn state(&self) -> CircuitState {
         *self.state.read().await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+    use tokio::time::sleep;
+
+    #[tokio::test]
+    async fn test_circuit_breaker_initial_state() {
+        let cb = CircuitBreaker::new(3, Duration::from_millis(100));
+        assert_eq!(cb.state().await, CircuitState::Closed);
+        assert!(cb.allow_request().await);
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_threshold() {
+        let cb = CircuitBreaker::new(3, Duration::from_millis(100));
+
+        cb.record_failure().await;
+        cb.record_failure().await;
+        assert_eq!(cb.state().await, CircuitState::Closed);
+        assert!(cb.allow_request().await);
+
+        cb.record_failure().await;
+        assert_eq!(cb.state().await, CircuitState::Open);
+        assert!(!cb.allow_request().await);
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_timeout() {
+        tokio::time::pause();
+        let cb = CircuitBreaker::new(1, Duration::from_millis(50));
+
+        cb.record_failure().await;
+        assert_eq!(cb.state().await, CircuitState::Open);
+        assert!(!cb.allow_request().await);
+
+        tokio::time::advance(Duration::from_millis(60)).await;
+
+        assert!(cb.allow_request().await);
+        assert_eq!(cb.state().await, CircuitState::HalfOpen);
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_reset() {
+        tokio::time::pause();
+        let cb = CircuitBreaker::new(1, Duration::from_millis(50));
+
+        cb.record_failure().await;
+        assert_eq!(cb.state().await, CircuitState::Open);
+
+        tokio::time::advance(Duration::from_millis(60)).await;
+        cb.allow_request().await; // Move to HalfOpen
+        assert_eq!(cb.state().await, CircuitState::HalfOpen);
+
+        cb.record_success().await;
+        assert_eq!(cb.state().await, CircuitState::Closed);
+
+        // Verify count reset: should need another failure to trip
+        cb.record_failure().await;
+        assert_eq!(cb.state().await, CircuitState::Open);
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_half_open_failure() {
+        tokio::time::pause();
+        let cb = CircuitBreaker::new(1, Duration::from_millis(50));
+
+        cb.record_failure().await;
+        tokio::time::advance(Duration::from_millis(60)).await;
+        cb.allow_request().await; // Move to HalfOpen
+        assert_eq!(cb.state().await, CircuitState::HalfOpen);
+
+        cb.record_failure().await;
+        assert_eq!(cb.state().await, CircuitState::Open);
+        assert!(!cb.allow_request().await);
     }
 }
