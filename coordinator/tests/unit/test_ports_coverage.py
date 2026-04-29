@@ -70,3 +70,33 @@ def test_key_repository_can_be_implemented():
     assert repo.get_public_key() == "dummy-public-key"
     assert repo.get_private_key() == b"dummy-private-key"
     assert repo.ensure_keys_exist() is None
+
+
+def test_security_ports_abstract_methods():
+    """Verify that abstract methods in security ports can be called (for coverage of the 'pass' statements)."""
+
+    class DummyTokenService(TokenService):
+        def generate_ticket(self, user_id, target_node_id, project="free-tier"):
+            return super().generate_ticket(user_id, target_node_id, project)
+
+        def verify_ticket(self, token):
+            return super().verify_ticket(token)
+
+    class DummyKeyRepository(KeyRepository):
+        def get_public_key(self):
+            return super().get_public_key()
+
+        def get_private_key(self):
+            return super().get_private_key()
+
+        def ensure_keys_exist(self):
+            return super().ensure_keys_exist()
+
+    token_svc = DummyTokenService()
+    token_svc.generate_ticket("user", "node")
+    token_svc.verify_ticket("token")
+
+    key_repo = DummyKeyRepository()
+    key_repo.get_public_key()
+    key_repo.get_private_key()
+    key_repo.ensure_keys_exist()
