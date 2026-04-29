@@ -83,7 +83,7 @@ impl CircuitBreaker {
 mod tests {
     use super::*;
     use std::time::Duration;
-    use tokio::time::sleep;
+
 
     #[tokio::test]
     async fn test_circuit_breaker_initial_state() {
