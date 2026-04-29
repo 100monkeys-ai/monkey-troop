@@ -50,13 +50,11 @@ impl CoordinatorClient for HttpCoordinatorClient {
             "engines": engines
         });
 
-        if let Some(key) = encryption_public_key {
-            if let Some(obj) = payload.as_object_mut() {
-                obj.insert(
-                    "encryption_public_key".to_string(),
-                    serde_json::Value::String(key),
-                );
-            }
+        if let (Some(key), Some(obj)) = (encryption_public_key, payload.as_object_mut()) {
+            obj.insert(
+                "encryption_public_key".to_string(),
+                serde_json::Value::String(key),
+            );
         }
 
         let response = self.client.post(endpoint).json(&payload).send().await?;
