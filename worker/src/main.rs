@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
 
     // Fetch public key from coordinator for JWT verification (Simulated for MVP, should be fetch logic)
     let public_key = "---PUBLIC KEY---".to_string();
-    let verifier = Arc::new(JwtVerifier::new(public_key));
+    let verifier = Arc::new(JwtVerifier { public_key });
 
     // E2E encryption keypair
     let e2e_decryptor = Arc::new(X25519Decryptor::new());
