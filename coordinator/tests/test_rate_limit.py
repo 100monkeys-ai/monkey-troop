@@ -100,6 +100,18 @@ def test_check_discovery_limit(limiter, mock_redis):
     mock_redis.setex.assert_called_once_with("ratelimit:discovery:1.2.3.4", WINDOW_SECONDS, 1)
 
 
+def test_check_discovery_limit_exceeded(limiter, mock_redis):
+    """Test discovery limit check when limit is exceeded."""
+    mock_redis.get.return_value = str(DISCOVERY_LIMIT).encode("utf-8")
+
+    allowed, remaining = limiter.check_discovery_limit("1.2.3.4")
+
+    assert allowed is False
+    assert remaining == 0
+    mock_redis.get.assert_called_once_with("ratelimit:discovery:1.2.3.4")
+    mock_redis.incr.assert_not_called()
+
+
 def test_check_inference_limit(limiter, mock_redis):
     """Test inference limit check uses correct key and limit via Redis."""
     mock_redis.get.return_value = None
@@ -111,6 +123,18 @@ def test_check_inference_limit(limiter, mock_redis):
     mock_redis.get.assert_called_once_with("ratelimit:inference:user123")
     mock_redis.setex.assert_called_once_with("ratelimit:inference:user123", WINDOW_SECONDS, 1)
 
+
+
+def test_check_inference_limit_exceeded(limiter, mock_redis):
+    """Test inference limit check when limit is exceeded."""
+    mock_redis.get.return_value = str(INFERENCE_LIMIT).encode("utf-8")
+
+    allowed, remaining = limiter.check_inference_limit("user123")
+
+    assert allowed is False
+    assert remaining == 0
+    mock_redis.get.assert_called_once_with("ratelimit:inference:user123")
+    mock_redis.incr.assert_not_called()
 
 def test_reset_limit(limiter, mock_redis):
     """Test reset limit deletes the key from Redis."""
