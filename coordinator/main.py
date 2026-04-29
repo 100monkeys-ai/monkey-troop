@@ -14,10 +14,12 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from redis import Redis
 from sqlalchemy.orm import Session
+from alembic.config import Config
 
 import audit
 from auth import create_jwt_ticket
 from crypto import ensure_keys_exist, get_public_key_string
+from database import User, Node, get_db, init_db
 from transactions import (
     create_user_if_not_exists,
     get_user_balance,
@@ -25,19 +27,10 @@ from transactions import (
     reserve_credits,
     record_job_completion,
     get_transaction_history,
-    generate_receipt_signature,
 )
 from rate_limit import RateLimiter
 from middleware import RateLimitMiddleware, RequestTracingMiddleware
-from rate_limit import RateLimiter
-from redis import Redis
-from sqlalchemy.orm import Session
 from timeout_middleware import TimeoutMiddleware
-from transactions import (
-    check_sufficient_balance,
-    create_user_if_not_exists,
-    get_transaction_history,
-)
 
 app = FastAPI(
     title="Monkey Troop Coordinator",
@@ -348,11 +341,11 @@ async def submit_proof(req: VerifyRequest, db: Session = Depends(get_db)):
         default_user = db.query(User).first()
         if not default_user:
             # Create default user
-            default_user = User(username="system", public_key="system-key", balance_seconds=0)
+            default_user = User(public_key="system-key", balance_seconds=0)
             db.add(default_user)
             db.commit()
 
-        node = Node(node_id=req.node_id, owner_id=default_user.id)
+        node = Node(node_id=req.node_id, owner_public_key=default_user.public_key)
         db.add(node)
 
     node.multiplier = score
@@ -487,12 +480,11 @@ async def get_balance(public_key: str, db: Session = Depends(get_db)):
 @app.get("/users/{public_key}/transactions")
 async def get_transactions(
     public_key: str,
+    limit: int = 50,
     db: Session = Depends(get_db),
 ):
     """Get transaction history for a user."""
-    from transactions import get_transaction_history
-
-    return {"transactions": get_transaction_history(public_key, limit)}
+    return {"transactions": get_transaction_history(db, public_key, limit=limit)}
 
 
 @app.get("/admin/audit")

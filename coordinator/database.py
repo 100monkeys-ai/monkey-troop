@@ -10,8 +10,8 @@ from sqlalchemy import (
     BigInteger,
     DateTime,
     ForeignKey,
+    JSON,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -62,12 +62,14 @@ class Node(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     node_id = Column(String(50), unique=True, nullable=False)
-    owner_public_key = Column(String, nullable=False, index=True)
+    owner_public_key = Column(String, ForeignKey("users.public_key"), nullable=False, index=True)
 
     multiplier = Column(Float, default=1.0)  # Credit multiplier based on hardware
+    hardware_model = Column(String)
     benchmark_score = Column(Float)  # Seconds to complete standard task
     trust_score = Column(Integer, default=100)  # Reputation
     total_jobs_completed = Column(Integer, default=0)
+    last_benchmark = Column(DateTime)
 
     # Relationships
     owner = relationship("User", back_populates="nodes")
@@ -87,11 +89,15 @@ class Transaction(Base):
     from_user = Column(String, index=True, nullable=True)  # Public Key
     to_user = Column(String, index=True, nullable=True)  # Public Key
 
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    worker_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
+
     node_id = Column(String, nullable=True)
 
     duration_seconds = Column(Integer, nullable=False)
     credits_transferred = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
+    meta_data = Column("metadata", JSON)
 
     # Relationships
     requester = relationship(
