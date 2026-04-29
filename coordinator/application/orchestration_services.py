@@ -34,6 +34,17 @@ class AuthorizationResult:
     encryption_public_key: Optional[str] = None
 
 
+@dataclass
+class JobCompletionParams:
+    job_id: str
+    requester_pk: str
+    worker_node_id: str
+    worker_owner_pk: str
+    duration_seconds: int
+    multiplier: float
+    success: bool
+
+
 class OrchestrationService:
     """Orchestrates complex use cases that span multiple bounded contexts."""
 
@@ -77,30 +88,21 @@ class OrchestrationService:
             encryption_public_key=selected_node.encryption_public_key,
         )
 
-    def complete_job(
-        self,
-        job_id: str,
-        requester_pk: str,
-        worker_node_id: str,
-        worker_owner_pk: str,
-        duration_seconds: int,
-        multiplier: float,
-        success: bool,
-    ) -> dict:
+    def complete_job(self, params: JobCompletionParams) -> dict:
         """Orchestrate job completion across accounting and reputation."""
         result = {"status": "failed"}
 
-        if success:
+        if params.success:
             result = self.accounting_service.process_job_completion(
-                job_id,
-                requester_pk,
-                worker_node_id,
-                worker_owner_pk,
-                duration_seconds,
-                multiplier,
+                params.job_id,
+                params.requester_pk,
+                params.worker_node_id,
+                params.worker_owner_pk,
+                params.duration_seconds,
+                params.multiplier,
             )
 
-        self.discovery_service.record_job_outcome(worker_node_id, success)
-        self.discovery_service.recalculate_reputation(worker_node_id)
+        self.discovery_service.record_job_outcome(params.worker_node_id, params.success)
+        self.discovery_service.recalculate_reputation(params.worker_node_id)
 
         return result
