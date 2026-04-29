@@ -7,8 +7,8 @@ dispatches it to a thread pool.  These tests confirm that behaviour:
 
 * A ``def`` endpoint with a blocking sleep executes concurrently across threads,
   so N parallel requests finish in roughly 1x the single-request delay.
-* An ``async def`` endpoint with a blocking sleep holds the event loop, so N
-  parallel requests finish in roughly N× the single-request delay.
+* An ``async def`` endpoint with a non-blocking sleep executes concurrently, so N
+  parallel requests finish in roughly 1x the single-request delay.
 """
 
 import asyncio
@@ -35,13 +35,13 @@ def _make_sync_app() -> FastAPI:
     return app
 
 
-def _make_async_blocking_app() -> FastAPI:
-    """Return a FastAPI app with an *async* def endpoint that blocks the event loop."""
+def _make_async_non_blocking_app() -> FastAPI:
+    """Return a FastAPI app with an *async* def endpoint that executes without blocking the event loop."""
     app = FastAPI()
 
     @app.get("/slow")
     async def slow_async():
-        time.sleep(SIMULATED_DB_DELAY_S)  # blocks the event loop (the bug we fixed)
+        await asyncio.sleep(SIMULATED_DB_DELAY_S)  # non-blocking sleep
         return {"ok": True}
 
     return app
@@ -74,17 +74,16 @@ async def test_sync_endpoint_uses_thread_pool():
     )
 
 
-async def test_async_blocking_endpoint_serializes_requests():
+async def test_async_non_blocking_endpoint_executes_concurrently():
     """
-    An async def endpoint that calls blocking time.sleep() holds the event loop.
-    CONCURRENT_REQUESTS should therefore take close to sequential time, demonstrating
-    the problem that motivated converting submit_proof to a sync def.
+    An async def endpoint that calls non-blocking await asyncio.sleep() doesn't hold the event loop.
+    CONCURRENT_REQUESTS should therefore complete much faster than sequential execution.
     """
-    elapsed = await _time_concurrent_requests(_make_async_blocking_app())
+    elapsed = await _time_concurrent_requests(_make_async_non_blocking_app())
     sequential_time = CONCURRENT_REQUESTS * SIMULATED_DB_DELAY_S
 
-    # Blocking the event loop serializes requests; expect at least half of sequential time.
-    assert elapsed >= sequential_time * 0.5, (
-        f"Async-blocking endpoint was unexpectedly fast: {elapsed:.3f}s "
-        f"(expected >= {sequential_time * 0.5:.3f}s for {CONCURRENT_REQUESTS} requests)"
+    # Non-blocking execution should be at least 3× faster than sequential.
+    assert elapsed < sequential_time / 3, (
+        f"Async non-blocking endpoint took {elapsed:.3f}s, expected less than "
+        f"{sequential_time / 3:.3f}s (sequential would be {sequential_time:.3f}s)"
     )
