@@ -47,10 +47,12 @@ class DiscoveryService:
 
     def _weighted_select(self, candidates: List[Node]) -> Optional[Node]:
         """Select a node using reputation-weighted random selection."""
+        reps = self.reputation_repo.get_reputations_batch([n.node_id for n in candidates])
+        rep_map = {r.node_id: r.score.value for r in reps}
+
         weights = []
         for node in candidates:
-            rep = self.reputation_repo.get_reputation(node.node_id)
-            score = rep.score.value if rep else 0.5
+            score = rep_map.get(node.node_id, 0.5)
             tier = ReputationTier.from_score(ReputationScore(score))
             if tier == ReputationTier.SUSPENDED:
                 weights.append(0.0)
@@ -83,10 +85,11 @@ class DiscoveryService:
 
     def _sort_by_reputation(self, nodes: List[Node]) -> List[Node]:
         """Sort nodes by reputation score descending."""
+        reps = self.reputation_repo.get_reputations_batch([n.node_id for n in nodes])
+        rep_map = {r.node_id: r.score.value for r in reps}
 
         def get_score(node: Node) -> float:
-            rep = self.reputation_repo.get_reputation(node.node_id)
-            return rep.score.value if rep else 0.5
+            return rep_map.get(node.node_id, 0.5)
 
         return sorted(nodes, key=get_score, reverse=True)
 

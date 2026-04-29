@@ -70,7 +70,7 @@ def test_select_node_for_model_by_name(
     node2 = Node("n2", "ip2", "BUSY", [_mi("m1")], HardwareSpec("g1", 1), [])
 
     mock_discovery_repo.find_nodes_by_model.return_value = [node1, node2]
-    mock_reputation_repo.get_reputation.return_value = None
+    mock_reputation_repo.get_reputations_batch.return_value = []
 
     selected = discovery_service.select_node_for_model("m1")
     assert selected == node1
@@ -84,7 +84,7 @@ def test_select_node_for_model_by_hash(
         "n1", "ip1", "IDLE", [_mi("m1", content_hash="sha256:abc")], HardwareSpec("g1", 1), []
     )
     mock_discovery_repo.find_nodes_by_model.return_value = [node1]
-    mock_reputation_repo.get_reputation.return_value = None
+    mock_reputation_repo.get_reputations_batch.return_value = []
 
     selected = discovery_service.select_node_for_model("sha256:abc")
     assert selected == node1
@@ -114,12 +114,15 @@ def test_select_node_weighted_prefers_high_reputation(
 
     mock_discovery_repo.find_nodes_by_model.return_value = [high_rep_node, low_rep_node]
 
-    def get_rep(node_id):
-        if node_id == "n1":
-            return _make_reputation("n1", 0.95)
-        return _make_reputation("n2", 0.3)
+    def get_reps_batch(node_ids):
+        res = []
+        if "n1" in node_ids:
+            res.append(_make_reputation("n1", 0.95))
+        if "n2" in node_ids:
+            res.append(_make_reputation("n2", 0.3))
+        return res
 
-    mock_reputation_repo.get_reputation.side_effect = get_rep
+    mock_reputation_repo.get_reputations_batch.side_effect = get_reps_batch
 
     # Run selection many times — high-rep node should dominate
     selections = {}
@@ -139,12 +142,15 @@ def test_select_node_excludes_suspended(
 
     mock_discovery_repo.find_nodes_by_model.return_value = [good_node, suspended_node]
 
-    def get_rep(node_id):
-        if node_id == "n1":
-            return _make_reputation("n1", 0.8)
-        return _make_reputation("n2", 0.1)  # SUSPENDED tier
+    def get_reps_batch(node_ids):
+        res = []
+        if "n1" in node_ids:
+            res.append(_make_reputation("n1", 0.8))
+        if "n2" in node_ids:
+            res.append(_make_reputation("n2", 0.1))  # SUSPENDED tier
+        return res
 
-    mock_reputation_repo.get_reputation.side_effect = get_rep
+    mock_reputation_repo.get_reputations_batch.side_effect = get_reps_batch
 
     for _ in range(50):
         selected = discovery_service.select_node_for_model("m1")
@@ -157,7 +163,7 @@ def test_select_node_all_suspended_returns_none(
     """If all nodes are suspended, return None."""
     node = _make_node("n1")
     mock_discovery_repo.find_nodes_by_model.return_value = [node]
-    mock_reputation_repo.get_reputation.return_value = _make_reputation("n1", 0.1)
+    mock_reputation_repo.get_reputations_batch.return_value = [_make_reputation("n1", 0.1)]
 
     selected = discovery_service.select_node_for_model("m1")
     assert selected is None
@@ -199,11 +205,11 @@ def test_list_peers_sorted_by_reputation(
 
     mock_discovery_repo.list_all_active_nodes.return_value = [n1, n2, n3]
 
-    def get_rep(node_id):
+    def get_reps_batch(node_ids):
         scores = {"n1": 0.3, "n2": 0.9, "n3": 0.6}
-        return _make_reputation(node_id, scores[node_id])
+        return [_make_reputation(nid, scores[nid]) for nid in node_ids if nid in scores]
 
-    mock_reputation_repo.get_reputation.side_effect = get_rep
+    mock_reputation_repo.get_reputations_batch.side_effect = get_reps_batch
 
     peers = discovery_service.list_peers()
     assert [p.node_id for p in peers] == ["n2", "n3", "n1"]

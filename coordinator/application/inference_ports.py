@@ -35,6 +35,10 @@ class NodeReputationRepository(ABC):
         pass
 
     @abstractmethod
+    def get_reputations_batch(self, node_ids: List[str]) -> List[NodeReputation]:
+        pass
+
+    @abstractmethod
     def save_reputation(self, reputation: NodeReputation) -> None:
         pass
 
