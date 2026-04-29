@@ -26,8 +26,11 @@ target_metadata = Base.metadata
 
 
 def get_url():
-    """Get database URL from environment or default"""
-    return os.getenv("DATABASE_URL", "postgresql://troop:password@localhost/troop_coordinator")
+    """Get database URL from environment"""
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise ValueError("DATABASE_URL environment variable is not set")
+    return url
 
 
 def run_migrations_offline() -> None:
