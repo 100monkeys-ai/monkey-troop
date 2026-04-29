@@ -115,6 +115,9 @@ class Transaction(Base):
     from_user = Column(String, index=True, nullable=True)  # Public Key
     to_user = Column(String, index=True, nullable=True)  # Public Key
 
+    requester_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
+    worker_node_id = Column(Integer, ForeignKey("nodes.id"), index=True, nullable=True)
+
     node_id = Column(String, nullable=True)
 
     duration_seconds = Column(Integer, nullable=False)
