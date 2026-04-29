@@ -2,7 +2,13 @@
 
 from datetime import datetime, timezone
 
-from domain.accounting.models import CreditAmount, Transaction, TransactionType, User
+from domain.accounting.models import (
+    CreditAmount,
+    JobCompletionParams,
+    Transaction,
+    TransactionType,
+    User,
+)
 
 from .accounting_ports import TransactionRepository, UserRepository
 
@@ -49,29 +55,21 @@ class AccountingService:
         except ValueError:
             return False
 
-    def process_job_completion(
-        self,
-        job_id: str,
-        requester_pk: str,
-        worker_node_id: str,
-        worker_owner_pk: str,
-        duration_seconds: int,
-        multiplier: float,
-    ) -> dict:
+    def process_job_completion(self, params: JobCompletionParams) -> dict:
         """Use Case: Transfer credits from requester to worker after a job."""
 
         # In a real DDD app, we would use a Unit of Work or Transactional context here
-        requester = self.user_repo.get_by_public_key(requester_pk)
-        worker_owner = self.user_repo.get_by_public_key(worker_owner_pk)
+        requester = self.user_repo.get_by_public_key(params.requester_pk)
+        worker_owner = self.user_repo.get_by_public_key(params.worker_owner_pk)
 
         if not requester:
             return {"status": "error", "message": "Requester not found"}
 
         if not worker_owner:
-            worker_owner = self.create_user_if_not_exists(worker_owner_pk, 0)
+            worker_owner = self.create_user_if_not_exists(params.worker_owner_pk, 0)
 
         # Calculate final amount (credits = duration * hardware multiplier)
-        credits_to_transfer = int(duration_seconds * multiplier)
+        credits_to_transfer = int(params.duration_seconds * params.multiplier)
         transfer_amount = CreditAmount(credits_to_transfer)
 
         # Add to worker
@@ -83,9 +81,9 @@ class AccountingService:
         # Record transaction
         txn = Transaction(
             id=None,
-            job_id=job_id,
-            from_user=requester_pk,
-            to_user=worker_owner_pk,
+            job_id=params.job_id,
+            from_user=params.requester_pk,
+            to_user=params.worker_owner_pk,
             amount=transfer_amount,
             timestamp=datetime.now(timezone.utc),
             type=TransactionType.JOB_COMPLETION,

@@ -5,8 +5,8 @@ from coordinator.application.orchestration_services import (
     InsufficientCreditsError,
     NoNodesAvailableError,
     AuthorizationResult,
-    JobCompletionParams,
 )
+from coordinator.domain.accounting.models import JobCompletionParams
 
 
 @pytest.fixture
@@ -107,15 +107,12 @@ def test_complete_job_success(
         worker_owner_pk="owner1",
         duration_seconds=100,
         multiplier=1.0,
-        success=True,
     )
-    result = orchestration_service.complete_job(params)
+    result = orchestration_service.complete_job(params, success=True)
 
     # Assert
     assert result == {"status": "success"}
-    mock_accounting_service.process_job_completion.assert_called_once_with(
-        "job123", "user1", "node1", "owner1", 100, 1.0
-    )
+    mock_accounting_service.process_job_completion.assert_called_once_with(params)
     mock_discovery_service.record_job_outcome.assert_called_once_with("node1", True)
     mock_discovery_service.recalculate_reputation.assert_called_once_with("node1")
 
@@ -131,9 +128,8 @@ def test_complete_job_failure(
         worker_owner_pk="owner1",
         duration_seconds=100,
         multiplier=1.0,
-        success=False,
     )
-    result = orchestration_service.complete_job(params)
+    result = orchestration_service.complete_job(params, success=False)
 
     # Assert
     assert result == {"status": "failed"}
