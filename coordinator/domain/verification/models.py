@@ -35,7 +35,7 @@ class BenchmarkResult:
         Baseline: RTX 3060 takes ~35s -> 1.0x
         """
         if duration <= 0:
-            return 0.0
+            return 1.0
 
         baseline = 35.0
         multiplier = baseline / duration

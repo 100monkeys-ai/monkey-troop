@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from coordinator.domain.verification.models import BenchmarkResult, Challenge
 
 
@@ -32,15 +34,19 @@ def test_benchmark_result_initialization():
     assert res.multiplier == 3.5
 
 
-def test_calculate_multiplier():
-    # Baseline: 35s -> 1.0x
-    assert BenchmarkResult.calculate_multiplier(35.0) == 1.0
-    # Faster: 17.5s -> 2.0x
-    assert BenchmarkResult.calculate_multiplier(17.5) == 2.0
-    # Slower: 70.0s -> 0.5x
-    assert BenchmarkResult.calculate_multiplier(70.0) == 0.5
-    # Cap at 20x: 1.0s -> 20.0x
-    assert BenchmarkResult.calculate_multiplier(1.0) == 20.0
-    # Zero or negative duration
-    assert BenchmarkResult.calculate_multiplier(0) == 0.0
-    assert BenchmarkResult.calculate_multiplier(-5) == 0.0
+@pytest.mark.parametrize(
+    "duration,expected_multiplier",
+    [
+        (35.0, 1.0),  # Baseline
+        (17.5, 2.0),  # Faster (2x)
+        (70.0, 0.5),  # Slower (0.5x)
+        (1.0, 20.0),  # Cap at 20x
+        (0.5, 20.0),  # Faster than cap
+        (0.0, 1.0),  # Edge case: zero duration
+        (-5.0, 1.0),  # Edge case: negative duration
+        (350.0, 0.1),  # Very slow
+        (3500.0, 0.01),  # Extremely slow
+    ],
+)
+def test_calculate_multiplier(duration, expected_multiplier):
+    assert BenchmarkResult.calculate_multiplier(duration) == expected_multiplier
