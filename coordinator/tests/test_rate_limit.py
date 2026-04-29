@@ -4,6 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import redis
+
 from infrastructure.security.rate_limit import (
     DISCOVERY_LIMIT,
     INFERENCE_LIMIT,
@@ -86,6 +88,28 @@ def test_check_rate_limit_exceeded(limiter, mock_redis):
     mock_redis.get.assert_called_once_with("test_key")
     mock_redis.incr.assert_not_called()
     mock_redis.setex.assert_not_called()
+
+
+def test_check_rate_limit_invalid_value(limiter, mock_redis):
+    """Test rate limit check raises ValueError on invalid Redis data."""
+    mock_redis.get.return_value = b"invalid_data"
+
+    with pytest.raises(ValueError, match="invalid literal for int()"):
+        limiter.check_rate_limit("test_key", 5)
+
+    mock_redis.get.assert_called_once_with("test_key")
+    mock_redis.incr.assert_not_called()
+
+
+def test_check_rate_limit_redis_error(limiter, mock_redis):
+    """Test rate limit check propagates Redis connection errors."""
+    mock_redis.get.side_effect = redis.ConnectionError("Redis down")
+
+    with pytest.raises(redis.ConnectionError, match="Redis down"):
+        limiter.check_rate_limit("test_key", 5)
+
+    mock_redis.get.assert_called_once_with("test_key")
+    mock_redis.incr.assert_not_called()
 
 
 def test_check_discovery_limit(limiter, mock_redis):
