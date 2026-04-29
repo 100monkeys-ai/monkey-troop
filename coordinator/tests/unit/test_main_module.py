@@ -43,6 +43,6 @@ def test_main_module_execution():
 
     # The process should have terminated in response to SIGTERM without an obvious crash.
     assert process.returncode is not None, "main.py did not terminate after SIGTERM"
-    assert b"Traceback" not in stderr, (
-        f"main.py crashed on startup:\n{stderr.decode(errors='ignore')}"
-    )
+    assert (
+        b"Traceback" not in stderr
+    ), f"main.py crashed on startup:\n{stderr.decode(errors='ignore')}"
