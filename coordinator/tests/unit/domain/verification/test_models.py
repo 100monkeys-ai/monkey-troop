@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from coordinator.domain.verification.models import BenchmarkResult, Challenge
 
 
