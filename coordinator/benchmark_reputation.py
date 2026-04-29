@@ -58,7 +58,7 @@ class LatencyMockReputationRepo:
 
 
 def run_benchmark(num_nodes=50, latency=0.005):
-    print(f"Benchmarking with {num_nodes} nodes and {latency*1000:.1f}ms latency per query")
+    print(f"Benchmarking with {num_nodes} nodes and {latency * 1000:.1f}ms latency per query")
 
     nodes = [_make_node(f"node_{i}") for i in range(num_nodes)]
 

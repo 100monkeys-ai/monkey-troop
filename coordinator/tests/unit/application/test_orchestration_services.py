@@ -6,6 +6,7 @@ from coordinator.application.orchestration_services import (
     NoNodesAvailableError,
     AuthorizationResult,
 )
+from coordinator.domain.accounting.models import JobCompletionParams
 
 
 @pytest.fixture
@@ -99,21 +100,19 @@ def test_complete_job_success(
     mock_accounting_service.process_job_completion.return_value = {"status": "success"}
 
     # Execute
-    result = orchestration_service.complete_job(
+    params = JobCompletionParams(
         job_id="job123",
         requester_pk="user1",
         worker_node_id="node1",
         worker_owner_pk="owner1",
         duration_seconds=100,
         multiplier=1.0,
-        success=True,
     )
+    result = orchestration_service.complete_job(params, success=True)
 
     # Assert
     assert result == {"status": "success"}
-    mock_accounting_service.process_job_completion.assert_called_once_with(
-        "job123", "user1", "node1", "owner1", 100, 1.0
-    )
+    mock_accounting_service.process_job_completion.assert_called_once_with(params)
     mock_discovery_service.record_job_outcome.assert_called_once_with("node1", True)
     mock_discovery_service.recalculate_reputation.assert_called_once_with("node1")
 
@@ -122,15 +121,15 @@ def test_complete_job_failure(
     orchestration_service, mock_accounting_service, mock_discovery_service
 ):
     # Execute with success=False
-    result = orchestration_service.complete_job(
+    params = JobCompletionParams(
         job_id="job123",
         requester_pk="user1",
         worker_node_id="node1",
         worker_owner_pk="owner1",
         duration_seconds=100,
         multiplier=1.0,
-        success=False,
     )
+    result = orchestration_service.complete_job(params, success=False)
 
     # Assert
     assert result == {"status": "failed"}

@@ -148,7 +148,6 @@ def test_check_inference_limit(limiter, mock_redis):
     mock_redis.setex.assert_called_once_with("ratelimit:inference:user123", WINDOW_SECONDS, 1)
 
 
-
 def test_check_inference_limit_exceeded(limiter, mock_redis):
     """Test inference limit check when limit is exceeded."""
     mock_redis.get.return_value = str(INFERENCE_LIMIT).encode("utf-8")
@@ -159,6 +158,7 @@ def test_check_inference_limit_exceeded(limiter, mock_redis):
     assert remaining == 0
     mock_redis.get.assert_called_once_with("ratelimit:inference:user123")
     mock_redis.incr.assert_not_called()
+
 
 def test_reset_limit(limiter, mock_redis):
     """Test reset limit deletes the key from Redis."""

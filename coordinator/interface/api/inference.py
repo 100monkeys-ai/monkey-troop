@@ -1,6 +1,5 @@
 """FastAPI endpoints for the Inference context."""
 
-import json
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -74,11 +73,7 @@ async def list_peers(
 ):
     """List available nodes sorted by reputation, optionally filtered by model."""
     nodes = discovery_service.list_peers(model)
-    nodes_data = []
-    for n in nodes:
-        node_dict = json.loads(n.to_json())
-        node_dict["reputation_score"] = n.reputation_score
-        nodes_data.append(node_dict)
+    nodes_data = [n.to_dict() for n in nodes]
     return {"count": len(nodes), "nodes": nodes_data}
 
 

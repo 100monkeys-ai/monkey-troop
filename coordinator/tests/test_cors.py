@@ -29,6 +29,7 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from main import get_allowed_origins
 
+
 def test_get_allowed_origins_default():
     """Test default allowed origins when env var is not set."""
     old_val = os.environ.get("ALLOWED_ORIGINS")
@@ -39,6 +40,7 @@ def test_get_allowed_origins_default():
     finally:
         if old_val is not None:
             os.environ["ALLOWED_ORIGINS"] = old_val
+
 
 def test_get_allowed_origins_custom():
     """Test custom allowed origins from env var."""
@@ -52,6 +54,7 @@ def test_get_allowed_origins_custom():
         else:
             del os.environ["ALLOWED_ORIGINS"]
 
+
 def test_get_allowed_origins_filters_wildcard():
     """Test that wildcard is filtered out."""
     old_val = os.environ.get("ALLOWED_ORIGINS")
@@ -63,6 +66,7 @@ def test_get_allowed_origins_filters_wildcard():
             os.environ["ALLOWED_ORIGINS"] = old_val
         else:
             del os.environ["ALLOWED_ORIGINS"]
+
 
 def test_get_allowed_origins_wildcard_only():
     """Test that only wildcard defaults to local."""

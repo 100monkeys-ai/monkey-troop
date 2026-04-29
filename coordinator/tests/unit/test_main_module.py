@@ -26,7 +26,9 @@ def test_main_module_execution():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,
-        cwd=os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) # Set cwd to coordinator root
+        cwd=os.path.abspath(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        ),  # Set cwd to coordinator root
     )
 
     # Wait a short moment for it to start; it should still be running after this.

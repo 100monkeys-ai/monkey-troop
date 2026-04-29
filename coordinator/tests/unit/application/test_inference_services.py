@@ -171,11 +171,13 @@ def test_select_node_all_suspended_returns_none(
 
 from unittest.mock import patch
 
+
 def test__weighted_select_empty_candidates(discovery_service, mock_reputation_repo):
     """If candidates list is empty, return None immediately."""
     selected = discovery_service._weighted_select([])
     assert selected is None
     mock_reputation_repo.get_reputations_batch.assert_called_once_with([])
+
 
 def test__weighted_select_weights_calculation(discovery_service, mock_reputation_repo):
     """Verify exact weights passed to random.choices."""
@@ -190,7 +192,7 @@ def test__weighted_select_weights_calculation(discovery_service, mock_reputation
 
     mock_reputation_repo.get_reputations_batch.return_value = [
         _make_reputation("n1", 0.8),
-        _make_reputation("n2", 0.1)
+        _make_reputation("n2", 0.1),
     ]
 
     with patch("coordinator.application.inference_services.random.choices") as mock_choices:
@@ -202,25 +204,23 @@ def test__weighted_select_weights_calculation(discovery_service, mock_reputation
 
         # Check weights passed to random.choices
         mock_choices.assert_called_once_with(
-            candidates,
-            weights=[pytest.approx(0.64), pytest.approx(0.0), pytest.approx(0.25)],
-            k=1
+            candidates, weights=[pytest.approx(0.64), pytest.approx(0.0), pytest.approx(0.25)], k=1
         )
+
 
 def test__weighted_select_all_suspended_or_zero(discovery_service, mock_reputation_repo):
     """If all weights are zero (e.g. all suspended), return None."""
     n1 = _make_node("n1")
     candidates = [n1]
 
-    mock_reputation_repo.get_reputations_batch.return_value = [
-        _make_reputation("n1", 0.1)
-    ]
+    mock_reputation_repo.get_reputations_batch.return_value = [_make_reputation("n1", 0.1)]
 
     with patch("coordinator.application.inference_services.random.choices") as mock_choices:
         selected = discovery_service._weighted_select(candidates)
 
         assert selected is None
         mock_choices.assert_not_called()
+
 
 def test_get_aggregated_models(discovery_service, mock_discovery_repo):
     m1 = _mi("alpha", content_hash="sha256:aaa", size_bytes=100)
@@ -295,6 +295,7 @@ def test_recalculate_reputation_unknown_node(discovery_service, mock_reputation_
     mock_reputation_repo.get_reputation.return_value = None
     result = discovery_service.recalculate_reputation("unknown")
     assert result is None
+
 
 def test_sort_by_reputation_empty_list(discovery_service, mock_reputation_repo):
     """Sorting an empty list should return an empty list and not call the database."""

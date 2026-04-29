@@ -4,7 +4,7 @@ use base64::Engine;
 use chacha20poly1305::aead::{Aead, OsRng};
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
 use hkdf::Hkdf;
-use rand_core::RngCore;
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use x25519_dalek::{PublicKey, StaticSecret};
@@ -41,7 +41,9 @@ pub struct E2EChunkEnvelope {
 
 /// Generate a new X25519 keypair, returning (secret, base64-encoded public key)
 pub fn generate_keypair() -> (StaticSecret, String) {
-    let secret = StaticSecret::random_from_rng(rand::rng());
+    let mut bytes = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    let secret = StaticSecret::from(bytes);
     let public = PublicKey::from(&secret);
     let public_b64 = BASE64.encode(public.as_bytes());
     (secret, public_b64)
@@ -70,7 +72,7 @@ pub fn derive_session_key(shared_secret: &[u8; 32]) -> Result<[u8; 32]> {
 /// Generate a random 12-byte nonce
 pub fn generate_base_nonce() -> [u8; 12] {
     let mut nonce = [0u8; 12];
-    rand::rng().fill_bytes(&mut nonce);
+    rand::thread_rng().fill_bytes(&mut nonce);
     nonce
 }
 

@@ -40,29 +40,30 @@ class Node:
     reputation_score: float = 0.5
     encryption_public_key: Optional[str] = None
 
+    def to_dict(self) -> dict:
+        return {
+            "node_id": self.node_id,
+            "tailscale_ip": self.tailscale_ip,
+            "status": self.status,
+            "models": [
+                {
+                    "name": m.name,
+                    "content_hash": m.content_hash,
+                    "size_bytes": m.size_bytes,
+                }
+                for m in self.models
+            ],
+            "hardware": {"gpu": self.hardware.gpu, "vram_free": self.hardware.vram_free_mb},
+            "engines": [
+                {"type": e.type, "version": e.version, "port": e.port} for e in self.engines
+            ],
+            "reputation_score": self.reputation_score,
+            "encryption_public_key": self.encryption_public_key,
+        }
+
     def to_json(self) -> str:
         # Pydantic is already used for DTOs; this is for Domain -> JSON conversion
-        return json.dumps(
-            {
-                "node_id": self.node_id,
-                "tailscale_ip": self.tailscale_ip,
-                "status": self.status,
-                "models": [
-                    {
-                        "name": m.name,
-                        "content_hash": m.content_hash,
-                        "size_bytes": m.size_bytes,
-                    }
-                    for m in self.models
-                ],
-                "hardware": {"gpu": self.hardware.gpu, "vram_free": self.hardware.vram_free_mb},
-                "engines": [
-                    {"type": e.type, "version": e.version, "port": e.port} for e in self.engines
-                ],
-                "reputation_score": self.reputation_score,
-                "encryption_public_key": self.encryption_public_key,
-            }
-        )
+        return json.dumps(self.to_dict())
 
     @classmethod
     def from_dict(cls, data: dict) -> "Node":
