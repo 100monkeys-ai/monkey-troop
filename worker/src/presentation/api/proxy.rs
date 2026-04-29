@@ -14,7 +14,7 @@ use http_body_util::StreamBody;
 use serde_json::Value;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
-use tracing::info;
+use tracing::{error, info};
 
 pub struct ProxyState {
     pub service: Arc<WorkerService>,
@@ -111,7 +111,7 @@ async fn handle_chat_completion(
             let base_nonce_for_done = base_nonce;
 
             let sse_stream = chunk_stream.map(
-                move |result| -> Result<Frame<Bytes>, std::convert::Infallible> {
+                move |result| -> Result<Frame<Bytes>, anyhow::Error> {
                     let seq = seq_counter.fetch_add(1, Ordering::Relaxed);
                     match result {
                         Ok(chunk) => {
@@ -122,7 +122,10 @@ async fn handle_chat_completion(
                                 seq,
                                 json_str.as_bytes(),
                             )
-                            .expect("Chunk encryption should not fail");
+                            .map_err(|e| {
+                                error!("Chunk encryption failed: {:?}", e);
+                                e
+                            })?;
                             let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
                             let envelope_json =
                                 serde_json::to_string(&envelope).unwrap_or_default();
@@ -137,7 +140,10 @@ async fn handle_chat_completion(
                                 seq,
                                 b"[DONE]",
                             )
-                            .expect("Chunk encryption should not fail");
+                            .map_err(|e| {
+                                error!("Done chunk encryption failed: {:?}", e);
+                                e
+                            })?;
                             let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
                             let envelope_json =
                                 serde_json::to_string(&envelope).unwrap_or_default();
@@ -157,10 +163,13 @@ async fn handle_chat_completion(
                     seq,
                     b"[DONE]",
                 )
-                .expect("Chunk encryption should not fail");
+                .map_err(|e| {
+                    error!("Final done chunk encryption failed: {:?}", e);
+                    e
+                })?;
                 let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
                 let envelope_json = serde_json::to_string(&envelope).unwrap_or_default();
-                Ok::<Frame<Bytes>, std::convert::Infallible>(Frame::data(Bytes::from(format!(
+                Ok::<Frame<Bytes>, anyhow::Error>(Frame::data(Bytes::from(format!(
                     "data: {envelope_json}\n\n"
                 ))))
             });
@@ -577,5 +586,59 @@ mod tests {
             response.headers().get("Content-Type").unwrap(),
             "text/event-stream"
         );
+    }
+
+    #[tokio::test]
+    async fn test_proxy_e2e_streaming_response() {
+        let service = make_service(
+            true,
+            vec![Model {
+                id: "llama3".to_string(),
+                content_hash: "sha256:abc123".to_string(),
+                size_bytes: 4_000_000_000,
+                engine_type: EngineType::Ollama,
+            }],
+        );
+
+        let app = create_proxy_router(Arc::new(ProxyState { service }));
+
+        let key = [0u8; 32];
+        let plaintext =
+            serde_json::to_vec(&json!({"model_id": "llama3", "messages": [], "stream": true}))
+                .unwrap();
+        let encrypted = monkey_troop_shared::encrypt_payload(&key, &plaintext).unwrap();
+        let mut encrypted_with_key = encrypted;
+        encrypted_with_key.client_public_key =
+            Some("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".to_string());
+
+        let envelope = json!({ "e2e": encrypted_with_key });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header("Authorization", "Bearer valid-token")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(serde_json::to_string(&envelope).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get("Content-Type").unwrap(),
+            "text/event-stream"
+        );
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body_str = String::from_utf8(body.to_vec()).unwrap();
+
+        // Should contain E2E encrypted data frames
+        assert!(body_str.contains("data: {"));
+        assert!(body_str.contains("\"e2e\":"));
     }
 }
