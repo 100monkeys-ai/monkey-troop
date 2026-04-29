@@ -73,7 +73,7 @@ def main():
     
     try:
         run_benchmark(seed, matrix_size)
-    except Exception as e:
+    except (ImportError, ValueError, RuntimeError) as e:
         print(f"Benchmark error: {e}", file=sys.stderr)
         sys.exit(1)
 
