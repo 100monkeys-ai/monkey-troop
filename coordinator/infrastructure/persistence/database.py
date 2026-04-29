@@ -16,6 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
+from typing import Optional
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -23,8 +24,8 @@ if not DATABASE_URL:
 
 
 # Use dynamic engine creation to allow easier testing overrides
-def create_db_engine(url: str = DATABASE_URL):
-    return create_engine(url)
+def create_db_engine(url: Optional[str] = None):
+    return create_engine(url or DATABASE_URL)
 
 
 engine = create_db_engine()
