@@ -42,19 +42,20 @@ mod tests {
     }
 
     #[test]
-    fn test_derive_session_key_matches() {
+    fn test_derive_session_key_matches() -> anyhow::Result<()> {
         let worker = X25519Decryptor::new();
         let (client_secret, client_pub_b64) = crypto::generate_keypair();
 
         // Worker derives key from client's public key
-        let worker_key = worker.derive_session_key(&client_pub_b64).unwrap();
+        let worker_key = worker.derive_session_key(&client_pub_b64)?;
 
         // Client derives key from worker's public key
-        let worker_pub = crypto::decode_public_key(worker.public_key_b64()).unwrap();
+        let worker_pub = crypto::decode_public_key(worker.public_key_b64())?;
         let shared = client_secret.diffie_hellman(&worker_pub);
         let client_key = crypto::derive_session_key(shared.as_bytes());
 
         assert_eq!(worker_key, client_key);
+        Ok(())
     }
 
     #[test]
