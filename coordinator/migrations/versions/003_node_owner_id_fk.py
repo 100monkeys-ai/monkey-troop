@@ -34,13 +34,15 @@ def upgrade() -> None:
         sa.column("public_key", sa.String),
     )
     conn = op.get_bind()
-    rows = conn.execute(sa.select(users_table.c.id, users_table.c.public_key)).fetchall()
-    for user_id, public_key in rows:
-        conn.execute(
-            sa.update(nodes_table)
-            .where(nodes_table.c.owner_public_key == public_key)
-            .values(owner_id=user_id)
-        )
+
+    # Optimized: Use a correlated subquery to backfill owner_id in a single query.
+    # This avoids the N+1 query pattern which can be slow for many users.
+    subquery = (
+        sa.select(users_table.c.id)
+        .where(users_table.c.public_key == nodes_table.c.owner_public_key)
+        .scalar_subquery()
+    )
+    conn.execute(sa.update(nodes_table).values(owner_id=subquery))
 
     # Make owner_id non-nullable now that it is populated
     op.alter_column("nodes", "owner_id", nullable=False)
@@ -65,6 +67,7 @@ def downgrade() -> None:
     op.create_index(op.f("ix_nodes_owner_public_key"), "nodes", ["owner_public_key"], unique=False)
 
     # Drop the owner_id FK constraint, index, and column
+    # Use op.drop_constraint instead of op.drop_index for foreign keys
     op.drop_index(op.f("ix_nodes_owner_id"), table_name="nodes")
     op.drop_constraint("fk_nodes_owner_id_users", "nodes", type_="foreignkey")
     op.drop_column("nodes", "owner_id")
