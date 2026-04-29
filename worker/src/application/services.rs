@@ -88,18 +88,30 @@ impl WorkerService {
     }
 
     pub async fn refresh_model_registry(&self) -> Result<()> {
-        let mut new_registry = ModelRegistry::new();
-
-        for engine in self.engines.values() {
-            if engine.is_healthy().await {
-                match engine.get_models().await {
-                    Ok(models) => {
-                        for model in models {
-                            new_registry.add_model(model);
+        let registry_futures: Vec<_> = self
+            .engines
+            .values()
+            .map(|engine| async move {
+                if engine.is_healthy().await {
+                    match engine.get_models().await {
+                        Ok(models) => Some(models),
+                        Err(e) => {
+                            error!("Failed to fetch models from engine: {}", e);
+                            None
                         }
                     }
-                    Err(e) => error!("Failed to fetch models from engine: {}", e),
+                } else {
+                    None
                 }
+            })
+            .collect();
+
+        let results = futures::future::join_all(registry_futures).await;
+
+        let mut new_registry = ModelRegistry::new();
+        for models in results.into_iter().flatten() {
+            for model in models {
+                new_registry.add_model(model);
             }
         }
 
