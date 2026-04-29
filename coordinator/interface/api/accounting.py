@@ -11,7 +11,7 @@ router = APIRouter(prefix="/users", tags=["Accounting"])
 
 
 @router.get("/{public_key}/balance", response_model=BalanceResponseSchema)
-async def get_balance(
+def get_balance(
     public_key: str, accounting_service: AccountingService = Depends(get_accounting_service)
 ):
     """Get user's credit balance."""
@@ -25,7 +25,7 @@ async def get_balance(
 
 
 @router.get("/{public_key}/transactions")
-async def get_transactions(
+def get_transactions(
     public_key: str,
     limit: int = 50,
     accounting_service: AccountingService = Depends(get_accounting_service),
