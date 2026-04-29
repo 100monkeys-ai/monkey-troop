@@ -51,3 +51,22 @@ def test_user_repository_can_be_implemented():
     saved = repo.save(user)
     assert saved is user
     assert repo.get_by_public_key("test-key") == user
+
+
+def test_key_repository_can_be_implemented():
+    """Verify that a concrete implementation of KeyRepository can define and use the required methods."""
+
+    class DummyKeyRepo(KeyRepository):
+        def get_public_key(self) -> str:
+            return "dummy-public-key"
+
+        def get_private_key(self) -> bytes:
+            return b"dummy-private-key"
+
+        def ensure_keys_exist(self) -> None:
+            pass
+
+    repo = DummyKeyRepo()
+    assert repo.get_public_key() == "dummy-public-key"
+    assert repo.get_private_key() == b"dummy-private-key"
+    assert repo.ensure_keys_exist() is None
