@@ -12,14 +12,7 @@ struct Claims {
 }
 
 pub struct JwtVerifier {
-    public_key: String,
-}
-
-impl JwtVerifier {
-    #[allow(dead_code)]
-    pub fn new(public_key: String) -> Self {
-        Self { public_key }
-    }
+    pub(crate) public_key: String,
 }
 
 #[async_trait]
@@ -56,7 +49,9 @@ IQIDAQAB\n\
     #[tokio::test]
     async fn test_jwt_verifier_invalid_key_format() {
         // An obviously invalid RSA PEM key should cause from_rsa_pem to return an error.
-        let verifier = JwtVerifier::new("not-a-valid-pem-key".to_string());
+        let verifier = JwtVerifier {
+            public_key: "not-a-valid-pem-key".to_string(),
+        };
         let result = verifier.verify_ticket("any-token", "node-1").await;
         assert!(
             result.is_err(),
@@ -68,7 +63,9 @@ IQIDAQAB\n\
     async fn test_jwt_verifier_invalid_token_signature() {
         // Use a syntactically valid RSA public key but an invalid token, which should
         // cause decode to fail and result in Ok(false) from verify_ticket.
-        let verifier = JwtVerifier::new(TEST_RSA_PUBLIC_KEY_PEM.to_string());
+        let verifier = JwtVerifier {
+            public_key: TEST_RSA_PUBLIC_KEY_PEM.to_string(),
+        };
         let result = verifier.verify_ticket("invalid-token", "node-1").await;
         assert!(
             result.is_ok(),
@@ -81,8 +78,10 @@ IQIDAQAB\n\
     }
 
     #[test]
-    fn test_jwt_verifier_new() {
-        let verifier = JwtVerifier::new("test-key".to_string());
+    fn test_jwt_verifier_initialization() {
+        let verifier = JwtVerifier {
+            public_key: "test-key".to_string(),
+        };
         assert_eq!(verifier.public_key, "test-key");
     }
 }
