@@ -41,7 +41,9 @@ impl Config {
 fn get_tailscale_ip() -> Result<String> {
     use std::process::Command;
 
-    let output = Command::new("tailscale").args(["ip", "-4"]).output()?;
+    let output = Command::new(monkey_troop_shared::get_secure_binary_path("tailscale")?)
+        .args(["ip", "-4"])
+        .output()?;
 
     if output.status.success() {
         let ip = String::from_utf8_lossy(&output.stdout);

@@ -40,7 +40,7 @@ impl NvidiaGpuMonitor {
 
 /// Free functions for GPU and CPU checks to avoid lifetime issues with spawn_blocking
 fn check_nvidia_idle(threshold: f32) -> Result<bool> {
-    let output = Command::new("nvidia-smi")
+    let output = Command::new(monkey_troop_shared::get_secure_binary_path("nvidia-smi")?)
         .args([
             "--query-gpu=utilization.gpu",
             "--format=csv,noheader,nounits",
@@ -84,7 +84,7 @@ fn get_gpu_info() -> (String, u64) {
 
 fn get_nvidia_info() -> Result<(String, u64)> {
     // Get GPU name
-    let name_output = Command::new("nvidia-smi")
+    let name_output = Command::new(monkey_troop_shared::get_secure_binary_path("nvidia-smi")?)
         .args(["--query-gpu=name", "--format=csv,noheader"])
         .output()?;
 
@@ -93,7 +93,7 @@ fn get_nvidia_info() -> Result<(String, u64)> {
         .to_string();
 
     // Get free VRAM in MB
-    let vram_output = Command::new("nvidia-smi")
+    let vram_output = Command::new(monkey_troop_shared::get_secure_binary_path("nvidia-smi")?)
         .args(["--query-gpu=memory.free", "--format=csv,noheader,nounits"])
         .output()?;
 
