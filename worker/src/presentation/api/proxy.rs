@@ -197,12 +197,12 @@ async fn handle_chat_completion(
             axum::body::Body::new(StreamBody::new(full_stream))
         };
 
-        return Ok(Response::builder()
+        return Response::builder()
             .header("Content-Type", "text/event-stream")
             .header("Cache-Control", "no-cache")
             .header("Connection", "keep-alive")
             .body(response_body)
-            .unwrap());
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR);
     }
 
     let response = state
