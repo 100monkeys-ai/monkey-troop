@@ -42,10 +42,7 @@ def run_benchmark(seed: str, matrix_size: int):
     proof_hash = hashlib.sha256(proof_data.encode()).hexdigest()
     
     # Get device name
-    if device == "cuda":
-        device_name = torch.cuda.get_device_name(0)
-    else:
-        device_name = "CPU"
+    device_name = torch.cuda.get_device_name(0) if device == "cuda" else "CPU"
     
     # Output JSON
     output = {
