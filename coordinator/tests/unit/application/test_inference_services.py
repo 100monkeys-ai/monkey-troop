@@ -242,3 +242,33 @@ def test_recalculate_reputation_unknown_node(discovery_service, mock_reputation_
     mock_reputation_repo.get_reputation.return_value = None
     result = discovery_service.recalculate_reputation("unknown")
     assert result is None
+
+
+def test_sort_by_reputation(discovery_service, mock_reputation_repo):
+    n1 = _make_node("n1")
+    n2 = _make_node("n2")
+    n3 = _make_node("n3")
+    n4 = _make_node("n4")
+
+    # n4 does not have a reputation score and will fallback to 0.5
+    # n1: 0.9, n2: 0.2, n3: 0.6, n4: 0.5 (fallback)
+    # expected sort: n1 (0.9), n3 (0.6), n4 (0.5), n2 (0.2)
+
+    def get_reputation_mock(node_id):
+        scores = {"n1": 0.9, "n2": 0.2, "n3": 0.6}
+        if node_id in scores:
+            return _make_reputation(node_id, scores[node_id])
+        return None
+
+    mock_reputation_repo.get_reputation.side_effect = get_reputation_mock
+
+    def get_reps_batch(node_ids):
+        scores = {"n1": 0.9, "n2": 0.2, "n3": 0.6}
+        return [_make_reputation(nid, scores[nid]) for nid in node_ids if nid in scores]
+
+    mock_reputation_repo.get_reputations_batch.side_effect = get_reps_batch
+
+    nodes = [n1, n2, n3, n4]
+    sorted_nodes = discovery_service._sort_by_reputation(nodes)
+
+    assert [n.node_id for n in sorted_nodes] == ["n1", "n3", "n4", "n2"]
