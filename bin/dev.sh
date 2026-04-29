@@ -33,6 +33,7 @@ case "$1" in
         echo -e "${GREEN}Running tests...${NC}"
         cargo test --workspace
         cd coordinator && pytest
+        cd ../worker && pytest
         ;;
     
     "coord")
