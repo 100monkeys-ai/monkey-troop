@@ -1,5 +1,7 @@
 """Monkey Troop Coordinator - DDD Entry Point."""
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,10 +20,17 @@ from interface.api.verification import router as verification_router
 # FastAPI App
 app = FastAPI(title="Monkey Troop Coordinator", version="0.1.0")
 
+def get_allowed_origins() -> list[str]:
+    """Parse ALLOWED_ORIGINS from environment, filtering out wildcards."""
+    raw = os.getenv("ALLOWED_ORIGINS", "")
+    origins = [o.strip() for o in raw.split(",") if o.strip() and o.strip() != "*"]
+    return origins if origins else ["http://localhost:3000"]
+
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_allowed_origins(),
     allow_methods=["*"],
     allow_headers=["*"],
 )
