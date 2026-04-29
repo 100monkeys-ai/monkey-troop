@@ -34,13 +34,13 @@ class RedisNodeDiscoveryRepository(NodeDiscoveryRepository):
         return [n for n in nodes if any(m.name == identifier for m in n.models)]
 
     def list_all_active_nodes(self) -> List[Node]:
-        keys = list(self.redis.scan_iter("node:*"))
-        if not keys:
-            return []
-
-        raw_nodes = self.redis.mget(keys)
         nodes = []
-        for raw_data in raw_nodes:
-            if raw_data:
-                nodes.append(Node.from_dict(json.loads(raw_data)))
+        cursor = "0"
+        while cursor != 0:
+            cursor, keys = self.redis.scan(cursor=cursor, match="node:*", count=1000)
+            if keys:
+                raw_nodes = self.redis.mget(keys)
+                for raw_data in raw_nodes:
+                    if raw_data:
+                        nodes.append(Node.from_dict(json.loads(raw_data)))
         return nodes
