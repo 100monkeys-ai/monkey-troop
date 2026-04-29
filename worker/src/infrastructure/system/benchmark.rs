@@ -38,7 +38,7 @@ pub async fn run_benchmark(seed: &str, matrix_size: usize) -> Result<BenchmarkRe
     // The benchmark.py is at the root of the worker directory
     let output = tokio::time::timeout(
         Duration::from_secs(BENCHMARK_TIMEOUT_SECS), // 5 minute timeout
-        Command::new("python3")
+        Command::new(monkey_troop_shared::get_secure_binary_path("python3")?)
             .arg("benchmark.py")
             .arg(seed)
             .arg(matrix_size.to_string())
@@ -129,7 +129,7 @@ print(json.dumps(output))
 
     let output = tokio::time::timeout(
         Duration::from_secs(BENCHMARK_TIMEOUT_SECS),
-        Command::new("python3")
+        Command::new(monkey_troop_shared::get_secure_binary_path("python3")?)
             .arg("-c")
             .arg(python_code)
             .arg(seed)
