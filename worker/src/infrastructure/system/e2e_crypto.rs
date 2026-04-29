@@ -24,7 +24,7 @@ impl E2EDecryptor for X25519Decryptor {
     fn derive_session_key(&self, client_public_key_b64: &str) -> anyhow::Result<[u8; 32]> {
         let client_pub = crypto::decode_public_key(client_public_key_b64)?;
         let shared_secret = self.secret.diffie_hellman(&client_pub);
-        Ok(crypto::derive_session_key(shared_secret.as_bytes()))
+        crypto::derive_session_key(shared_secret.as_bytes())
     }
 }
 
@@ -52,7 +52,7 @@ mod tests {
         // Client derives key from worker's public key
         let worker_pub = crypto::decode_public_key(worker.public_key_b64())?;
         let shared = client_secret.diffie_hellman(&worker_pub);
-        let client_key = crypto::derive_session_key(shared.as_bytes());
+        let client_key = crypto::derive_session_key(shared.as_bytes())?;
 
         assert_eq!(worker_key, client_key);
         Ok(())

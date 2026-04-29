@@ -59,12 +59,12 @@ pub fn decode_public_key(b64: &str) -> Result<PublicKey> {
 }
 
 /// Derive a symmetric session key from a shared secret using HKDF-SHA256
-pub fn derive_session_key(shared_secret: &[u8; 32]) -> [u8; 32] {
+pub fn derive_session_key(shared_secret: &[u8; 32]) -> Result<[u8; 32]> {
     let hk = Hkdf::<Sha256>::new(None, shared_secret);
     let mut okm = [0u8; 32];
     hk.expand(b"monkey-troop-e2e-v1", &mut okm)
-        .expect("HKDF expand should not fail with 32-byte output");
-    okm
+        .map_err(|e| anyhow::anyhow!("HKDF expansion failed: {e}"))?;
+    Ok(okm)
 }
 
 /// Generate a random 12-byte nonce
@@ -170,11 +170,12 @@ mod tests {
     }
 
     #[test]
-    fn test_derive_session_key_deterministic() {
+    fn test_derive_session_key_deterministic() -> anyhow::Result<()> {
         let secret = [42u8; 32];
-        let k1 = derive_session_key(&secret);
-        let k2 = derive_session_key(&secret);
+        let k1 = derive_session_key(&secret)?;
+        let k2 = derive_session_key(&secret)?;
         assert_eq!(k1, k2);
+        Ok(())
     }
 
     #[test]
@@ -216,26 +217,27 @@ mod tests {
     }
 
     #[test]
-    fn test_e2e_key_agreement() {
+    fn test_e2e_key_agreement() -> anyhow::Result<()> {
         let (secret_a, pub_a_b64) = generate_keypair();
         let (secret_b, pub_b_b64) = generate_keypair();
 
-        let pub_a = decode_public_key(&pub_a_b64).unwrap();
-        let pub_b = decode_public_key(&pub_b_b64).unwrap();
+        let pub_a = decode_public_key(&pub_a_b64)?;
+        let pub_b = decode_public_key(&pub_b_b64)?;
 
         let shared_a = secret_a.diffie_hellman(&pub_b);
         let shared_b = secret_b.diffie_hellman(&pub_a);
 
-        let key_a = derive_session_key(shared_a.as_bytes());
-        let key_b = derive_session_key(shared_b.as_bytes());
+        let key_a = derive_session_key(shared_a.as_bytes())?;
+        let key_b = derive_session_key(shared_b.as_bytes())?;
 
         assert_eq!(key_a, key_b);
 
         // Full round trip
         let plaintext = b"end-to-end encrypted message";
-        let encrypted = encrypt_payload(&key_a, plaintext).unwrap();
-        let decrypted = decrypt_payload(&key_b, &encrypted).unwrap();
+        let encrypted = encrypt_payload(&key_a, plaintext)?;
+        let decrypted = decrypt_payload(&key_b, &encrypted)?;
         assert_eq!(decrypted, plaintext);
+        Ok(())
     }
 
     #[test]
