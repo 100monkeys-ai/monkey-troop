@@ -8,10 +8,16 @@ import sys
 import json
 import hashlib
 import time
-import torch
+
+try:
+    import torch
+except ImportError:
+    torch = None
 
 def run_benchmark(seed: str, matrix_size: int):
     """Run GPU benchmark with given seed and matrix size."""
+    if torch is None:
+        raise ImportError("torch is not installed")
     
     # Set seed for reproducibility
     seed_int = int(seed, 16) % (2**32)
@@ -56,16 +62,23 @@ def run_benchmark(seed: str, matrix_size: int):
     
     print(json.dumps(output))
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) != 3:
         print("Usage: python3 benchmark.py <seed> <matrix_size>", file=sys.stderr)
         sys.exit(1)
     
     seed = sys.argv[1]
-    matrix_size = int(sys.argv[2])
+    try:
+        matrix_size = int(sys.argv[2])
+    except ValueError:
+        print(f"Benchmark error: matrix_size must be an integer, got {sys.argv[2]}", file=sys.stderr)
+        sys.exit(1)
     
     try:
         run_benchmark(seed, matrix_size)
     except Exception as e:
         print(f"Benchmark error: {e}", file=sys.stderr)
         sys.exit(1)
+
+if __name__ == "__main__":
+    main()
