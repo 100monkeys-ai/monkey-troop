@@ -26,7 +26,9 @@ def test_main_module_execution():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,
-        cwd=os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) # Set cwd to coordinator root
+        cwd=os.path.abspath(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        ),  # Set cwd to coordinator root
     )
 
     # Wait a short moment for it to start; it should still be running after this.
@@ -41,6 +43,6 @@ def test_main_module_execution():
 
     # The process should have terminated in response to SIGTERM without an obvious crash.
     assert process.returncode is not None, "main.py did not terminate after SIGTERM"
-    assert (
-        b"Traceback" not in stderr
-    ), f"main.py crashed on startup:\n{stderr.decode(errors='ignore')}"
+    assert b"Traceback" not in stderr, (
+        f"main.py crashed on startup:\n{stderr.decode(errors='ignore')}"
+    )

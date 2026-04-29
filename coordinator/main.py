@@ -20,6 +20,7 @@ from interface.api.verification import router as verification_router
 # FastAPI App
 app = FastAPI(title="Monkey Troop Coordinator", version="0.1.0")
 
+
 def get_allowed_origins() -> list[str]:
     """Parse ALLOWED_ORIGINS from environment, filtering out wildcards."""
     raw = os.getenv("ALLOWED_ORIGINS", "")

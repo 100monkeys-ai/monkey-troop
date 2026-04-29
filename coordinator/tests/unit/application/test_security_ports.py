@@ -55,8 +55,6 @@ def test_concrete_key_repository():
     assert repo.get_private_key() == b"priv"
     repo.ensure_keys_exist()
 
-import pytest
-from coordinator.application.security_ports import KeyRepository, TokenService
 
 def test_key_repository_requires_ensure_keys_exist():
     class IncompleteKeyRepository(KeyRepository):
@@ -68,6 +66,7 @@ def test_key_repository_requires_ensure_keys_exist():
 
     with pytest.raises(TypeError, match="Can't instantiate abstract class IncompleteKeyRepository"):
         IncompleteKeyRepository()
+
 
 def test_key_repository_all_methods_implemented():
     class CompleteKeyRepository(KeyRepository):
@@ -83,6 +82,7 @@ def test_key_repository_all_methods_implemented():
     repo = CompleteKeyRepository()
     assert isinstance(repo, KeyRepository)
 
+
 def test_token_service_requires_all_methods():
     class IncompleteTokenService(TokenService):
         def generate_ticket(self, user_id: str, target_node_id: str, project: str = "free-tier"):
@@ -90,6 +90,7 @@ def test_token_service_requires_all_methods():
 
     with pytest.raises(TypeError, match="Can't instantiate abstract class IncompleteTokenService"):
         IncompleteTokenService()
+
 
 def test_token_service_all_methods_implemented():
     class CompleteTokenService(TokenService):
