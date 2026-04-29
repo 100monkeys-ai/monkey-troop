@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from coordinator.application.accounting_services import AccountingService
-from coordinator.domain.accounting.models import TransactionType, User
+from coordinator.domain.accounting.models import JobCompletionParams, TransactionType, User
 
 
 @pytest.fixture
@@ -84,7 +84,7 @@ def test_process_job_completion_success(accounting_service, mock_user_repo, mock
     # Mocking get_by_public_key for both
     mock_user_repo.get_by_public_key.side_effect = [requester, worker_owner]
 
-    result = accounting_service.process_job_completion(
+    params = JobCompletionParams(
         job_id="job1",
         requester_pk="requester",
         worker_node_id="node1",
@@ -92,6 +92,7 @@ def test_process_job_completion_success(accounting_service, mock_user_repo, mock
         duration_seconds=100,
         multiplier=2.0,
     )
+    result = accounting_service.process_job_completion(params)
 
     assert result["status"] == "success"
     assert result["credits_transferred"] == 200
@@ -109,7 +110,7 @@ def test_process_job_completion_success(accounting_service, mock_user_repo, mock
 def test_process_job_completion_requester_not_found(accounting_service, mock_user_repo):
     mock_user_repo.get_by_public_key.return_value = None
 
-    result = accounting_service.process_job_completion(
+    params = JobCompletionParams(
         job_id="job1",
         requester_pk="missing",
         worker_node_id="node1",
@@ -117,6 +118,7 @@ def test_process_job_completion_requester_not_found(accounting_service, mock_use
         duration_seconds=100,
         multiplier=1.0,
     )
+    result = accounting_service.process_job_completion(params)
 
     assert result["status"] == "error"
     assert "Requester not found" in result["message"]
@@ -148,7 +150,7 @@ def test_process_job_completion_worker_owner_not_exists(
         new_worker_owner,
     ]
 
-    result = accounting_service.process_job_completion(
+    params = JobCompletionParams(
         job_id="job1",
         requester_pk="requester",
         worker_node_id="node1",
@@ -156,6 +158,7 @@ def test_process_job_completion_worker_owner_not_exists(
         duration_seconds=100,
         multiplier=1.0,
     )
+    result = accounting_service.process_job_completion(params)
 
     assert result["status"] == "success"
     assert result["credits_transferred"] == 100

@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from domain.accounting.models import JobCompletionParams
+
 from .accounting_services import AccountingService
 from .inference_services import DiscoveryService
 from .security_services import SecurityService
@@ -79,28 +81,16 @@ class OrchestrationService:
 
     def complete_job(
         self,
-        job_id: str,
-        requester_pk: str,
-        worker_node_id: str,
-        worker_owner_pk: str,
-        duration_seconds: int,
-        multiplier: float,
+        params: JobCompletionParams,
         success: bool,
     ) -> dict:
         """Orchestrate job completion across accounting and reputation."""
         result = {"status": "failed"}
 
         if success:
-            result = self.accounting_service.process_job_completion(
-                job_id,
-                requester_pk,
-                worker_node_id,
-                worker_owner_pk,
-                duration_seconds,
-                multiplier,
-            )
+            result = self.accounting_service.process_job_completion(params)
 
-        self.discovery_service.record_job_outcome(worker_node_id, success)
-        self.discovery_service.recalculate_reputation(worker_node_id)
+        self.discovery_service.record_job_outcome(params.worker_node_id, success)
+        self.discovery_service.recalculate_reputation(params.worker_node_id)
 
         return result

@@ -15,6 +15,18 @@ class TransactionType(str, Enum):
 
 
 @dataclass(frozen=True)
+class JobCompletionParams:
+    """Parameters for processing job completion accounting."""
+
+    job_id: str
+    requester_pk: str
+    worker_node_id: str
+    worker_owner_pk: str
+    duration_seconds: int
+    multiplier: float
+
+
+@dataclass(frozen=True)
 class CreditAmount:
     """Value object representing a credit amount in seconds."""
 
