@@ -2,7 +2,7 @@
 name = "monkey-troop-coordinator"
 version = "0.1.0"
 description = "Coordinator service for Monkey Troop distributed AI compute network"
-authors = ["Monkey Troop Contributors"]
+authors = [{name = "Monkey Troop Contributors"}]
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.11"
