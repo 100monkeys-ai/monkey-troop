@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict
 
-from domain.verification.models import BenchmarkResult, Challenge
+from domain.verification.models import BenchmarkResult, Challenge, HardwareProof
 
 from .verification_ports import BenchmarkRepository, ChallengeRepository
 
@@ -34,35 +34,33 @@ class VerificationService:
 
         return challenge
 
-    def verify_proof(
-        self, token: str, node_id: str, duration: float, device_name: str, proof_hash: str
-    ) -> Dict[str, Any]:
+    def verify_proof(self, proof: HardwareProof) -> Dict[str, Any]:
         """Use Case: Verify the proof-of-hardware submission."""
 
         # 1. Retrieve and validate challenge
-        challenge = self.challenge_repo.get_challenge(token)
+        challenge = self.challenge_repo.get_challenge(proof.token)
         if not challenge:
             return {"status": "error", "message": "Challenge expired or invalid"}
 
-        if challenge.node_id != node_id:
+        if challenge.node_id != proof.node_id:
             return {"status": "error", "message": "Challenge node ID mismatch"}
 
         # 2. In a real system, we would verify proof_hash here using the original seed
         # For MVP, we calculate the multiplier based on duration
-        multiplier = BenchmarkResult.calculate_multiplier(duration)
+        multiplier = BenchmarkResult.calculate_multiplier(proof.duration)
 
         # 3. Save benchmark result to persistent storage
         result = BenchmarkResult(
-            node_id=node_id,
-            duration=duration,
-            device_name=device_name,
+            node_id=proof.node_id,
+            duration=proof.duration,
+            device_name=proof.device_name,
             multiplier=multiplier,
             timestamp=datetime.utcnow(),
         )
         self.benchmark_repo.save_result(result)
 
         # 4. Cleanup
-        self.challenge_repo.delete_challenge(token)
+        self.challenge_repo.delete_challenge(proof.token)
 
         tier = "High Performance" if multiplier > 3 else "Standard"
         return {"status": "verified", "assigned_multiplier": multiplier, "tier": tier}

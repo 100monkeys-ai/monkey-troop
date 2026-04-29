@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from application.verification_services import VerificationService
+from domain.verification.models import HardwareProof
 from infrastructure.dependencies import get_verification_service
 
 from .schemas import ChallengeResponseSchema, VerifyRequestSchema
@@ -29,13 +30,14 @@ async def submit_proof(
     verification_service: VerificationService = Depends(get_verification_service),
 ):
     """Node submits proof-of-hardware result."""
-    result = verification_service.verify_proof(
+    proof = HardwareProof(
         token=req.challenge_token,
         node_id=req.node_id,
         duration=req.duration,
         device_name=req.device_name,
         proof_hash=req.proof_hash,
     )
+    result = verification_service.verify_proof(proof)
 
     if result["status"] == "error":
         raise HTTPException(status_code=400, detail=result["message"])

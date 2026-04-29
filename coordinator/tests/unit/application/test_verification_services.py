@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from coordinator.application.verification_services import VerificationService
-from coordinator.domain.verification.models import Challenge
+from coordinator.domain.verification.models import Challenge, HardwareProof
 
 
 @pytest.fixture
@@ -40,9 +40,10 @@ def test_verify_proof_success(verification_service, mock_challenge_repo, mock_be
 
     mock_challenge_repo.get_challenge.return_value = challenge
 
-    result = verification_service.verify_proof(
+    proof = HardwareProof(
         token=token, node_id=node_id, duration=10.0, device_name="RTX 4090", proof_hash="hash_123"
     )
+    result = verification_service.verify_proof(proof)
 
     assert result["status"] == "verified"
     assert result["assigned_multiplier"] == 3.5  # 35.0 / 10.0
@@ -54,7 +55,8 @@ def test_verify_proof_success(verification_service, mock_challenge_repo, mock_be
 
 def test_verify_proof_challenge_not_found(verification_service, mock_challenge_repo):
     mock_challenge_repo.get_challenge.return_value = None
-    result = verification_service.verify_proof("t", "n", 10.0, "d", "h")
+    proof = HardwareProof("t", "n", 10.0, "d", "h")
+    result = verification_service.verify_proof(proof)
     assert result["status"] == "error"
     assert "Challenge expired or invalid" in result["message"]
 
@@ -63,7 +65,8 @@ def test_verify_proof_node_mismatch(verification_service, mock_challenge_repo):
     challenge = Challenge("t", "s", 1024, datetime.utcnow(), "node_1")
     mock_challenge_repo.get_challenge.return_value = challenge
 
-    result = verification_service.verify_proof("t", "different_node", 10.0, "d", "h")
+    proof = HardwareProof("t", "different_node", 10.0, "d", "h")
+    result = verification_service.verify_proof(proof)
     assert result["status"] == "error"
     assert "Challenge node ID mismatch" in result["message"]
 
@@ -73,5 +76,6 @@ def test_verify_proof_tier_standard(verification_service, mock_challenge_repo):
     mock_challenge_repo.get_challenge.return_value = challenge
 
     # 35.0 / 17.5 = 2.0 (<= 3.0, so Standard)
-    result = verification_service.verify_proof("t", "node_1", 17.5, "d", "h")
+    proof = HardwareProof("t", "node_1", 17.5, "d", "h")
+    result = verification_service.verify_proof(proof)
     assert result["tier"] == "Standard"
