@@ -169,6 +169,59 @@ def test_select_node_all_suspended_returns_none(
     assert selected is None
 
 
+from unittest.mock import patch
+
+def test__weighted_select_empty_candidates(discovery_service, mock_reputation_repo):
+    """If candidates list is empty, return None immediately."""
+    selected = discovery_service._weighted_select([])
+    assert selected is None
+    mock_reputation_repo.get_reputations_batch.assert_called_once_with([])
+
+def test__weighted_select_weights_calculation(discovery_service, mock_reputation_repo):
+    """Verify exact weights passed to random.choices."""
+    # Nodes:
+    # n1: score 0.8 (weight 0.8**2 = 0.64)
+    # n2: score 0.1 (suspended, weight 0.0)
+    # n3: no reputation (default 0.5, weight 0.5**2 = 0.25)
+    n1 = _make_node("n1")
+    n2 = _make_node("n2")
+    n3 = _make_node("n3")
+    candidates = [n1, n2, n3]
+
+    mock_reputation_repo.get_reputations_batch.return_value = [
+        _make_reputation("n1", 0.8),
+        _make_reputation("n2", 0.1)
+    ]
+
+    with patch("coordinator.application.inference_services.random.choices") as mock_choices:
+        mock_choices.return_value = [n1]
+
+        selected = discovery_service._weighted_select(candidates)
+
+        assert selected == n1
+
+        # Check weights passed to random.choices
+        mock_choices.assert_called_once_with(
+            candidates,
+            weights=[pytest.approx(0.64), pytest.approx(0.0), pytest.approx(0.25)],
+            k=1
+        )
+
+def test__weighted_select_all_suspended_or_zero(discovery_service, mock_reputation_repo):
+    """If all weights are zero (e.g. all suspended), return None."""
+    n1 = _make_node("n1")
+    candidates = [n1]
+
+    mock_reputation_repo.get_reputations_batch.return_value = [
+        _make_reputation("n1", 0.1)
+    ]
+
+    with patch("coordinator.application.inference_services.random.choices") as mock_choices:
+        selected = discovery_service._weighted_select(candidates)
+
+        assert selected is None
+        mock_choices.assert_not_called()
+
 def test_get_aggregated_models(discovery_service, mock_discovery_repo):
     m1 = _mi("alpha", content_hash="sha256:aaa", size_bytes=100)
     m2 = _mi("beta", content_hash="sha256:bbb", size_bytes=200)
