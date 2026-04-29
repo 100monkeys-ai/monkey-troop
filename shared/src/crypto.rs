@@ -4,7 +4,7 @@ use base64::Engine;
 use chacha20poly1305::aead::{Aead, OsRng};
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
 use hkdf::Hkdf;
-use rand::RngCore;
+use rand_core::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use x25519_dalek::{PublicKey, StaticSecret};
