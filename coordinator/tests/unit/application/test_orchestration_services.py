@@ -5,6 +5,7 @@ from coordinator.application.orchestration_services import (
     InsufficientCreditsError,
     NoNodesAvailableError,
     AuthorizationResult,
+    JobCompletionParams,
 )
 
 
@@ -99,7 +100,7 @@ def test_complete_job_success(
     mock_accounting_service.process_job_completion.return_value = {"status": "success"}
 
     # Execute
-    result = orchestration_service.complete_job(
+    params = JobCompletionParams(
         job_id="job123",
         requester_pk="user1",
         worker_node_id="node1",
@@ -108,6 +109,7 @@ def test_complete_job_success(
         multiplier=1.0,
         success=True,
     )
+    result = orchestration_service.complete_job(params)
 
     # Assert
     assert result == {"status": "success"}
@@ -122,7 +124,7 @@ def test_complete_job_failure(
     orchestration_service, mock_accounting_service, mock_discovery_service
 ):
     # Execute with success=False
-    result = orchestration_service.complete_job(
+    params = JobCompletionParams(
         job_id="job123",
         requester_pk="user1",
         worker_node_id="node1",
@@ -131,6 +133,7 @@ def test_complete_job_failure(
         multiplier=1.0,
         success=False,
     )
+    result = orchestration_service.complete_job(params)
 
     # Assert
     assert result == {"status": "failed"}
