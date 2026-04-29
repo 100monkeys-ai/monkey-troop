@@ -10,8 +10,8 @@ from sqlalchemy import (
     BigInteger,
     DateTime,
     ForeignKey,
+    JSON,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -88,6 +88,8 @@ class Transaction(Base):
     to_user = Column(String, index=True, nullable=True)  # Public Key
 
     node_id = Column(String, nullable=True)
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    worker_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
 
     duration_seconds = Column(Integer, nullable=False)
     credits_transferred = Column(Float, nullable=False)
