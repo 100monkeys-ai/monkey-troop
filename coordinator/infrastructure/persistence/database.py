@@ -17,9 +17,9 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://troop_admin:changeme@localhost:5432/troop_ledger"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
 
 
 # Use dynamic engine creation to allow easier testing overrides
