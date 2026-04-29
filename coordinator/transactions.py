@@ -5,12 +5,8 @@ import hmac
 import os
 from datetime import datetime
 
-from sqlalchemy.orm import Session
-
-from database import Node, Transaction, User
-
 from sqlalchemy import and_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import Node, Transaction, User
 
@@ -191,6 +187,7 @@ def get_transaction_history(db: Session, public_key: str, limit: int = 50) -> li
     """Get transaction history for a user."""
     transactions = (
         db.query(Transaction)
+        .options(joinedload(Transaction.requester), joinedload(Transaction.worker_node))
         .filter((Transaction.from_user == public_key) | (Transaction.to_user == public_key))
         .order_by(Transaction.timestamp.desc())
         .limit(limit)
