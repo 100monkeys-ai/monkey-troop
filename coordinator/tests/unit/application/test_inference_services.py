@@ -242,3 +242,52 @@ def test_recalculate_reputation_unknown_node(discovery_service, mock_reputation_
     mock_reputation_repo.get_reputation.return_value = None
     result = discovery_service.recalculate_reputation("unknown")
     assert result is None
+
+def test_sort_by_reputation_empty_list(discovery_service, mock_reputation_repo):
+    """Sorting an empty list should return an empty list and not call the database."""
+    result = discovery_service._sort_by_reputation([])
+    assert result == []
+    mock_reputation_repo.get_reputations_batch.assert_called_once_with([])
+
+
+def test_sort_by_reputation_missing_reputation(discovery_service, mock_reputation_repo):
+    """Nodes missing from reputation_repo should default to a score of 0.5."""
+    n1 = _make_node("n1")  # Score 0.9
+    n2 = _make_node("n2")  # Missing (defaults to 0.5)
+    n3 = _make_node("n3")  # Score 0.2
+
+    def get_reps_batch(node_ids):
+        scores = {"n1": 0.9, "n3": 0.2}
+        return [_make_reputation(nid, scores[nid]) for nid in node_ids if nid in scores]
+
+    mock_reputation_repo.get_reputations_batch.side_effect = get_reps_batch
+
+    result = discovery_service._sort_by_reputation([n1, n2, n3])
+
+    assert [n.node_id for n in result] == ["n1", "n2", "n3"]
+    mock_reputation_repo.get_reputations_batch.assert_called_once_with(["n1", "n2", "n3"])
+
+
+def test_sort_by_reputation_stable_sort(discovery_service, mock_reputation_repo):
+    """Sorting should be stable for nodes with identical scores."""
+    n1 = _make_node("n1")
+    n2 = _make_node("n2")
+    n3 = _make_node("n3")
+    n4 = _make_node("n4")
+
+    # n1 and n2 have identical high scores.
+    # n3 and n4 have identical missing/default scores.
+    def get_reps_batch(node_ids):
+        scores = {"n1": 0.8, "n2": 0.8}
+        return [_make_reputation(nid, scores[nid]) for nid in node_ids if nid in scores]
+
+    mock_reputation_repo.get_reputations_batch.side_effect = get_reps_batch
+
+    result = discovery_service._sort_by_reputation([n1, n2, n3, n4])
+
+    # Should maintain n1 before n2, and n3 before n4
+    assert [n.node_id for n in result] == ["n1", "n2", "n3", "n4"]
+
+    # Reversing original order to verify stability explicitly
+    result_reversed = discovery_service._sort_by_reputation([n2, n1, n4, n3])
+    assert [n.node_id for n in result_reversed] == ["n2", "n1", "n4", "n3"]
