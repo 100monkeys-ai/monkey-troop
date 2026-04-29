@@ -110,8 +110,8 @@ async fn handle_chat_completion(
             let key_for_done = key;
             let base_nonce_for_done = base_nonce;
 
-            let sse_stream = chunk_stream.map(
-                move |result| -> Result<Frame<Bytes>, std::convert::Infallible> {
+            let sse_stream =
+                chunk_stream.map(move |result| -> Result<Frame<Bytes>, anyhow::Error> {
                     let seq = seq_counter.fetch_add(1, Ordering::Relaxed);
                     match result {
                         Ok(chunk) => {
@@ -121,8 +121,7 @@ async fn handle_chat_completion(
                                 &base_nonce,
                                 seq,
                                 json_str.as_bytes(),
-                            )
-                            .expect("Chunk encryption should not fail");
+                            )?;
                             let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
                             let envelope_json =
                                 serde_json::to_string(&envelope).unwrap_or_default();
@@ -136,8 +135,7 @@ async fn handle_chat_completion(
                                 &base_nonce,
                                 seq,
                                 b"[DONE]",
-                            )
-                            .expect("Chunk encryption should not fail");
+                            )?;
                             let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
                             let envelope_json =
                                 serde_json::to_string(&envelope).unwrap_or_default();
@@ -146,8 +144,7 @@ async fn handle_chat_completion(
                             ))))
                         }
                     }
-                },
-            );
+                });
 
             let done_frame = futures::stream::once(async move {
                 let seq = seq_for_done.load(Ordering::Relaxed);
@@ -156,11 +153,10 @@ async fn handle_chat_completion(
                     &base_nonce_for_done,
                     seq,
                     b"[DONE]",
-                )
-                .expect("Chunk encryption should not fail");
+                )?;
                 let envelope = monkey_troop_shared::E2EChunkEnvelope { e2e: encrypted };
                 let envelope_json = serde_json::to_string(&envelope).unwrap_or_default();
-                Ok::<Frame<Bytes>, std::convert::Infallible>(Frame::data(Bytes::from(format!(
+                Ok::<Frame<Bytes>, anyhow::Error>(Frame::data(Bytes::from(format!(
                     "data: {envelope_json}\n\n"
                 ))))
             });

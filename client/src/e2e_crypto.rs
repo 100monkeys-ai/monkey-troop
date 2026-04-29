@@ -16,7 +16,7 @@ pub fn establish_session(worker_public_key_b64: &str) -> anyhow::Result<E2ESessi
     let (client_secret, client_pub_b64) = crypto::generate_keypair();
     let worker_pub = decode_public_key(worker_public_key_b64)?;
     let shared_secret = client_secret.diffie_hellman(&worker_pub);
-    let session_key = derive_session_key(shared_secret.as_bytes());
+    let session_key = derive_session_key(shared_secret.as_bytes())?;
     Ok(E2ESession {
         session_key,
         client_public_key_b64: client_pub_b64,
@@ -60,21 +60,21 @@ mod tests {
     }
 
     #[test]
-    fn test_encrypt_decrypt_round_trip() {
+    fn test_encrypt_decrypt_round_trip() -> anyhow::Result<()> {
         let (worker_secret, worker_pub) = crypto::generate_keypair();
-        let session = establish_session(&worker_pub).unwrap();
+        let session = establish_session(&worker_pub)?;
 
         let plaintext = b"test request payload";
-        let encrypted_value = encrypt_request(&session, plaintext).unwrap();
+        let encrypted_value = encrypt_request(&session, plaintext)?;
 
         // Simulate worker decryption
-        let envelope: E2EEnvelope = serde_json::from_value(encrypted_value).unwrap();
-        let client_pub =
-            decode_public_key(envelope.e2e.client_public_key.as_ref().unwrap()).unwrap();
+        let envelope: E2EEnvelope = serde_json::from_value(encrypted_value)?;
+        let client_pub = decode_public_key(envelope.e2e.client_public_key.as_ref().unwrap())?;
         let shared = worker_secret.diffie_hellman(&client_pub);
-        let worker_key = derive_session_key(shared.as_bytes());
-        let decrypted = crypto::decrypt_payload(&worker_key, &envelope.e2e).unwrap();
+        let worker_key = derive_session_key(shared.as_bytes())?;
+        let decrypted = crypto::decrypt_payload(&worker_key, &envelope.e2e)?;
         assert_eq!(decrypted, plaintext);
+        Ok(())
     }
 
     #[test]
