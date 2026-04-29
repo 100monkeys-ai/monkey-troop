@@ -3,21 +3,18 @@
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-
 from application.inference_services import DiscoveryService
 from application.orchestration_services import OrchestrationService
-from domain.inference.models import EngineInfo, HardwareSpec, ModelIdentity, Node
+from domain.inference.models import (EngineInfo, HardwareSpec, ModelIdentity,
+                                     Node)
 from domain.inference.reputation import ReputationTier
-from infrastructure.dependencies import get_discovery_service, get_orchestration_service
+from fastapi import APIRouter, Depends, HTTPException, Query
+from infrastructure.dependencies import (get_discovery_service,
+                                         get_orchestration_service)
 
-from .schemas import (
-    AuthorizeRequestSchema,
-    AuthorizeResponseSchema,
-    NodeHeartbeatSchema,
-    NodeReputationSchema,
-    ReputationComponentsSchema,
-)
+from .schemas import (AuthorizeRequestSchema, AuthorizeResponseSchema,
+                      NodeHeartbeatSchema, NodeReputationSchema,
+                      ReputationComponentsSchema)
 
 router = APIRouter(tags=["Inference"])
 
@@ -28,7 +25,8 @@ async def authorize_request(
     orchestration_service: OrchestrationService = Depends(get_orchestration_service),
 ):
     """Orchestrated endpoint: Authorize a request across multiple contexts."""
-    from application.orchestration_services import InsufficientCreditsError, NoNodesAvailableError
+    from application.orchestration_services import (InsufficientCreditsError,
+                                                    NoNodesAvailableError)
 
     try:
         result = orchestration_service.authorize_inference(req.requester, req.model)
@@ -47,7 +45,8 @@ async def authorize_request(
 
 @router.post("/heartbeat")
 async def receive_heartbeat(
-    data: NodeHeartbeatSchema, discovery_service: DiscoveryService = Depends(get_discovery_service)
+    data: NodeHeartbeatSchema,
+    discovery_service: DiscoveryService = Depends(get_discovery_service),
 ):
     """Update node status and model availability."""
     node = Node(
@@ -55,10 +54,14 @@ async def receive_heartbeat(
         tailscale_ip=data.tailscale_ip,
         status=data.status,
         models=[
-            ModelIdentity(name=m.name, content_hash=m.content_hash, size_bytes=m.size_bytes)
+            ModelIdentity(
+                name=m.name, content_hash=m.content_hash, size_bytes=m.size_bytes
+            )
             for m in data.models
         ],
-        hardware=HardwareSpec(gpu=data.hardware.gpu, vram_free_mb=data.hardware.vram_free),
+        hardware=HardwareSpec(
+            gpu=data.hardware.gpu, vram_free_mb=data.hardware.vram_free
+        ),
         engines=[EngineInfo(e.type, e.version, e.port) for e in data.engines],
         encryption_public_key=data.encryption_public_key,
     )
@@ -110,7 +113,9 @@ async def get_node_reputation(
 
 
 @router.get("/v1/models")
-async def list_models_openai(discovery_service: DiscoveryService = Depends(get_discovery_service)):
+async def list_models_openai(
+    discovery_service: DiscoveryService = Depends(get_discovery_service),
+):
     """OpenAI-compatible models endpoint."""
     models = discovery_service.get_aggregated_models()
     return {

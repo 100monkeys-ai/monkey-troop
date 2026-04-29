@@ -2,10 +2,9 @@
 
 import fakeredis
 import pytest
+from infrastructure.persistence import database
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from infrastructure.persistence import database
 
 # Use in-memory SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -21,8 +20,12 @@ def redis_client():
 def setup_test_database():
 
     # Globally override the database engine and sessionmaker
-    test_engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    test_engine = create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
+    test_session_local = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_engine
+    )
 
     # Monkeypatch the database module
     database.engine = test_engine

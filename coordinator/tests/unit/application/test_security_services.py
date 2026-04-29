@@ -32,7 +32,9 @@ def test_issue_authorization_ticket(security_service, mock_token_service):
 
     res = security_service.issue_authorization_ticket(user_id, node_id)
     assert res == ticket
-    mock_token_service.generate_ticket.assert_called_once_with(user_id, node_id, "free-tier")
+    mock_token_service.generate_ticket.assert_called_once_with(
+        user_id, node_id, "free-tier"
+    )
 
 
 def test_verify_incoming_ticket(security_service, mock_token_service):

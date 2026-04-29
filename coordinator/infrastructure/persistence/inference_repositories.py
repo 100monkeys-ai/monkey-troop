@@ -3,10 +3,9 @@
 import json
 from typing import List, Optional
 
-from redis import Redis
-
 from application.inference_ports import NodeDiscoveryRepository
 from domain.inference.models import Node
+from redis import Redis
 
 
 class RedisNodeDiscoveryRepository(NodeDiscoveryRepository):
@@ -30,7 +29,9 @@ class RedisNodeDiscoveryRepository(NodeDiscoveryRepository):
     def find_nodes_by_model(self, identifier: str) -> List[Node]:
         nodes = self.list_all_active_nodes()
         if identifier.startswith("sha256:"):
-            return [n for n in nodes if any(m.content_hash == identifier for m in n.models)]
+            return [
+                n for n in nodes if any(m.content_hash == identifier for m in n.models)
+            ]
         return [n for n in nodes if any(m.name == identifier for m in n.models)]
 
     def list_all_active_nodes(self) -> List[Node]:

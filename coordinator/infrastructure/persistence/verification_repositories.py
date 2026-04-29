@@ -4,11 +4,11 @@ import json
 import logging
 from typing import Optional
 
+from application.verification_ports import (BenchmarkRepository,
+                                            ChallengeRepository)
+from domain.verification.models import BenchmarkResult, Challenge
 from redis import Redis
 from sqlalchemy.orm import Session
-
-from application.verification_ports import BenchmarkRepository, ChallengeRepository
-from domain.verification.models import BenchmarkResult, Challenge
 
 from . import database as db_models
 
@@ -82,7 +82,11 @@ class SqlAlchemyBenchmarkRepository(BenchmarkRepository):
             self.session.commit()
 
     def get_last_result(self, node_id: str) -> Optional[BenchmarkResult]:
-        node = self.session.query(db_models.Node).filter(db_models.Node.node_id == node_id).first()
+        node = (
+            self.session.query(db_models.Node)
+            .filter(db_models.Node.node_id == node_id)
+            .first()
+        )
         if not node or node.last_benchmark is None:
             return None
 

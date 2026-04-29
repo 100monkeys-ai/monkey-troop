@@ -12,7 +12,9 @@ from .verification_ports import BenchmarkRepository, ChallengeRepository
 class VerificationService:
     """Orchestrates hardware verification use cases."""
 
-    def __init__(self, challenge_repo: ChallengeRepository, benchmark_repo: BenchmarkRepository):
+    def __init__(
+        self, challenge_repo: ChallengeRepository, benchmark_repo: BenchmarkRepository
+    ):
         self.challenge_repo = challenge_repo
         self.benchmark_repo = benchmark_repo
 
@@ -35,7 +37,12 @@ class VerificationService:
         return challenge
 
     def verify_proof(
-        self, token: str, node_id: str, duration: float, device_name: str, proof_hash: str
+        self,
+        token: str,
+        node_id: str,
+        duration: float,
+        device_name: str,
+        proof_hash: str,
     ) -> Dict[str, Any]:
         """Use Case: Verify the proof-of-hardware submission."""
 

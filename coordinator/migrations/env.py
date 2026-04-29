@@ -1,5 +1,4 @@
 import os
-
 # Import your models here
 # Import your models here
 import sys
@@ -27,7 +26,9 @@ target_metadata = Base.metadata
 
 def get_url():
     """Get database URL from environment or default"""
-    return os.getenv("DATABASE_URL", "postgresql://troop:password@localhost/troop_coordinator")
+    return os.getenv(
+        "DATABASE_URL", "postgresql://troop:password@localhost/troop_coordinator"
+    )
 
 
 def run_migrations_offline() -> None:

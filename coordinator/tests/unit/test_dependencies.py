@@ -1,14 +1,11 @@
 from unittest.mock import MagicMock
 
+from infrastructure.dependencies import (get_accounting_service,
+                                         get_discovery_service,
+                                         get_redis_client,
+                                         get_security_service,
+                                         get_verification_service)
 from sqlalchemy.orm import Session
-
-from infrastructure.dependencies import (
-    get_accounting_service,
-    get_discovery_service,
-    get_redis_client,
-    get_security_service,
-    get_verification_service,
-)
 
 
 def test_dependency_providers():

@@ -4,7 +4,9 @@ import json
 from typing import AsyncIterator
 
 
-async def stream_chat_completion(response_stream: AsyncIterator[bytes]) -> AsyncIterator[str]:
+async def stream_chat_completion(
+    response_stream: AsyncIterator[bytes],
+) -> AsyncIterator[str]:
     """
     Convert streaming response to SSE format.
 

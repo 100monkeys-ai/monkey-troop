@@ -2,7 +2,6 @@ from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
-
 from infrastructure.persistence import database as db_models
 from infrastructure.persistence.database import get_db
 from main import app
@@ -26,7 +25,11 @@ def test_get_balance(client, db_session):
     assert data["balance_seconds"] == 3600
 
     # Check DB
-    user = db_session.query(db_models.User).filter(db_models.User.public_key == "test_user").first()
+    user = (
+        db_session.query(db_models.User)
+        .filter(db_models.User.public_key == "test_user")
+        .first()
+    )
     assert user is not None
     assert user.balance_seconds == 3600
 

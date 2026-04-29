@@ -52,7 +52,9 @@ async def _time_concurrent_requests(app: FastAPI) -> float:
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         start = time.perf_counter()
-        responses = await asyncio.gather(*[client.get("/slow") for _ in range(CONCURRENT_REQUESTS)])
+        responses = await asyncio.gather(
+            *[client.get("/slow") for _ in range(CONCURRENT_REQUESTS)]
+        )
         elapsed = time.perf_counter() - start
 
     assert all(r.status_code == 200 for r in responses)

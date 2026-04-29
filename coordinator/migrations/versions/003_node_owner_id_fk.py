@@ -34,7 +34,9 @@ def upgrade() -> None:
         sa.column("public_key", sa.String),
     )
     conn = op.get_bind()
-    rows = conn.execute(sa.select(users_table.c.id, users_table.c.public_key)).fetchall()
+    rows = conn.execute(
+        sa.select(users_table.c.id, users_table.c.public_key)
+    ).fetchall()
     for user_id, public_key in rows:
         conn.execute(
             sa.update(nodes_table)
@@ -62,7 +64,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Restore index on owner_public_key
-    op.create_index(op.f("ix_nodes_owner_public_key"), "nodes", ["owner_public_key"], unique=False)
+    op.create_index(
+        op.f("ix_nodes_owner_public_key"), "nodes", ["owner_public_key"], unique=False
+    )
 
     # Drop the owner_id FK constraint, index, and column
     op.drop_index(op.f("ix_nodes_owner_id"), table_name="nodes")

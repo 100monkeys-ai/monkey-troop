@@ -3,14 +3,9 @@
 from datetime import datetime, timezone
 
 import pytest
-
-from domain.inference.reputation import (
-    NodeReputation,
-    ReputationCalculator,
-    ReputationComponents,
-    ReputationScore,
-    ReputationTier,
-)
+from domain.inference.reputation import (NodeReputation, ReputationCalculator,
+                                         ReputationComponents, ReputationScore,
+                                         ReputationTier)
 
 
 class TestReputationScore:
@@ -37,33 +32,51 @@ class TestReputationScore:
 
 class TestReputationComponents:
     def test_creation(self):
-        components = ReputationComponents(availability=0.9, reliability=0.8, performance=0.7)
+        components = ReputationComponents(
+            availability=0.9, reliability=0.8, performance=0.7
+        )
         assert components.availability == 0.9
         assert components.reliability == 0.8
         assert components.performance == 0.7
 
     def test_frozen(self):
-        components = ReputationComponents(availability=0.9, reliability=0.8, performance=0.7)
+        components = ReputationComponents(
+            availability=0.9, reliability=0.8, performance=0.7
+        )
         with pytest.raises(AttributeError):
             components.availability = 0.5
 
 
 class TestReputationTier:
     def test_suspended(self):
-        assert ReputationTier.from_score(ReputationScore(0.0)) == ReputationTier.SUSPENDED
-        assert ReputationTier.from_score(ReputationScore(0.19)) == ReputationTier.SUSPENDED
+        assert (
+            ReputationTier.from_score(ReputationScore(0.0)) == ReputationTier.SUSPENDED
+        )
+        assert (
+            ReputationTier.from_score(ReputationScore(0.19)) == ReputationTier.SUSPENDED
+        )
 
     def test_probation(self):
-        assert ReputationTier.from_score(ReputationScore(0.2)) == ReputationTier.PROBATION
-        assert ReputationTier.from_score(ReputationScore(0.39)) == ReputationTier.PROBATION
+        assert (
+            ReputationTier.from_score(ReputationScore(0.2)) == ReputationTier.PROBATION
+        )
+        assert (
+            ReputationTier.from_score(ReputationScore(0.39)) == ReputationTier.PROBATION
+        )
 
     def test_standard(self):
-        assert ReputationTier.from_score(ReputationScore(0.4)) == ReputationTier.STANDARD
-        assert ReputationTier.from_score(ReputationScore(0.69)) == ReputationTier.STANDARD
+        assert (
+            ReputationTier.from_score(ReputationScore(0.4)) == ReputationTier.STANDARD
+        )
+        assert (
+            ReputationTier.from_score(ReputationScore(0.69)) == ReputationTier.STANDARD
+        )
 
     def test_trusted(self):
         assert ReputationTier.from_score(ReputationScore(0.7)) == ReputationTier.TRUSTED
-        assert ReputationTier.from_score(ReputationScore(0.89)) == ReputationTier.TRUSTED
+        assert (
+            ReputationTier.from_score(ReputationScore(0.89)) == ReputationTier.TRUSTED
+        )
 
     def test_elite(self):
         assert ReputationTier.from_score(ReputationScore(0.9)) == ReputationTier.ELITE
@@ -163,7 +176,9 @@ class TestNodeReputation:
         rep = NodeReputation(
             node_id="node1",
             score=ReputationScore(0.75),
-            components=ReputationComponents(availability=0.9, reliability=0.8, performance=0.5),
+            components=ReputationComponents(
+                availability=0.9, reliability=0.8, performance=0.5
+            ),
             total_jobs=10,
             successful_jobs=8,
             failed_jobs=2,

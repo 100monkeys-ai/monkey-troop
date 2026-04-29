@@ -13,7 +13,9 @@ class ReputationScore:
 
     def __post_init__(self):
         if not (0.0 <= self.value <= 1.0):
-            raise ValueError(f"Reputation score must be between 0.0 and 1.0, got {self.value}")
+            raise ValueError(
+                f"Reputation score must be between 0.0 and 1.0, got {self.value}"
+            )
 
 
 @dataclass(frozen=True)
@@ -72,7 +74,9 @@ class ReputationCalculator:
 
     MIN_JOBS_FOR_REPUTATION = 5
     DEFAULT_SCORE = ReputationScore(0.5)
-    DEFAULT_COMPONENTS = ReputationComponents(availability=1.0, reliability=1.0, performance=1.0)
+    DEFAULT_COMPONENTS = ReputationComponents(
+        availability=1.0, reliability=1.0, performance=1.0
+    )
 
     @staticmethod
     def calculate(

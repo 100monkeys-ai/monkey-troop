@@ -1,9 +1,9 @@
 import pytest
-
 from application.accounting_ports import TransactionRepository, UserRepository
 from application.inference_ports import NodeDiscoveryRepository
 from application.security_ports import KeyRepository, TokenService
-from application.verification_ports import BenchmarkRepository, ChallengeRepository
+from application.verification_ports import (BenchmarkRepository,
+                                            ChallengeRepository)
 
 
 def test_ports_are_abstract():
@@ -42,7 +42,11 @@ def test_user_repository_can_be_implemented():
 
         def save(self, user):
             # assume user has "pk" attribute or is simply a mapping with "pk" key
-            pk = getattr(user, "pk", None) if not isinstance(user, dict) else user.get("pk")
+            pk = (
+                getattr(user, "pk", None)
+                if not isinstance(user, dict)
+                else user.get("pk")
+            )
             self._users[pk] = user
             return user
 

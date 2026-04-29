@@ -33,11 +33,18 @@ class AuditService:
         self.db = db_session
 
     def _write_to_db(
-        self, event_type: str, user_id: Optional[str], ip_address: str, details: Dict[str, Any]
+        self,
+        event_type: str,
+        user_id: Optional[str],
+        ip_address: str,
+        details: Dict[str, Any],
     ):
         try:
             audit_entry = db_models.AuditLog(
-                event_type=event_type, user_id=user_id, ip_address=ip_address, details=details
+                event_type=event_type,
+                user_id=user_id,
+                ip_address=ip_address,
+                details=details,
             )
             self.db.add(audit_entry)
             self.db.commit()
@@ -45,7 +52,11 @@ class AuditService:
             logging.error(f"Failed to write audit log to database: {e}")
 
     def log_event(
-        self, event_type: str, user_id: Optional[str], ip_address: str, details: Dict[str, Any]
+        self,
+        event_type: str,
+        user_id: Optional[str],
+        ip_address: str,
+        details: Dict[str, Any],
     ):
         # Write to file
         audit_logger.info(json.dumps({**details, "event": event_type}))
@@ -65,7 +76,12 @@ class AuditService:
         if user_id:
             query = query.filter(db_models.AuditLog.user_id == user_id)
 
-        logs = query.order_by(db_models.AuditLog.timestamp.desc()).offset(offset).limit(limit).all()
+        logs = (
+            query.order_by(db_models.AuditLog.timestamp.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
         return [
             {
                 "id": log.id,

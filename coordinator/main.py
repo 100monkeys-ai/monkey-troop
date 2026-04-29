@@ -2,13 +2,10 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 # Database and Core
 from infrastructure.persistence.database import init_db
-
 # Infrastructure Implementations
 from infrastructure.security.key_repository import FileSystemKeyRepository
-
 # Import Context-Specific Routers (Interface Layer)
 from interface.api.accounting import router as accounting_router
 from interface.api.inference import router as inference_router

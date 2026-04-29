@@ -4,7 +4,6 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
-
 from infrastructure.dependencies import get_redis_client
 from infrastructure.persistence.database import get_db
 from main import app
@@ -32,7 +31,9 @@ def client(db_session, redis_client):
     app.dependency_overrides.clear()
 
 
-def _model_dict(name: str, content_hash: str = "sha256:aaa", size_bytes: int = 1000) -> dict:
+def _model_dict(
+    name: str, content_hash: str = "sha256:aaa", size_bytes: int = 1000
+) -> dict:
     return {"name": name, "content_hash": content_hash, "size_bytes": size_bytes}
 
 
@@ -52,7 +53,9 @@ def test_authorize_request_success(client, redis_client):
     redis_client.setex(f"node:{node_id}", 60, json.dumps(node_data))
 
     # 2. Call authorize
-    response = client.post("/authorize", json={"model": model_name, "requester": "user_main_test"})
+    response = client.post(
+        "/authorize", json={"model": model_name, "requester": "user_main_test"}
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -69,7 +72,8 @@ def test_authorize_request_no_node(client, redis_client):
         redis_client.delete(*keys)
 
     response = client.post(
-        "/authorize", json={"model": "non_existent_model", "requester": "user_main_test"}
+        "/authorize",
+        json={"model": "non_existent_model", "requester": "user_main_test"},
     )
 
     assert response.status_code == 503

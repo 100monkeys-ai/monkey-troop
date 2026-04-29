@@ -55,9 +55,13 @@ class Node:
                     }
                     for m in self.models
                 ],
-                "hardware": {"gpu": self.hardware.gpu, "vram_free": self.hardware.vram_free_mb},
+                "hardware": {
+                    "gpu": self.hardware.gpu,
+                    "vram_free": self.hardware.vram_free_mb,
+                },
                 "engines": [
-                    {"type": e.type, "version": e.version, "port": e.port} for e in self.engines
+                    {"type": e.type, "version": e.version, "port": e.port}
+                    for e in self.engines
                 ],
                 "reputation_score": self.reputation_score,
                 "encryption_public_key": self.encryption_public_key,
@@ -81,7 +85,9 @@ class Node:
             hardware=HardwareSpec(
                 gpu=data["hardware"]["gpu"], vram_free_mb=data["hardware"]["vram_free"]
             ),
-            engines=[EngineInfo(e["type"], e["version"], e["port"]) for e in data["engines"]],
+            engines=[
+                EngineInfo(e["type"], e["version"], e["port"]) for e in data["engines"]
+            ],
             reputation_score=data.get("reputation_score", 0.5),
             encryption_public_key=data.get("encryption_public_key"),
         )

@@ -22,7 +22,9 @@ def upgrade() -> None:
     op.create_table(
         "audit_logs",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("timestamp", sa.DateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "timestamp", sa.DateTime(), server_default=sa.text("now()"), nullable=False
+        ),
         sa.Column("event_type", sa.String(50), nullable=False),
         sa.Column("user_id", sa.String(255), nullable=True),
         sa.Column("ip_address", sa.String(45), nullable=True),
@@ -31,8 +33,12 @@ def upgrade() -> None:
     )
 
     # Create indexes for common queries
-    op.create_index("ix_audit_logs_timestamp", "audit_logs", ["timestamp"], unique=False)
-    op.create_index("ix_audit_logs_event_type", "audit_logs", ["event_type"], unique=False)
+    op.create_index(
+        "ix_audit_logs_timestamp", "audit_logs", ["timestamp"], unique=False
+    )
+    op.create_index(
+        "ix_audit_logs_event_type", "audit_logs", ["event_type"], unique=False
+    )
     op.create_index("ix_audit_logs_user_id", "audit_logs", ["user_id"], unique=False)
     op.create_index("ix_audit_logs_id", "audit_logs", ["id"], unique=False)
 

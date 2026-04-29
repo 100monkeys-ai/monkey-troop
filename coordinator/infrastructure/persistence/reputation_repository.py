@@ -3,14 +3,10 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
-
 from application.inference_ports import NodeReputationRepository
-from domain.inference.reputation import (
-    NodeReputation,
-    ReputationComponents,
-    ReputationScore,
-)
+from domain.inference.reputation import (NodeReputation, ReputationComponents,
+                                         ReputationScore)
+from sqlalchemy.orm import Session
 
 from . import database as db_models
 

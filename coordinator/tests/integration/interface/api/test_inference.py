@@ -2,16 +2,13 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi.testclient import TestClient
-
 from application.inference_services import DiscoveryService
-from domain.inference.reputation import (
-    NodeReputation,
-    ReputationComponents,
-    ReputationScore,
-)
+from domain.inference.reputation import (NodeReputation, ReputationComponents,
+                                         ReputationScore)
+from fastapi.testclient import TestClient
 from infrastructure.dependencies import get_discovery_service, get_redis_client
-from infrastructure.persistence.inference_repositories import RedisNodeDiscoveryRepository
+from infrastructure.persistence.inference_repositories import \
+    RedisNodeDiscoveryRepository
 from main import app
 
 
@@ -40,7 +37,9 @@ def client(redis_client, mock_reputation_repo):
     app.dependency_overrides.clear()
 
 
-def _model_payload(name: str, content_hash: str = "sha256:aaa", size_bytes: int = 1000) -> dict:
+def _model_payload(
+    name: str, content_hash: str = "sha256:aaa", size_bytes: int = 1000
+) -> dict:
     return {"name": name, "content_hash": content_hash, "size_bytes": size_bytes}
 
 
@@ -123,7 +122,9 @@ def test_node_reputation_endpoint(client, mock_reputation_repo):
     mock_reputation_repo.get_reputation.return_value = NodeReputation(
         node_id="node_1",
         score=ReputationScore(0.85),
-        components=ReputationComponents(availability=0.9, reliability=0.8, performance=0.85),
+        components=ReputationComponents(
+            availability=0.9, reliability=0.8, performance=0.85
+        ),
         total_jobs=20,
         successful_jobs=18,
         failed_jobs=2,

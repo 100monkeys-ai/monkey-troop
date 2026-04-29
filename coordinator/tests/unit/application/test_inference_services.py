@@ -4,15 +4,16 @@ from unittest.mock import MagicMock
 import pytest
 
 from coordinator.application.inference_services import DiscoveryService
-from coordinator.domain.inference.models import HardwareSpec, ModelIdentity, Node
-from coordinator.domain.inference.reputation import (
-    NodeReputation,
-    ReputationComponents,
-    ReputationScore,
-)
+from coordinator.domain.inference.models import (HardwareSpec, ModelIdentity,
+                                                 Node)
+from coordinator.domain.inference.reputation import (NodeReputation,
+                                                     ReputationComponents,
+                                                     ReputationScore)
 
 
-def _mi(name: str, content_hash: str = "sha256:default", size_bytes: int = 1000) -> ModelIdentity:
+def _mi(
+    name: str, content_hash: str = "sha256:default", size_bytes: int = 1000
+) -> ModelIdentity:
     return ModelIdentity(name=name, content_hash=content_hash, size_bytes=size_bytes)
 
 
@@ -46,7 +47,9 @@ def _make_reputation(node_id, score_value):
     return NodeReputation(
         node_id=node_id,
         score=ReputationScore(score_value),
-        components=ReputationComponents(availability=1.0, reliability=1.0, performance=1.0),
+        components=ReputationComponents(
+            availability=1.0, reliability=1.0, performance=1.0
+        ),
         total_jobs=10,
         successful_jobs=10,
         failed_jobs=0,
@@ -56,7 +59,9 @@ def _make_reputation(node_id, score_value):
     )
 
 
-def test_register_heartbeat(discovery_service, mock_discovery_repo, mock_reputation_repo):
+def test_register_heartbeat(
+    discovery_service, mock_discovery_repo, mock_reputation_repo
+):
     node = _make_node("node1")
     discovery_service.register_heartbeat(node, ttl_seconds=20)
     mock_discovery_repo.save_node.assert_called_once_with(node, 20)
@@ -81,7 +86,12 @@ def test_select_node_for_model_by_hash(
     discovery_service, mock_discovery_repo, mock_reputation_repo
 ):
     node1 = Node(
-        "n1", "ip1", "IDLE", [_mi("m1", content_hash="sha256:abc")], HardwareSpec("g1", 1), []
+        "n1",
+        "ip1",
+        "IDLE",
+        [_mi("m1", content_hash="sha256:abc")],
+        HardwareSpec("g1", 1),
+        [],
     )
     mock_discovery_repo.find_nodes_by_model.return_value = [node1]
     mock_reputation_repo.get_reputation.return_value = None
@@ -176,7 +186,9 @@ def test_get_aggregated_models(discovery_service, mock_discovery_repo):
     assert [m.name for m in models] == ["alpha", "beta", "gamma"]
 
 
-def test_get_aggregated_models_deduplicates_by_hash(discovery_service, mock_discovery_repo):
+def test_get_aggregated_models_deduplicates_by_hash(
+    discovery_service, mock_discovery_repo
+):
     """Same content_hash on different nodes should yield only one entry."""
     m1_a = _mi("llama2", content_hash="sha256:same", size_bytes=100)
     m1_b = _mi("llama2", content_hash="sha256:same", size_bytes=100)
@@ -209,7 +221,9 @@ def test_list_peers_sorted_by_reputation(
     assert [p.node_id for p in peers] == ["n2", "n3", "n1"]
 
 
-def test_list_peers_with_model_filter(discovery_service, mock_discovery_repo, mock_reputation_repo):
+def test_list_peers_with_model_filter(
+    discovery_service, mock_discovery_repo, mock_reputation_repo
+):
     mock_discovery_repo.find_nodes_by_model.return_value = []
     discovery_service.list_peers(model="m1")
     mock_discovery_repo.find_nodes_by_model.assert_called_once_with("m1")

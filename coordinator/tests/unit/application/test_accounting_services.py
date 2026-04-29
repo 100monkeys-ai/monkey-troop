@@ -21,7 +21,9 @@ def accounting_service(mock_user_repo, mock_txn_repo):
     return AccountingService(mock_user_repo, mock_txn_repo)
 
 
-def test_create_user_if_not_exists_new_user(accounting_service, mock_user_repo, mock_txn_repo):
+def test_create_user_if_not_exists_new_user(
+    accounting_service, mock_user_repo, mock_txn_repo
+):
     mock_user_repo.get_by_public_key.return_value = None
 
     public_key = "new_user"
@@ -38,7 +40,9 @@ def test_create_user_if_not_exists_new_user(accounting_service, mock_user_repo, 
     assert txn.amount.seconds == 3600
 
 
-def test_create_user_if_not_exists_existing_user(accounting_service, mock_user_repo, mock_txn_repo):
+def test_create_user_if_not_exists_existing_user(
+    accounting_service, mock_user_repo, mock_txn_repo
+):
     existing_user = User.create_new("existing_user", 5000)
     mock_user_repo.get_by_public_key.return_value = existing_user
 
@@ -77,7 +81,9 @@ def test_reserve_credits_user_not_found(accounting_service, mock_user_repo):
     assert result is False
 
 
-def test_process_job_completion_success(accounting_service, mock_user_repo, mock_txn_repo):
+def test_process_job_completion_success(
+    accounting_service, mock_user_repo, mock_txn_repo
+):
     requester = User.create_new("requester", 1000)
     worker_owner = User.create_new("worker_owner", 500)
 
@@ -161,4 +167,6 @@ def test_process_job_completion_worker_owner_not_exists(
     assert result["credits_transferred"] == 100
 
     # Check that SOME saved user had 100 credits (it would be the last one saved)
-    assert any(u.public_key == "new_worker" and u.balance.seconds == 100 for u in saved_users)
+    assert any(
+        u.public_key == "new_worker" and u.balance.seconds == 100 for u in saved_users
+    )

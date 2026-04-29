@@ -5,7 +5,6 @@ import time
 
 import httpx
 import pytest
-
 from infrastructure.dependencies import get_redis_client
 from infrastructure.persistence.database import get_db
 from main import app, startup_event
@@ -16,7 +15,9 @@ TEST_USER_KEY = "test_user_12345"
 TEST_MODEL = "llama2:7b"
 
 
-def _model_dict(name: str, content_hash: str = "sha256:aaa", size_bytes: int = 1000) -> dict:
+def _model_dict(
+    name: str, content_hash: str = "sha256:aaa", size_bytes: int = 1000
+) -> dict:
     return {"name": name, "content_hash": content_hash, "size_bytes": size_bytes}
 
 

@@ -2,15 +2,16 @@ from datetime import datetime
 
 from domain.accounting.models import CreditAmount, Transaction, User
 from infrastructure.persistence.repositories import (
-    SqlAlchemyTransactionRepository,
-    SqlAlchemyUserRepository,
-)
+    SqlAlchemyTransactionRepository, SqlAlchemyUserRepository)
 
 
 def test_sqlalchemy_user_repository_save_and_get(db_session):
     repo = SqlAlchemyUserRepository(db_session)
     user = User(
-        id=None, public_key="test_pubkey", balance=CreditAmount(100), created_at=datetime.utcnow()
+        id=None,
+        public_key="test_pubkey",
+        balance=CreditAmount(100),
+        created_at=datetime.utcnow(),
     )
 
     # Save new user

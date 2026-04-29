@@ -48,8 +48,12 @@ def upgrade() -> None:
         ),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
     )
-    op.create_index("ix_node_reputations_node_id", "node_reputations", ["node_id"], unique=True)
-    op.create_index("ix_node_reputations_score", "node_reputations", ["score"], unique=False)
+    op.create_index(
+        "ix_node_reputations_node_id", "node_reputations", ["node_id"], unique=True
+    )
+    op.create_index(
+        "ix_node_reputations_score", "node_reputations", ["score"], unique=False
+    )
 
 
 def downgrade() -> None:

@@ -29,10 +29,14 @@ def test_issue_challenge(verification_service, mock_challenge_repo):
     assert challenge.node_id == node_id
     assert challenge.token is not None
     assert challenge.seed is not None
-    mock_challenge_repo.save_challenge.assert_called_once_with(challenge, ttl_seconds=60)
+    mock_challenge_repo.save_challenge.assert_called_once_with(
+        challenge, ttl_seconds=60
+    )
 
 
-def test_verify_proof_success(verification_service, mock_challenge_repo, mock_benchmark_repo):
+def test_verify_proof_success(
+    verification_service, mock_challenge_repo, mock_benchmark_repo
+):
     token = "token_123"
     node_id = "node_1"
     now = datetime.utcnow()
@@ -41,7 +45,11 @@ def test_verify_proof_success(verification_service, mock_challenge_repo, mock_be
     mock_challenge_repo.get_challenge.return_value = challenge
 
     result = verification_service.verify_proof(
-        token=token, node_id=node_id, duration=10.0, device_name="RTX 4090", proof_hash="hash_123"
+        token=token,
+        node_id=node_id,
+        duration=10.0,
+        device_name="RTX 4090",
+        proof_hash="hash_123",
     )
 
     assert result["status"] == "verified"

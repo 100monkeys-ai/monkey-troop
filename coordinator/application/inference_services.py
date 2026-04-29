@@ -5,12 +5,8 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from domain.inference.models import ModelIdentity, Node
-from domain.inference.reputation import (
-    NodeReputation,
-    ReputationCalculator,
-    ReputationScore,
-    ReputationTier,
-)
+from domain.inference.reputation import (NodeReputation, ReputationCalculator,
+                                         ReputationScore, ReputationTier)
 
 from .inference_ports import NodeDiscoveryRepository, NodeReputationRepository
 

@@ -1,8 +1,12 @@
-from domain.inference.models import EngineInfo, HardwareSpec, ModelIdentity, Node
-from infrastructure.persistence.inference_repositories import RedisNodeDiscoveryRepository
+from domain.inference.models import (EngineInfo, HardwareSpec, ModelIdentity,
+                                     Node)
+from infrastructure.persistence.inference_repositories import \
+    RedisNodeDiscoveryRepository
 
 
-def _mi(name: str, content_hash: str = "sha256:default", size_bytes: int = 1000) -> ModelIdentity:
+def _mi(
+    name: str, content_hash: str = "sha256:default", size_bytes: int = 1000
+) -> ModelIdentity:
     return ModelIdentity(name=name, content_hash=content_hash, size_bytes=size_bytes)
 
 

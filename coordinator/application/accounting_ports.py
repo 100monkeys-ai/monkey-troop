@@ -26,5 +26,7 @@ class TransactionRepository(ABC):
         pass
 
     @abstractmethod
-    def get_history_by_user(self, public_key: str, limit: int = 50) -> List[Transaction]:
+    def get_history_by_user(
+        self, public_key: str, limit: int = 50
+    ) -> List[Transaction]:
         pass

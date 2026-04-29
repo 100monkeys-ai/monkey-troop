@@ -2,7 +2,6 @@ from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
-
 from infrastructure.dependencies import get_redis_client
 from infrastructure.persistence import database as db_models
 from infrastructure.persistence.database import get_db

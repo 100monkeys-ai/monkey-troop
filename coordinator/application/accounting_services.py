@@ -2,7 +2,8 @@
 
 from datetime import datetime, timezone
 
-from domain.accounting.models import CreditAmount, Transaction, TransactionType, User
+from domain.accounting.models import (CreditAmount, Transaction,
+                                      TransactionType, User)
 
 from .accounting_ports import TransactionRepository, UserRepository
 
@@ -14,7 +15,9 @@ class AccountingService:
         self.user_repo = user_repo
         self.txn_repo = txn_repo
 
-    def create_user_if_not_exists(self, public_key: str, starter_credits: int = 3600) -> User:
+    def create_user_if_not_exists(
+        self, public_key: str, starter_credits: int = 3600
+    ) -> User:
         """Use Case: Provision a new user with initial credits."""
         user = self.user_repo.get_by_public_key(public_key)
 

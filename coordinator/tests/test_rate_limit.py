@@ -3,13 +3,9 @@
 from unittest.mock import MagicMock
 
 import pytest
-
-from infrastructure.security.rate_limit import (
-    DISCOVERY_LIMIT,
-    INFERENCE_LIMIT,
-    WINDOW_SECONDS,
-    RateLimiter,
-)
+from infrastructure.security.rate_limit import (DISCOVERY_LIMIT,
+                                                INFERENCE_LIMIT,
+                                                WINDOW_SECONDS, RateLimiter)
 
 
 @pytest.fixture
@@ -96,7 +92,9 @@ def test_check_discovery_limit(limiter):
 
     assert allowed is True
     assert remaining == 99
-    limiter.check_rate_limit.assert_called_once_with("ratelimit:discovery:1.2.3.4", DISCOVERY_LIMIT)
+    limiter.check_rate_limit.assert_called_once_with(
+        "ratelimit:discovery:1.2.3.4", DISCOVERY_LIMIT
+    )
 
 
 def test_check_inference_limit(limiter):
@@ -107,7 +105,9 @@ def test_check_inference_limit(limiter):
 
     assert allowed is True
     assert remaining == 19
-    limiter.check_rate_limit.assert_called_once_with("ratelimit:inference:user123", INFERENCE_LIMIT)
+    limiter.check_rate_limit.assert_called_once_with(
+        "ratelimit:inference:user123", INFERENCE_LIMIT
+    )
 
 
 def test_reset_limit(limiter, mock_redis):

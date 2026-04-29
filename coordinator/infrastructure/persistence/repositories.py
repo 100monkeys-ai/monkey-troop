@@ -2,10 +2,9 @@
 
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
-
 from application.accounting_ports import TransactionRepository, UserRepository
 from domain.accounting.models import CreditAmount, Transaction, User
+from sqlalchemy.orm import Session
 
 from . import database as db_models
 
@@ -70,7 +69,9 @@ class SqlAlchemyTransactionRepository(TransactionRepository):
         self.session.add(db_txn)
         self.session.commit()
 
-    def get_history_by_user(self, public_key: str, limit: int = 50) -> List[Transaction]:
+    def get_history_by_user(
+        self, public_key: str, limit: int = 50
+    ) -> List[Transaction]:
         db_txns = (
             self.session.query(db_models.Transaction)
             .filter(

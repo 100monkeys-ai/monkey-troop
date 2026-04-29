@@ -6,7 +6,11 @@ from coordinator.domain.verification.models import BenchmarkResult, Challenge
 def test_challenge_initialization():
     now = datetime.utcnow()
     challenge = Challenge(
-        token="token_123", seed="seed_abc", matrix_size=1024, created_at=now, node_id="node_1"
+        token="token_123",
+        seed="seed_abc",
+        matrix_size=1024,
+        created_at=now,
+        node_id="node_1",
     )
     assert challenge.token == "token_123"
     assert challenge.matrix_size == 1024
@@ -25,7 +29,11 @@ def test_challenge_is_expired():
 def test_benchmark_result_initialization():
     now = datetime.utcnow()
     res = BenchmarkResult(
-        node_id="node_1", duration=10.0, device_name="RTX 4090", multiplier=3.5, timestamp=now
+        node_id="node_1",
+        duration=10.0,
+        device_name="RTX 4090",
+        multiplier=3.5,
+        timestamp=now,
     )
     assert res.node_id == "node_1"
     assert res.duration == 10.0

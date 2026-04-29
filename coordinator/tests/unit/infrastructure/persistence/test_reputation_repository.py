@@ -3,17 +3,12 @@
 from datetime import datetime, timezone
 
 import pytest
-
-from domain.inference.reputation import (
-    NodeReputation,
-    ReputationComponents,
-    ReputationScore,
-)
+from domain.inference.reputation import (NodeReputation, ReputationComponents,
+                                         ReputationScore)
 from infrastructure.persistence.database import Node as DbNode
 from infrastructure.persistence.database import User as DbUser
-from infrastructure.persistence.reputation_repository import (
-    SqlAlchemyNodeReputationRepository,
-)
+from infrastructure.persistence.reputation_repository import \
+    SqlAlchemyNodeReputationRepository
 
 
 @pytest.fixture
@@ -72,7 +67,9 @@ class TestSqlAlchemyNodeReputationRepository:
         reputation = NodeReputation(
             node_id="node_1",
             score=ReputationScore(0.85),
-            components=ReputationComponents(availability=0.9, reliability=0.8, performance=0.85),
+            components=ReputationComponents(
+                availability=0.9, reliability=0.8, performance=0.85
+            ),
             total_jobs=20,
             successful_jobs=18,
             failed_jobs=2,
@@ -96,7 +93,12 @@ class TestSqlAlchemyNodeReputationRepository:
         db_session.flush()
 
         for nid in ["nodeA", "nodeB"]:
-            node = DbNode(node_id=nid, owner_id=user.id, owner_public_key="pk_multi", status="IDLE")
+            node = DbNode(
+                node_id=nid,
+                owner_id=user.id,
+                owner_public_key="pk_multi",
+                status="IDLE",
+            )
             db_session.add(node)
         db_session.flush()
 

@@ -3,10 +3,9 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from jose import JWTError, jwt
-
 from application.security_ports import KeyRepository, TokenService
 from domain.security.models import AuthTicket
+from jose import JWTError, jwt
 
 
 class JoseJwtTokenService(TokenService):

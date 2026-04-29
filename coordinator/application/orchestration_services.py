@@ -47,7 +47,9 @@ class OrchestrationService:
         self.discovery_service = discovery_service
         self.security_service = security_service
 
-    def authorize_inference(self, requester_pk: str, model_name: str) -> AuthorizationResult:
+    def authorize_inference(
+        self, requester_pk: str, model_name: str
+    ) -> AuthorizationResult:
         """
         Orchestrate the authorization of an inference request.
         1. Ensure user has sufficient credits.
