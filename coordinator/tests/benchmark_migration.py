@@ -1,6 +1,7 @@
 import time
+
 import sqlalchemy as sa
-from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
+from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
 
 
 def benchmark_migration(num_users=1000, nodes_per_user=2):
@@ -35,7 +36,7 @@ def benchmark_migration(num_users=1000, nodes_per_user=2):
                 node_data.append({"owner_public_key": f"key_{i}"})
         conn.execute(nodes.insert(), node_data)
 
-    # Current implementation (N+1)
+    # Optimized implementation (Single query)
     start_time = time.perf_counter()
     with engine.begin() as conn:
         users_table = sa.table(
@@ -50,24 +51,6 @@ def benchmark_migration(num_users=1000, nodes_per_user=2):
             sa.column("owner_public_key", sa.String),
         )
 
-        rows = conn.execute(sa.select(users_table.c.id, users_table.c.public_key)).fetchall()
-        for user_id, public_key in rows:
-            conn.execute(
-                sa.update(nodes_table)
-                .where(nodes_table.c.owner_public_key == public_key)
-                .values(owner_id=user_id)
-            )
-    end_time = time.perf_counter()
-    n_plus_one_time = end_time - start_time
-    print(f"N+1 implementation time: {n_plus_one_time:.4f}s")
-
-    # Reset owner_id
-    with engine.begin() as conn:
-        conn.execute(sa.update(nodes).values(owner_id=None))
-
-    # Optimized implementation (Single query)
-    start_time = time.perf_counter()
-    with engine.begin() as conn:
         # For SQLite, we might need a correlated subquery if it doesn't support UPDATE FROM
         # But let's try the SQLAlchemy version that should be more efficient
 

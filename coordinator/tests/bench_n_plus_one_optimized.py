@@ -1,13 +1,13 @@
-import time
-import sys
 import os
+import sys
+import time
 from unittest.mock import MagicMock
 
 # Add coordinator to sys.path
 sys.path.append(os.path.join(os.getcwd(), "coordinator"))
 
 from coordinator.application.inference_services import DiscoveryService
-from coordinator.domain.inference.models import Node, ModelIdentity, HardwareSpec
+from coordinator.domain.inference.models import HardwareSpec, ModelIdentity, Node
 
 
 def _mi(name: str, content_hash: str = "sha256:default", size_bytes: int = 1000) -> ModelIdentity:

@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-
 import redis
 
 from infrastructure.security.rate_limit import (

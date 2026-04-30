@@ -14,68 +14,70 @@ try:
 except ImportError:
     torch = None
 
+
 def run_benchmark(seed: str, matrix_size: int):
     """Run GPU benchmark with given seed and matrix size."""
     if torch is None:
         raise ImportError("torch is not installed")
-    
+
     # Set seed for reproducibility
     seed_int = int(seed, 16) % (2**32)
     torch.manual_seed(seed_int)
-    
+
     # Check for GPU availability
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    
+
     # Generate random matrices
     a = torch.randn(matrix_size, matrix_size, device=device)
     b = torch.randn(matrix_size, matrix_size, device=device)
-    
+
     # Warm-up run
     _ = torch.matmul(a, b)
     if device == "cuda":
         torch.cuda.synchronize()
-    
+
     # Timed run
     start_time = time.time()
     result = torch.matmul(a, b)
     if device == "cuda":
         torch.cuda.synchronize()
     duration = time.time() - start_time
-    
+
     # Generate proof hash from seed, duration, and result checksum
     result_sum = result.sum().item()
     proof_data = f"{seed}:{duration:.6f}:{result_sum:.6f}"
     proof_hash = hashlib.sha256(proof_data.encode()).hexdigest()
-    
+
     # Get device name
     device_name = torch.cuda.get_device_name(0) if device == "cuda" else "CPU"
-    
+
     # Output JSON
-    output = {
-        "proof_hash": proof_hash,
-        "duration": duration,
-        "device": device_name
-    }
-    
+    output = {"proof_hash": proof_hash, "duration": duration, "device": device_name}
+
     print(json.dumps(output))
+
 
 def main():
     if len(sys.argv) != 3:
         print("Usage: python3 benchmark.py <seed> <matrix_size>", file=sys.stderr)
         sys.exit(1)
-    
+
     seed = sys.argv[1]
     try:
         matrix_size = int(sys.argv[2])
     except ValueError:
-        print(f"Benchmark error: matrix_size must be an integer, got {sys.argv[2]}", file=sys.stderr)
+        print(
+            f"Benchmark error: matrix_size must be an integer, got {sys.argv[2]}",
+            file=sys.stderr,
+        )
         sys.exit(1)
-    
+
     try:
         run_benchmark(seed, matrix_size)
     except (ImportError, ValueError, RuntimeError) as e:
         print(f"Benchmark error: {e}", file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
