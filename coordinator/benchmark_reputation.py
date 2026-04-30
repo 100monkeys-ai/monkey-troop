@@ -1,18 +1,18 @@
-import time
+import os
 import random
-from typing import List
-from unittest.mock import MagicMock
 
 # Mocking the imports as we might be running this from the root or coordinator dir
 import sys
-import os
+import time
+from typing import List
+from unittest.mock import MagicMock
 
 sys.path.append(os.path.join(os.getcwd(), "coordinator"))
 
-from domain.inference.models import Node, ModelIdentity, HardwareSpec
-from domain.inference.reputation import NodeReputation, ReputationScore, ReputationComponents
-from application.inference_services import DiscoveryService
 from application.inference_ports import NodeDiscoveryRepository
+from application.inference_services import DiscoveryService
+from domain.inference.models import HardwareSpec, ModelIdentity, Node
+from domain.inference.reputation import NodeReputation, ReputationComponents, ReputationScore
 
 
 def _mi(name: str) -> ModelIdentity:

@@ -31,7 +31,7 @@ def test_token_service_instantiation():
     with pytest.raises(TypeError) as exc_info:
         TokenService()
     assert "Can't instantiate abstract class TokenService" in str(exc_info.value)
-    # Removed since TypeError message changed in newer Python versions
+    assert "abstract method" in str(exc_info.value)
 
 
 def test_concrete_token_service():
@@ -45,7 +45,7 @@ def test_key_repository_instantiation():
     with pytest.raises(TypeError) as exc_info:
         KeyRepository()
     assert "Can't instantiate abstract class KeyRepository" in str(exc_info.value)
-    # Removed since TypeError message changed in newer Python versions
+    assert "abstract method" in str(exc_info.value)
 
 
 def test_concrete_key_repository():
