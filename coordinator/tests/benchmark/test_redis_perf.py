@@ -24,7 +24,7 @@ class MockRedis:
 
     def optimized(self):
         start = time.perf_counter()
-        cursor = "0"
+        cursor = 0
         nodes = []
         while True:
             cursor, keys = self.r.scan(cursor=cursor, match="node:*", count=100)
@@ -33,12 +33,12 @@ class MockRedis:
                 for raw_data in raw_nodes:
                     if raw_data:
                         nodes.append(json.loads(raw_data))
-            if cursor == 0 or cursor == "0" or cursor == b"0":
+            if cursor == 0:
                 break
         return time.perf_counter() - start
 
 
-m = MockRedis(10000)
-
-print(f"Original: {m.original():.4f}s")
-print(f"Optimized: {m.optimized():.4f}s")
+if __name__ == "__main__":
+    m = MockRedis(10000)
+    print(f"Original: {m.original():.4f}s")
+    print(f"Optimized: {m.optimized():.4f}s")
