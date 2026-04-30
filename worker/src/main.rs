@@ -95,9 +95,19 @@ async fn main() -> Result<()> {
             error!("Heartbeat task ended: {:?}", res);
         }
         res = proxy_handle => {
-            error!("Proxy task ended: {:?}", res);
-            if let Ok(Err(e)) = res {
-                return Err(e.into());
+            match res {
+                Ok(Ok(())) => {
+                    error!("Proxy task ended unexpectedly with a clean shutdown");
+                    return Err(anyhow::anyhow!("proxy task ended unexpectedly"));
+                }
+                Ok(Err(e)) => {
+                    error!("Proxy task failed: {}", e);
+                    return Err(e.into());
+                }
+                Err(e) => {
+                    error!("Proxy task join failed: {}", e);
+                    return Err(e.into());
+                }
             }
         }
     }
