@@ -36,7 +36,7 @@ def benchmark_migration(num_users=1000, nodes_per_user=2):
                 node_data.append({"owner_public_key": f"key_{i}"})
         conn.execute(nodes.insert(), node_data)
 
-    # Optimized implementation (Single query)
+    # Single-query migration implementation
     start_time = time.perf_counter()
     with engine.begin() as conn:
         users_table = sa.table(
