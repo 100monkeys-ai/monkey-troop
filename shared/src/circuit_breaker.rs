@@ -84,7 +84,6 @@ mod tests {
     use super::*;
     use std::time::Duration;
 
-
     #[tokio::test]
     async fn test_circuit_breaker_initial_state() {
         let cb = CircuitBreaker::new(3, Duration::from_millis(100));

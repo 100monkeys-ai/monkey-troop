@@ -110,8 +110,8 @@ async fn handle_chat_completion(
             let key_for_done = key;
             let base_nonce_for_done = base_nonce;
 
-            let sse_stream = chunk_stream.map(
-                move |result| -> Result<Frame<Bytes>, anyhow::Error> {
+            let sse_stream =
+                chunk_stream.map(move |result| -> Result<Frame<Bytes>, anyhow::Error> {
                     let seq = seq_counter.fetch_add(1, Ordering::Relaxed);
                     match result {
                         Ok(chunk) => {

@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
+use chacha20poly1305::aead::rand_core::RngCore;
 use chacha20poly1305::aead::{Aead, OsRng};
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
 use hkdf::Hkdf;
-use chacha20poly1305::aead::rand_core::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use x25519_dalek::{PublicKey, StaticSecret};
@@ -70,7 +70,8 @@ pub fn derive_session_key(shared_secret: &[u8; 32]) -> Result<[u8; 32]> {
 /// Generate a random 12-byte nonce
 pub fn generate_base_nonce() -> [u8; 12] {
     let mut nonce = [0u8; 12];
-    OsRng.fill_bytes(&mut nonce);
+    let mut rng = OsRng;
+    rng.fill_bytes(&mut nonce);
     nonce
 }
 
