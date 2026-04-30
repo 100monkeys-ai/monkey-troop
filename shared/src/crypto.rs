@@ -72,7 +72,7 @@ pub fn derive_session_key(shared_secret: &[u8; 32]) -> Result<[u8; 32]> {
 /// Generate a random 12-byte nonce
 pub fn generate_base_nonce() -> [u8; 12] {
     let mut nonce = [0u8; 12];
-    rand::thread_rng().fill_bytes(&mut nonce);
+    OsRng.fill_bytes(&mut nonce);
     nonce
 }
 
