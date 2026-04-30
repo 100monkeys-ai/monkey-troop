@@ -13,7 +13,6 @@ if "torch" not in sys.modules:
     sys.modules["torch"] = mock_torch
 
 import benchmark
-import importlib
 
 
 class TestBenchmark(unittest.TestCase):
