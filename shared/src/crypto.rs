@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
-use chacha20poly1305::aead::{Aead, OsRng};
+use chacha20poly1305::aead::Aead;
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
 use hkdf::Hkdf;
-use rand::RngCore;
+use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use x25519_dalek::{PublicKey, StaticSecret};
@@ -41,9 +41,7 @@ pub struct E2EChunkEnvelope {
 
 /// Generate a new X25519 keypair, returning (secret, base64-encoded public key)
 pub fn generate_keypair() -> (StaticSecret, String) {
-    let mut bytes = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut bytes);
-    let secret = StaticSecret::from(bytes);
+    let secret = StaticSecret::random_from_rng(OsRng);
     let public = PublicKey::from(&secret);
     let public_b64 = BASE64.encode(public.as_bytes());
     (secret, public_b64)

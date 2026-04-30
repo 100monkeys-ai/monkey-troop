@@ -86,13 +86,12 @@ async fn main() -> Result<()> {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8001").await?;
     info!("Proxy API listening on :8001");
 
-    let proxy_handle = tokio::spawn(async move {
-        axum::serve(listener, app).await
-    });
+    let proxy_handle = tokio::spawn(async move { axum::serve(listener, app).await });
 
     tokio::select! {
         res = heartbeat_handle => {
-            error!("Heartbeat task ended: {:?}", res);
+            error!("Heartbeat task ended unexpectedly: {:?}", res);
+            return Err(anyhow::anyhow!("heartbeat task ended unexpectedly"));
         }
         res = proxy_handle => {
             match res {
@@ -111,6 +110,4 @@ async fn main() -> Result<()> {
             }
         }
     }
-
-    Ok(())
 }
