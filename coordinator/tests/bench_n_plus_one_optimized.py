@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 # Add coordinator to sys.path
 sys.path.append(os.path.join(os.getcwd(), "coordinator"))
 
-from coordinator.application.inference_services import DiscoveryService
-from coordinator.domain.inference.models import HardwareSpec, ModelIdentity, Node
+from coordinator.application.inference_services import DiscoveryService  # noqa: E402
+from coordinator.domain.inference.models import HardwareSpec, ModelIdentity, Node  # noqa: E402
 
 
 def _mi(name: str, content_hash: str = "sha256:default", size_bytes: int = 1000) -> ModelIdentity:

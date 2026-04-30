@@ -95,9 +95,15 @@ def test_get_logs_with_filters(audit_service, mock_db_session):
 
         mock_chain = MagicMock()
         mock_chain.all.return_value = [mock_log]
-        (
-            mock_db_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.offset.return_value.limit.return_value
-        ) = mock_chain
+        query_chain = mock_db_session.query.return_value
+        limit_mock = (
+            query_chain.filter.return_value
+            .filter.return_value
+            .order_by.return_value
+            .offset.return_value
+            .limit
+        )
+        limit_mock.return_value = mock_chain
 
         logs = audit_service.get_logs(event_type="login", user_id="user2")
 

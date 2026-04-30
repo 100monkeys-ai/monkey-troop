@@ -9,10 +9,10 @@ from unittest.mock import MagicMock
 
 sys.path.append(os.path.join(os.getcwd(), "coordinator"))
 
-from application.inference_ports import NodeDiscoveryRepository
-from application.inference_services import DiscoveryService
-from domain.inference.models import HardwareSpec, ModelIdentity, Node
-from domain.inference.reputation import NodeReputation, ReputationComponents, ReputationScore
+from application.inference_ports import NodeDiscoveryRepository  # noqa: E402
+from application.inference_services import DiscoveryService  # noqa: E402
+from domain.inference.models import HardwareSpec, ModelIdentity, Node  # noqa: E402
+from domain.inference.reputation import NodeReputation, ReputationComponents, ReputationScore  # noqa: E402
 
 
 def _mi(name: str) -> ModelIdentity:

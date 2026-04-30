@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -167,9 +167,6 @@ def test_select_node_all_suspended_returns_none(
 
     selected = discovery_service.select_node_for_model("m1")
     assert selected is None
-
-
-from unittest.mock import patch
 
 
 def test__weighted_select_empty_candidates(discovery_service, mock_reputation_repo):
