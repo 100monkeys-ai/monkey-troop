@@ -44,4 +44,4 @@ monkey-troop-shared = { path = "../shared" }
 
 [dev-dependencies]
 httpmock = "0.8.3"
-serial_test = "3.2.0"
+serial_test = "3.5.0"
