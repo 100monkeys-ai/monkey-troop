@@ -105,4 +105,4 @@ def test_get_logs_with_filters(audit_service, mock_db_session):
         assert logs[0]["user_id"] == "user2"
         assert mock_db_session.query.return_value.filter.call_count == 1
         assert mock_db_session.query.return_value.filter.return_value.filter.call_count == 1
-        _ = mock_db_models  # suppress unused-variable warning
+        mock_db_session.query.assert_called_once_with(mock_db_models.AuditLog)

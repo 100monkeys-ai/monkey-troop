@@ -1488,7 +1488,6 @@ dependencies = [
  "chacha20poly1305",
  "chrono",
  "hkdf",
- "rand_core 0.6.4",
  "reqwest",
  "serde",
  "serde_json",

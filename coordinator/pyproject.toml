@@ -44,3 +44,8 @@ line-length = 100
 [tool.isort]
 profile = "black"
 line_length = 100
+
+[dependency-groups]
+dev = [
+    "flake8 (>=7.3.0,<8.0.0)"
+]
